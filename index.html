@@ -244,8 +244,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
-          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="height:45px;"></div>
+          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials" style="height:45px;"></div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -279,14 +279,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="nutrition-output"></div>
       <div class="card">
         <div class="card-title">Athlete Profile <span id="update-due-badge"></span></div>
-        <div id="height-metric-row" class="form-row"><label>Height (cm)</label><input type="number" id="height-cm-input" placeholder="182" step="1" autocomplete="off"></div>
-        <div id="height-imperial-row" class="form-grid-2" style="display:none;">
-          <div class="form-row"><label>Feet</label><input type="number" id="height-ft-input" placeholder="6" min="4" max="7" step="1" autocomplete="off"></div>
-          <div class="form-row"><label>Inches</label><input type="number" id="height-in-input" placeholder="2" min="0" max="11" step="1" autocomplete="off"></div>
-        </div>
-        <div class="form-row"><label>Weight (<span class="unit-label">kg</span>)</label><input type="number" id="weight-input" placeholder="72" step="0.5" autocomplete="off"></div>
+        <div id="athlete-profile-fields"></div>
         <div class="form-grid-2">
-          <div class="form-row"><label>Age</label><input type="number" id="age-input" placeholder="16" min="14" max="25" autocomplete="off"></div>
+          <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
           <div class="form-row"><label>Sex</label>
             <select id="sex-select">
               <option value="male">Male</option>
@@ -435,15 +430,7 @@ function ftInToCm(val){
 function sW(v){return S.useKg?v:Math.round(v/2.205*4)/4;}
 function uL(){return S.useKg?'kg':'lbs';}
 function updateHeightField(){
-  const metricRow=document.getElementById('height-metric-row');
-  const impRow=document.getElementById('height-imperial-row');
-  if(!metricRow||!impRow)return;
-  if(S.useKg){
-    metricRow.style.display='';impRow.style.display='none';
-  } else {
-    metricRow.style.display='none';impRow.style.display='';
-  }
-  // Never restore stored values — fields always start blank
+  // Height rows are now built dynamically in renderNutrition — nothing to do here
 }
 function getHeightCm(){
   if(S.useKg){
@@ -1227,13 +1214,40 @@ function calcNutrition(){
     </div>
   </div>`;
 }
+function makeInput(id,type,placeholder,extra){
+  const inp=document.createElement('input');
+  inp.type=type;inp.id=id;inp.placeholder=placeholder;
+  inp.autocomplete='off';inp.setAttribute('autocomplete','off');
+  inp.style.cssText='width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);';
+  if(extra)Object.assign(inp,extra);
+  inp.value='';
+  return inp;
+}
 function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
-  updateHeightField();
-  // Always clear all athlete profile fields — no pre-population ever
-  const ids=['height-cm-input','height-ft-input','height-in-input','weight-input','age-input'];
-  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  // Build inputs dynamically so iOS Safari cannot autofill them
+  const pf=document.getElementById('athlete-profile-fields');
+  if(pf){
+    if(S.useKg){
+      pf.innerHTML='<div class="form-row"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Height (cm)</label></div>';
+      const row=pf.querySelector('.form-row');
+      row.appendChild(makeInput('height-cm-input','number','182',{step:1}));
+    } else {
+      pf.innerHTML='<div class="form-grid-2"><div class="form-row"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Feet</label></div><div class="form-row"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Inches</label></div></div>';
+      const rows=pf.querySelectorAll('.form-row');
+      rows[0].appendChild(makeInput('height-ft-input','number','6',{min:4,max:7,step:1}));
+      rows[1].appendChild(makeInput('height-in-input','number','2',{min:0,max:11,step:1}));
+    }
+    // Weight row
+    const wtRow=document.createElement('div');wtRow.className='form-row';
+    wtRow.innerHTML='<label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Weight (<span class="unit-label">'+uL()+'</span>)</label>';
+    wtRow.appendChild(makeInput('weight-input','number','72',{step:0.5}));
+    pf.appendChild(wtRow);
+  }
+  // Age field
+  const aw=document.getElementById('age-field-wrap');
+  if(aw){aw.innerHTML='';aw.appendChild(makeInput('age-input','number','16',{min:14,max:25}));}
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
   document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
