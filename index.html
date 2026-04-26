@@ -244,8 +244,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
-          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="width:100%;font-size:13px;padding:10px 6px;"></div>
+            <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials" style="width:100%;"></div>
+          </div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -391,6 +393,10 @@ const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
 const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
+
+// Version gate — runs BEFORE S is built so bodyStats is wiped from localStorage first
+const APP_VER='v6';
+if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_VER);}
 
 let S={
   useKg:DB.get('useKg',true),
@@ -1392,12 +1398,6 @@ function showSection(name){
 }
 
 // INIT — version gate: clear stale bodyStats so fuel tab starts blank
-const APP_VER='v5';
-if(DB.get('appVer','')!==APP_VER){
-  DB.set('bodyStats',null);
-  S.bodyStats=null;
-  DB.set('appVer',APP_VER);
-}
 renderHome();
 </script>
 </body>
