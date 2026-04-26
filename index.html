@@ -279,14 +279,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="nutrition-output"></div>
       <div class="card">
         <div class="card-title">Athlete Profile <span id="update-due-badge"></span></div>
-        <div id="height-metric-row" class="form-row"><label>Height (cm)</label><input type="number" id="height-cm-input" placeholder="182" step="1"></div>
+        <div id="height-metric-row" class="form-row"><label>Height (cm)</label><input type="number" id="height-cm-input" placeholder="182" step="1" autocomplete="off"></div>
         <div id="height-imperial-row" class="form-grid-2" style="display:none;">
-          <div class="form-row"><label>Feet</label><input type="number" id="height-ft-input" placeholder="6" min="4" max="7" step="1"></div>
-          <div class="form-row"><label>Inches</label><input type="number" id="height-in-input" placeholder="2" min="0" max="11" step="1"></div>
+          <div class="form-row"><label>Feet</label><input type="number" id="height-ft-input" placeholder="6" min="4" max="7" step="1" autocomplete="off"></div>
+          <div class="form-row"><label>Inches</label><input type="number" id="height-in-input" placeholder="2" min="0" max="11" step="1" autocomplete="off"></div>
         </div>
-        <div class="form-row"><label>Weight (<span class="unit-label">kg</span>)</label><input type="number" id="weight-input" placeholder="72" step="0.5"></div>
+        <div class="form-row"><label>Weight (<span class="unit-label">kg</span>)</label><input type="number" id="weight-input" placeholder="72" step="0.5" autocomplete="off"></div>
         <div class="form-grid-2">
-          <div class="form-row"><label>Age</label><input type="number" id="age-input" placeholder="16" min="14" max="25"></div>
+          <div class="form-row"><label>Age</label><input type="number" id="age-input" placeholder="16" min="14" max="25" autocomplete="off"></div>
           <div class="form-row"><label>Sex</label>
             <select id="sex-select">
               <option value="male">Male</option>
@@ -1231,8 +1231,9 @@ function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   updateHeightField();
-  // Never pre-populate fields — user must enter fresh each time
-  // Only show the output card if a previous calculation exists
+  // Always clear all athlete profile fields — no pre-population ever
+  const ids=['height-cm-input','height-ft-input','height-in-input','weight-input','age-input'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
   document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
