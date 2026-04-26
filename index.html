@@ -122,7 +122,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
 .form-row{margin-bottom:12px;}
 .form-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
 .form-row input,.form-row select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .wh-entry{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .wh-entry:last-child{border-bottom:none;}
 .wh-date{font-size:11px;color:var(--muted);}
@@ -240,7 +241,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-grid">
+          <div class="form-grid-2">
             <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
             <div class="form-row"><label>Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
           </div>
@@ -255,40 +256,52 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Swim Phase (future coach sync)</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Gives the dryland engine context for pool load. Coach will eventually set this directly.</p>
-        <select id="swim-phase-select" onchange="saveSwimPhase()">
-          <option value="base">Base building</option>
-          <option value="threshold">Threshold / aerobic</option>
-          <option value="sprint">Sprint / race prep</option>
-          <option value="taper">Swim taper</option>
-          <option value="rest">Rest / recovery week</option>
+        <div class="card-title">Pool Load Phase</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Update monthly when the coach releases the new training block. This tells the dryland engine how hard pool sessions are so it can balance the load.</p>
+        <select id="swim-phase-select" onchange="saveSwimPhase()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:14px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
+          <option value="base">🏗️ Base Building — High volume, easy pace</option>
+          <option value="threshold">⚡ Threshold / Aerobic — Moderate-hard sets</option>
+          <option value="sprint">🚀 Sprint / Race Prep — Low volume, max intensity</option>
+          <option value="taper">🌊 Swim Taper — Sharpening for meet</option>
+          <option value="rest">😴 Rest / Recovery Week</option>
         </select>
+        <div style="margin-top:12px;padding:10px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent);">
+          <div id="phase-impact-text" style="font-size:12px;color:var(--muted);line-height:1.6;"></div>
+        </div>
       </div>
     </div>
 
     <!-- FUEL -->
     <div id="section-fuel" class="section">
       <p class="section-title">Fuel</p>
-      <p class="section-sub">Nutrition for a sprint swimmer</p>
+      <p class="section-sub">Nutrition for a competitive swimmer</p>
       <div id="nutrition-output"></div>
       <div class="card">
-        <div class="card-title">Your Stats <span id="update-due-badge"></span></div>
-        <div class="form-grid">
+        <div class="card-title">Athlete Profile <span id="update-due-badge"></span></div>
+        <div class="form-grid-2">
           <div class="form-row"><label>Height (<span id="height-unit-label">cm</span>)</label><input type="number" id="height-input" placeholder="182" step="0.1"></div>
           <div class="form-row"><label>Weight (<span class="unit-label">kg</span>)</label><input type="number" id="weight-input" placeholder="72" step="0.5"></div>
         </div>
-        <div class="form-row"><label>Age</label><input type="number" id="age-input" value="16" min="14" max="25"></div>
-        <div class="form-row"><label>Today's training type</label>
+        <div class="form-grid-2">
+          <div class="form-row"><label>Age</label><input type="number" id="age-input" value="16" min="14" max="25"></div>
+          <div class="form-row"><label>Sex</label>
+            <select id="sex-select">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row"><label>Typical Training Load</label>
           <select id="training-day-select">
-            <option value="swim_dryland">Swim + Dryland (hardest)</option>
-            <option value="swim_only">Swim only</option>
-            <option value="dryland_only">Dryland only</option>
-            <option value="active_recovery">Active recovery</option>
-            <option value="rest">Full rest</option>
+            <option value="swim_dryland">Swim + Dryland — Double session days</option>
+            <option value="swim_only">Swim only — Pool sessions</option>
+            <option value="dryland_only">Dryland only — Gym sessions</option>
+            <option value="active_recovery">Active recovery — Light movement</option>
+            <option value="rest">Full rest days</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="calcNutrition()">Calculate Plan</button>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Set this to your most common training day. Update every 2 weeks or when your load changes significantly.</p>
+        <button class="btn btn-primary" onclick="calcNutrition()">Calculate Nutrition Plan</button>
       </div>
       <div class="card">
         <div class="card-title">Meal Timing</div>
@@ -311,11 +324,23 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       </div>
       <div class="card">
         <div class="card-title">Program Progress</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <div style="background:var(--surface);border-radius:10px;padding:10px 14px;flex:1;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);">WEEK</div>
+            <div style="font-size:24px;font-weight:900;color:var(--accent);" id="week-display">1</div>
+            <div style="font-size:10px;color:var(--muted);">of 16</div>
+          </div>
+          <div style="background:var(--surface);border-radius:10px;padding:10px 14px;flex:1;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);">CYCLE</div>
+            <div style="font-size:24px;font-weight:900;color:var(--purple);" id="cycle-display">1</div>
+            <div style="font-size:10px;color:var(--muted);">program</div>
+          </div>
+        </div>
+        <div id="periodization-block" style="margin-bottom:12px;"></div>
         <div id="program-targets"></div>
-        <div style="margin-top:16px;display:flex;gap:8px;align-items:center;">
-          <span style="font-size:13px;color:var(--muted);">Week <strong id="week-display" style="color:var(--text)">1</strong> of 16</span>
-          <button class="btn-ghost" onclick="adjustWeek(-1)">← Back</button>
-          <button class="btn-ghost" onclick="adjustWeek(1)">Fwd →</button>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn-ghost" style="flex:1" onclick="adjustWeek(-1)">← Back a week</button>
+          <button class="btn-ghost" style="flex:1" onclick="adjustWeek(1)">Forward →</button>
         </div>
       </div>
       <div class="card">
@@ -355,7 +380,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="modal-overlay" id="picker-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')">Cancel</button></div></div></div>
 <div class="modal-overlay" id="day-modal"><div class="modal"><div class="modal-handle"></div><h3 id="day-modal-title" style="font-size:17px;margin-bottom:4px;"></h3><p style="font-size:12px;color:var(--muted);margin-bottom:4px;">Tap to toggle. Multiple selections allowed.</p><div class="day-type-grid" id="day-type-grid"></div><div style="margin-top:16px;display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1" onclick="saveDayEdit()">Save</button><button class="btn-ghost" style="flex:1" onclick="closeModal('day-modal')">Cancel</button></div></div></div>
 <div class="modal-overlay" id="wh-modal"><div class="modal"><div class="modal-handle"></div><h3 id="wh-modal-title" style="font-size:17px;margin-bottom:12px;"></h3><div id="wh-modal-content"></div><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('wh-modal')">Close</button></div></div></div>
-<div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add Time Entry</h3><div class="form-row"><label>Event</label><select id="at-event"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-row"><label>Date</label><input type="date" id="at-date"></div><div class="form-grid"><div class="form-row"><label>SCM</label><input type="text" id="at-scm" placeholder="24.50"></div><div class="form-row"><label>LCM</label><input type="text" id="at-lcm" placeholder="24.80"></div></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
+<div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add PB Entry</h3><div class="form-row"><label>Event</label><select id="at-event"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-grid-2"><div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div><div class="form-row"><label>Course</label><select id="at-course"><option value="scm">SCM (25m pool)</option><option value="lcm">LCM (50m pool)</option></select></div></div><div class="form-row"><label>Time (mm:ss.00 or ss.00)</label><input type="text" id="at-time" placeholder="24.50"></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save PB</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
 <script>
 const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
@@ -368,6 +393,7 @@ let S={
   history:DB.get('history',[]),
   weightLog:DB.get('weightLog',{}),
   programWeek:DB.get('programWeek',1),
+  programCycle:DB.get('programCycle',1),
   readiness:DB.get('todayReadiness',3),
   sleep:DB.get('todaySleep',8),
   daySchedule:DB.get('daySchedule',{}),
@@ -526,7 +552,27 @@ function getLoadDesc(m){
   if(m<1.2)return{label:'Hard',color:'var(--orange)',msg:'Push every set.'};
   return{label:'Maximum',color:'var(--red)',msg:'Peak readiness. Take it.'};
 }
-function getPhase(w){if(w<=4)return{name:'GPP',label:'General Prep',cls:'phase-gpp'};if(w<=8)return{name:'Strength',label:'Strength Block',cls:'phase-strength'};if(w<=12)return{name:'Power',label:'Power Block',cls:'phase-power'};return{name:'Taper',label:'Taper',cls:'phase-taper'};}
+function getPhase(w){
+  // Cycle 1: GPP focus, Cycle 2+: shorter GPP, longer power/strength
+  const c=S.programCycle||1;
+  if(c===1){
+    if(w<=4)return{name:'GPP',label:'General Prep',cls:'phase-gpp'};
+    if(w<=8)return{name:'Strength',label:'Strength Block',cls:'phase-strength'};
+    if(w<=12)return{name:'Power',label:'Power Block',cls:'phase-power'};
+    return{name:'Taper',label:'Peak & Taper',cls:'phase-taper'};
+  } else if(c===2){
+    if(w<=2)return{name:'GPP',label:'Transition / Reset',cls:'phase-gpp'};
+    if(w<=7)return{name:'Strength',label:'Advanced Strength',cls:'phase-strength'};
+    if(w<=12)return{name:'Power',label:'Max Power Block',cls:'phase-power'};
+    return{name:'Taper',label:'Championship Taper',cls:'phase-taper'};
+  } else {
+    // Cycle 3+: elite periodisation — minimal GPP, strength/power dominant
+    if(w<=2)return{name:'GPP',label:'Neural Reset',cls:'phase-gpp'};
+    if(w<=6)return{name:'Strength',label:'Elite Strength',cls:'phase-strength'};
+    if(w<=13)return{name:'Power',label:'Elite Power & Speed',cls:'phase-power'};
+    return{name:'Taper',label:'Championship Peak',cls:'phase-taper'};
+  }
+}
 function getDayType(dow){return{1:'lower',2:'upper',3:'mobility',4:'lower',5:'upper',6:'cardio',0:'mobility'}[dow]||'mobility';}
 function getScheme(phaseName,mult){
   const b={GPP:{sets:3,reps:'12-15',pct:'60-70%'},Strength:{sets:4,reps:'4-6',pct:'80-90%'},Power:{sets:4,reps:'5-6',pct:'explosive'},Taper:{sets:3,reps:'4-5',pct:'75%'}};
@@ -700,7 +746,16 @@ function finishWorkout(){
   const total=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
   if(!confirm(`Log session? ${Object.keys(completedSets).length} sets completed.`))return;
   S.history.push({...w,date:new Date().toISOString()});DB.set('history',S.history);
-  if(S.history.length%3===0){S.programWeek=Math.min(16,S.programWeek+1);DB.set('programWeek',S.programWeek);}
+  if(S.history.length%3===0){
+    S.programWeek++;
+    if(S.programWeek>16){
+      S.programWeek=1;
+      S.programCycle=(S.programCycle||1)+1;
+      DB.set('programCycle',S.programCycle);
+      alert(`🏆 Cycle ${S.programCycle-1} complete! Starting Cycle ${S.programCycle} — the program is now harder.`);
+    }
+    DB.set('programWeek',S.programWeek);
+  }
   S.currentWorkout=null;completedSets={};
   document.getElementById('workout-content').innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Session logged.</p></div>';
   document.getElementById('workout-actions').style.display='none';
@@ -739,55 +794,75 @@ function buildChart(hist,field){
   return svg;
 }
 
+// SCM qualifying standard: approx 2.5% faster than LCM (short course times are quicker due to more turns)
+function scmStd(lcmStr){if(!lcmStr)return null;const s=tSec(lcmStr);if(s===Infinity)return null;return secDisp(s*0.975);}
+
 function renderTimesContent(){
   const ev=S.activeTStroke;
   const hist=(S.timeHistory[ev]||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const tgt=TRIALS[ev];
+  const tgtLCM=TRIALS[ev];
+  const tgtSCM=scmStd(tgtLCM);
   const bL=getBest(ev,'lcm'),bS=getBest(ev,'scm');
-  const gap=tgt&&bL?gapSec(bL.lcm,tgt):null;
+  const gapLCM=tgtLCM&&bL?gapSec(bL.lcm,tgtLCM):null;
+  const gapSCM=tgtSCM&&bS?gapSec(bS.scm,tgtSCM):null;
+  function gapClass(g){return g===null?'gap-far':g<=0?'gap-done':g<=1?'gap-near':g<=3?'gap-close':'gap-far';}
+  function gapLabel(g){return g===null?'No data':g<=0?'✓ Cut':'need '+g.toFixed(2)+'s';}
   let html='';
   html+=`<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-title" style="margin-bottom:0;">${ev}</div>
-      <button class="btn btn-primary btn-sm" onclick="openAddTime('${esc(ev)}')">+ Add Time</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">${ev} — Personal Bests</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddTime('${esc(ev)}')">+ Add PB</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div><div style="font-size:11px;color:var(--muted);">Best LCM</div><div style="font-size:22px;font-weight:800;color:var(--accent);">${bL?bL.lcm:'—'}</div></div>
-      <div><div style="font-size:11px;color:var(--muted);">Best SCM</div><div style="font-size:22px;font-weight:800;color:var(--purple);">${bS?bS.scm:'—'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">LCM (50m pool)</div>
+        <div style="font-size:24px;font-weight:900;color:var(--accent);">${bL&&bL.lcm!=='—'?bL.lcm:'—'}</div>
+        ${tgtLCM?`<div style="font-size:10px;color:var(--muted);margin-top:4px;">Target: ${tgtLCM}</div>
+        <span class="gap-pill ${gapClass(gapLCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapLCM)}</span>`:''}
+      </div>
+      <div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">SCM (25m pool)</div>
+        <div style="font-size:24px;font-weight:900;color:var(--purple);">${bS&&bS.scm!=='—'?bS.scm:'—'}</div>
+        ${tgtSCM?`<div style="font-size:10px;color:var(--muted);margin-top:4px;">Target: ${tgtSCM}</div>
+        <span class="gap-pill ${gapClass(gapSCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapSCM)}</span>`:''}
+      </div>
     </div>
-    ${tgt?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-size:13px;color:var(--muted);">Trials cut: <b style="color:var(--text)">${tgt}</b></span>
-      <span class="gap-pill ${gap===null?'gap-far':gap<=0?'gap-done':gap<=1?'gap-near':gap<=3?'gap-close':'gap-far'}">${gap===null?'No data':gap<=0?'✓ Cut':'-'+gap.toFixed(2)+'s'}</span>
-    </div>
-    <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;"><div style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:${gap?Math.max(5,Math.min(95,(1-gap/tSec(tgt)*8)*100)).toFixed(0):5}%;border-radius:4px;transition:width 0.4s;"></div></div>`:'<p style="font-size:12px;color:var(--muted);">No trials standard for this event.</p>'}
+    ${tgtLCM?`<div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px;"><div style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:${gapLCM?Math.max(5,Math.min(95,(1-gapLCM/tSec(tgtLCM)*8)*100)).toFixed(0):5}%;border-radius:4px;transition:width 0.4s;"></div></div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;">LCM progress to Trials standard</div>`:''}
   </div>`;
-  if(hist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression</div><div class="chart-wrap">${buildChart(hist,'lcm')}</div></div>`;
-  // Table
-  html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div class="card-title" style="margin-bottom:0;">Time Log</div><div style="display:flex;gap:6px;font-size:11px;color:var(--muted);"><span style="color:var(--accent)">SCM</span><span style="color:var(--purple)">LCM</span></div></div>`;
-  if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No times yet. Add your first entry.</p></div>`;
+  const lcmHist=hist.filter(e=>e.lcm&&e.lcm!=='—');
+  const scmHist=hist.filter(e=>e.scm&&e.scm!=='—');
+  if(lcmHist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression (50m pool)</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`;
+  if(scmHist.length>=2)html+=`<div class="card"><div class="card-title">SCM Progression (25m pool)</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`;
+  // Time log
+  html+=`<div class="card"><div class="card-title" style="margin-bottom:8px;">PB Log</div>`;
+  if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Add your first entry.</p></div>`;
   else html+=[...hist].reverse().map((e,ri)=>{
     const isBL=bL&&e.lcm===bL.lcm&&e.date===bL.date;
+    const isBs=bS&&e.scm===bS.scm&&e.date===bS.date;
     const d=new Date(e.date).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'});
+    const course=e.lcm!=='—'?'LCM':'SCM';
+    const time=e.lcm!=='—'?e.lcm:e.scm;
+    const isPB=e.lcm!=='—'?isBL:isBs;
+    const col=e.lcm!=='—'?'var(--accent)':'var(--purple)';
     return`<div class="time-entry-row">
       <div class="time-entry-date">${d}</div>
-      <div class="time-entry-meet">${e.meet||'—'}${isBL?'<span class="pb-badge">PB</span>':''}</div>
-      <div class="time-scm">${e.scm||'—'}</div>
-      <div class="time-lcm">${e.lcm||'—'}</div>
+      <div class="time-entry-meet">${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}</div>
+      <div style="font-size:10px;font-weight:700;color:${col};min-width:32px;text-align:center;">${course}</div>
+      <div style="font-size:14px;font-weight:800;color:${col};min-width:52px;text-align:right;">${time}</div>
       <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;" onclick="delTime('${esc(ev)}',${hist.length-1-ri})">✕</button>
     </div>`;
   }).join('');
   html+=`</div>`;
-  if(hist.length>=2){
-    const first=hist[0],last=hist[hist.length-1];
+  if(lcmHist.length>=2){
+    const first=lcmHist[0],last=lcmHist[lcmHist.length-1];
     const iL=tSec(first.lcm)-tSec(last.lcm);
-    const iS=tSec(first.scm)-tSec(last.scm);
     const mo=Math.max(1,Math.round((new Date(last.date)-new Date(first.date))/2592000000));
     const rate=iL/mo;
-    html+=`<div class="card"><div class="card-title">Analysis</div><div style="font-size:13px;color:var(--muted);line-height:1.9;">
-      ${iL>0?`<p>📉 LCM: <b style="color:var(--green)">-${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} (${rate.toFixed(2)}s/mo avg)</p>`:'<p>📊 LCM: No improvement logged yet.</p>'}
-      ${iS>0?`<p>📉 SCM: <b style="color:var(--purple)">-${iS.toFixed(2)}s</b></p>`:''}
-      ${gap&&gap>0&&rate>0?`<p>🎯 Trials cut in ~<b style="color:var(--gold)">${Math.ceil(gap/rate)} months</b> at current rate</p>`:''}
-      ${gap&&gap>0?`<p>💡 Dryland program is automatically adjusted to close this gap.</p>`:''}
+    html+=`<div class="card"><div class="card-title">LCM Analysis</div><div style="font-size:13px;color:var(--muted);line-height:1.9;">
+      ${iL>0?`<p>📉 Dropped <b style="color:var(--green)">${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} (${rate.toFixed(2)}s/mo)</p>`:'<p>📊 Add more entries to see improvement rate.</p>'}
+      ${gapLCM&&gapLCM>0&&rate>0?`<p>🎯 Trials cut in ~<b style="color:var(--gold)">${Math.ceil(gapLCM/rate)} months</b> at this rate</p>`:''}
+      ${gapLCM&&gapLCM>0?`<p>💡 Dryland program adjusted to close the gap faster.</p>`:''}
     </div></div>`;
   }
   document.getElementById('times-content').innerHTML=html;
@@ -796,14 +871,21 @@ function renderTimesContent(){
 function openAddTime(ev){
   document.getElementById('at-event').innerHTML=ALL_EVENTS.map(e=>`<option value="${e}"${e===ev?' selected':''}>${e}</option>`).join('');
   document.getElementById('at-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('at-scm').value='';document.getElementById('at-lcm').value='';document.getElementById('at-meet').value='';
+  document.getElementById('at-time').value='';document.getElementById('at-meet').value='';
+  document.getElementById('at-course').value='lcm';
   openModal('add-time-modal');
 }
 function saveTimeEntry(){
-  const ev=document.getElementById('at-event').value,meet=document.getElementById('at-meet').value.trim()||'—',date=document.getElementById('at-date').value,scm=document.getElementById('at-scm').value.trim(),lcm=document.getElementById('at-lcm').value.trim();
-  if(!date||(!scm&&!lcm))return alert('Enter at least one time and a date.');
+  const ev=document.getElementById('at-event').value;
+  const meet=document.getElementById('at-meet').value.trim()||'—';
+  const date=document.getElementById('at-date').value;
+  const course=document.getElementById('at-course').value;
+  const time=document.getElementById('at-time').value.trim();
+  if(!date||!time)return alert('Enter a time and date.');
   if(!S.timeHistory[ev])S.timeHistory[ev]=[];
-  S.timeHistory[ev].push({date,meet,scm:scm||'—',lcm:lcm||'—'});
+  const entry={date,meet,scm:'—',lcm:'—'};
+  entry[course]=time;
+  S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
   DB.set('timeHistory',S.timeHistory);closeModal('add-time-modal');S.activeTStroke=ev;renderStrokeTabs();renderTimesContent();
 }
@@ -814,8 +896,9 @@ function renderHome(){
   const h=new Date().getHours();
   document.getElementById('greeting').textContent=`${h<12?'Morning':h<17?'Afternoon':'Evening'}, let\'s go.`;
   const phase=getPhase(S.programWeek);
-  document.getElementById('phase-info').textContent=`Week ${S.programWeek} of 16 · ${phase.label}`;
-  document.getElementById('header-sub').textContent=`Wk ${S.programWeek} · ${phase.name}`;
+  const cycle=S.programCycle||1;
+  document.getElementById('phase-info').textContent=`Cycle ${cycle} · Week ${S.programWeek} of 16 · ${phase.label}`;
+  document.getElementById('header-sub').textContent=`C${cycle} Wk ${S.programWeek} · ${phase.name}`;
   const hist=S.history,wkS=new Date();wkS.setDate(wkS.getDate()-(wkS.getDay()||7)+1);wkS.setHours(0,0,0,0);
   document.getElementById('stat-week').textContent=hist.filter(h=>new Date(h.date)>=wkS).length;
   document.getElementById('stat-total').textContent=hist.length;
@@ -901,7 +984,22 @@ function toggleDay(t){S.editSel[t]=!S.editSel[t];renderDayGrid();}
 function setDry(t){S.editSel.dryland=true;S.editSel.drylandType=t;renderDayGrid();}
 function clearDay(){S.editSel={swim:false,dryland:false,rest:true};renderDayGrid();}
 function saveDayEdit(){S.daySchedule[S.editingDay]=S.editSel;DB.set('daySchedule',S.daySchedule);closeModal('day-modal');renderCalendar();}
-function saveSwimPhase(){S.swimPhase=document.getElementById('swim-phase-select').value;DB.set('swimPhase',S.swimPhase);}
+function saveSwimPhase(){
+  S.swimPhase=document.getElementById('swim-phase-select').value;
+  DB.set('swimPhase',S.swimPhase);
+  updatePhaseImpact();
+}
+function updatePhaseImpact(){
+  const el=document.getElementById('phase-impact-text');if(!el)return;
+  const msgs={
+    base:'High pool volume → dryland focuses on strength foundation and mobility. Lower intensity lifting to avoid overreach.',
+    threshold:'Moderate-hard pool load → dryland maintains strength with controlled volume. Prioritise recovery between sessions.',
+    sprint:'Low pool volume, max intensity → dryland can push harder. Power and plyometric emphasis this block.',
+    taper:'Swim taper active → dryland switches to mobility, activation, and nervous system priming only. No heavy lifting.',
+    rest:'Recovery week → dryland is active recovery only: light movement, stretching, foam rolling.'
+  };
+  el.textContent=msgs[S.swimPhase]||'';
+}
 function addMeet(){
   const date=document.getElementById('meet-date-input').value,name=document.getElementById('meet-name-input').value.trim(),priority=document.getElementById('meet-priority-input').value;
   if(!date||!name)return alert('Enter date and name.');
@@ -934,29 +1032,47 @@ function calcNutrition(){
   const htRaw=document.getElementById('height-input').value;
   const htCm=S.useKg?parseFloat(htRaw):ftInToCm(htRaw);
   let wt=parseFloat(document.getElementById('weight-input').value);
-  const age=parseInt(document.getElementById('age-input').value)||16,dayType=document.getElementById('training-day-select').value;
+  const age=parseInt(document.getElementById('age-input').value)||16;
+  const dayType=document.getElementById('training-day-select').value;
+  const sex=document.getElementById('sex-select').value;
   if(!htCm||!wt)return alert('Enter height and weight.');
-  const wtKg=S.useKg?wt:wt/2.205,bmr=10*wtKg+6.25*htCm-5*age+5;
-  const mults={swim_dryland:2.0,swim_only:1.75,dryland_only:1.6,active_recovery:1.4,rest:1.3};
-  const target=Math.round(bmr*mults[dayType]*(dayType==='rest'?1:1.05));
-  const protein=Math.round(wtKg*2.2),fat=Math.round(wtKg*1.2),carbs=Math.max(0,Math.round((target-protein*4-fat*9)/4));
-  S.bodyStats={ht:htCm,wtKg,age,dayType,target,protein,carbs,fat,updated:new Date().toISOString()};
+  const wtKg=S.useKg?wt:wt/2.205;
+  // Mifflin-St Jeor BMR
+  const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
+  // Activity multipliers calibrated for competitive swimmers (pool + dryland combined load)
+  const mults={swim_dryland:2.3,swim_only:1.9,dryland_only:1.7,active_recovery:1.4,rest:1.3};
+  const target=Math.round(bmr*mults[dayType]);
+  // Swimmer-specific macros: high protein for muscle repair, high carbs for glycogen
+  const protein=Math.round(wtKg*2.4); // 2.4g/kg — elevated for adolescent strength athlete
+  const fat=Math.round(wtKg*1.1);
+  const carbs=Math.max(0,Math.round((target-protein*4-fat*9)/4));
+  // Water: base 35ml/kg + 500ml per hour of training
+  const trainHours={swim_dryland:2.5,swim_only:1.5,dryland_only:1.5,active_recovery:0.5,rest:0}[dayType];
+  const waterMl=Math.round(wtKg*35+trainHours*500);
+  const waterL=(waterMl/1000).toFixed(1);
+  S.bodyStats={ht:htCm,wtKg,age,sex,dayType,target,protein,carbs,fat,waterL,updated:new Date().toISOString()};
   S.lastStatsUpdate=new Date().toISOString();DB.set('bodyStats',S.bodyStats);DB.set('lastStatsUpdate',S.lastStatsUpdate);
   const dl={swim_dryland:'Swim + Dryland',swim_only:'Swim only',dryland_only:'Dryland only',active_recovery:'Active recovery',rest:'Rest day'};
+  const wtDisp=S.useKg?wtKg.toFixed(1)+'kg':(wtKg*2.205).toFixed(1)+'lbs';
   document.getElementById('nutrition-output').innerHTML=`<div class="card">
-    <div class="card-title">Daily Target — ${dl[dayType]}</div>
-    <div style="text-align:center;font-size:42px;font-weight:900;color:var(--green);">${target.toLocaleString()}</div>
-    <div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:12px;">calories · ${S.useKg?wtKg.toFixed(1)+'kg':(wtKg*2.205).toFixed(1)+'lbs'}</div>
+    <div class="card-title">Nutrition Plan — ${dl[dayType]}</div>
+    <div style="text-align:center;font-size:48px;font-weight:900;color:var(--green);line-height:1;">${target.toLocaleString()}</div>
+    <div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:16px;">calories · ${wtDisp} · BMR ${Math.round(bmr)} kcal</div>
     <div class="macro-grid">
       <div class="macro-box"><div class="macro-val macro-carb">${carbs}g</div><div class="macro-lbl">Carbs</div></div>
       <div class="macro-box"><div class="macro-val macro-prot">${protein}g</div><div class="macro-lbl">Protein</div></div>
       <div class="macro-box"><div class="macro-val macro-fat">${fat}g</div><div class="macro-lbl">Fat</div></div>
     </div>
-    <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">
-      <p>🍗 Protein: ${Math.round(protein/3)}g per meal across 3 meals</p>
-      <p>🍚 Carbs: ${carbs}g — front-load around training sessions</p>
-      <p>🥑 Fat: ${fat}g — nuts, salmon, avocado, olive oil</p>
-      <p style="margin-top:6px;color:var(--gold);">⚠️ Update every 2 weeks. Bodies change fast at 16 in heavy training.</p>
+    <div style="margin-top:12px;background:var(--surface);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:28px;">💧</div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--accent);">${waterL}L</div><div style="font-size:11px;color:var(--muted);">Water target · sip throughout, not all at once</div></div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.8;">
+      <p>🍗 Protein: ${Math.round(protein/4)}g per meal across 4 meals — prioritise post-training</p>
+      <p>🍚 Carbs: ${carbs}g — front-load before and after training sessions</p>
+      <p>🥑 Fat: ${fat}g — salmon, nuts, avocado, olive oil</p>
+      <p>🌙 Before bed: cottage cheese or Greek yogurt for overnight recovery</p>
+      <p style="margin-top:8px;color:var(--gold);">⚠️ Recalculate every 2 weeks — weight and training load changes.</p>
     </div>
   </div>`;
 }
@@ -967,6 +1083,8 @@ function renderNutrition(){
   if(S.bodyStats){
     document.getElementById('weight-input').value=S.useKg?S.bodyStats.wtKg.toFixed(1):(S.bodyStats.wtKg*2.205).toFixed(1);
     document.getElementById('age-input').value=S.bodyStats.age||16;
+    if(S.bodyStats.sex)document.getElementById('sex-select').value=S.bodyStats.sex;
+    if(S.bodyStats.dayType)document.getElementById('training-day-select').value=S.bodyStats.dayType;
     const days=Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000);
     document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
     calcNutrition();
@@ -983,6 +1101,26 @@ function renderHistory(){
 }
 function renderProgramTargets(){
   document.getElementById('week-display').textContent=S.programWeek;
+  document.getElementById('cycle-display').textContent=S.programCycle||1;
+  const c=S.programCycle||1;
+  const blocks=[
+    {name:'GPP',weeks:c===1?'1–4':c===2?'1–2':'1–2',cls:'phase-gpp',desc:'Movement quality, mobility, base conditioning. Builds the foundation everything else sits on.'},
+    {name:'Strength',weeks:c===1?'5–8':c===2?'3–7':'3–6',cls:'phase-strength',desc:'Progressive overload on compound lifts. Squat, hinge, push, pull patterns. Volume is king here.'},
+    {name:'Power',weeks:c===1?'9–12':c===2?'8–12':'7–13',cls:'phase-power',desc:'Convert strength to explosive power. Plyometrics, Olympic lift variations, sprint work.'},
+    {name:'Taper',weeks:c===1?'13–16':c===2?'13–16':'14–16',cls:'phase-taper',desc:'Reduce volume, maintain intensity. CNS freshening. Peak for the competition target.'},
+  ];
+  const curPhase=getPhase(S.programWeek);
+  document.getElementById('periodization-block').innerHTML=`
+    <div class="card-title">16-Week Cycle ${c} Structure</div>
+    ${blocks.map(b=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span class="phase-badge ${b.cls}" style="margin:0;flex-shrink:0;margin-top:2px;">${b.name}</span>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);">Weeks ${b.weeks}${curPhase.name===b.name?' <span style="color:var(--gold)">← You are here</span>':''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">${b.desc}</div>
+      </div>
+    </div>`).join('')}
+    ${c>1?`<div style="margin-top:8px;font-size:11px;color:var(--gold);padding:6px 8px;background:rgba(245,200,66,0.08);border-radius:6px;">Cycle ${c}: Program has progressed — loads, volumes and complexity are higher than Cycle 1.</div>`:''}
+  `;
   document.getElementById('program-targets').innerHTML=PRIMARY.map(ev=>{
     const best=getBest(ev,'lcm'),tgt=TRIALS[ev];
     const gap=best&&tgt?gapSec(best.lcm,tgt):null;
@@ -994,7 +1132,13 @@ function renderProgramTargets(){
     </div>`;
   }).join('');
 }
-function adjustWeek(d){S.programWeek=Math.max(1,Math.min(16,S.programWeek+d));DB.set('programWeek',S.programWeek);document.getElementById('week-display').textContent=S.programWeek;renderHome();}
+function adjustWeek(d){
+  S.programWeek=Math.max(1,Math.min(16,S.programWeek+d));
+  DB.set('programWeek',S.programWeek);
+  document.getElementById('week-display').textContent=S.programWeek;
+  document.getElementById('cycle-display').textContent=S.programCycle||1;
+  renderHome();
+}
 function confirmReset(){if(confirm('Delete ALL data? Export a backup first!')){localStorage.clear();location.reload();}}
 
 // ── Backup & Restore ──
@@ -1006,6 +1150,7 @@ function exportData(){
     history:S.history,
     weightLog:S.weightLog,
     programWeek:S.programWeek,
+    programCycle:S.programCycle,
     daySchedule:S.daySchedule,
     meets:S.meets,
     swimPhase:S.swimPhase,
@@ -1036,6 +1181,7 @@ function importData(event){
       if(data.history)DB.set('history',data.history);
       if(data.weightLog)DB.set('weightLog',data.weightLog);
       if(data.programWeek)DB.set('programWeek',data.programWeek);
+      if(data.programCycle)DB.set('programCycle',data.programCycle);
       if(data.daySchedule)DB.set('daySchedule',data.daySchedule);
       if(data.meets)DB.set('meets',data.meets);
       if(data.swimPhase)DB.set('swimPhase',data.swimPhase);
@@ -1072,7 +1218,7 @@ function showSection(name){
   document.getElementById('unit-btn').style.display=(name==='workout'||name==='fuel')?'':'none';
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
-  if(name==='schedule'){renderCalendar();document.getElementById('swim-phase-select').value=S.swimPhase;}
+  if(name==='schedule'){renderCalendar();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();}
 }
