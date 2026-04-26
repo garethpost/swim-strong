@@ -126,6 +126,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
 .form-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
 .form-row input,.form-row select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);}
 .form-row input::placeholder{color:var(--muted);opacity:0.5;}
+.form-row input[type="date"]{-webkit-appearance:none;appearance:none;font-size:14px;padding:10px 8px;min-height:45px;box-sizing:border-box;}
 .form-grid{display:grid;grid-template-columns:1fr;gap:10px;}
 .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .wh-entry{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
@@ -249,8 +250,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
           <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
           <div class="form-grid-2">
-            <div class="form-row"><label>Start Date</label><input type="text" id="meet-date-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
-            <div class="form-row"><label>End Date</label><input type="text" id="meet-end-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+            <div class="form-row"><label>Start Date</label><input type="date" id="meet-date-input"></div>
+            <div class="form-row"><label>End Date</label><input type="date" id="meet-end-input"></div>
           </div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
@@ -268,8 +269,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div class="card-title">Season Template</div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your weekly training pattern and season dates. The calendar fills automatically. Tap any day to override.</p>
         <div class="form-grid-2">
-          <div class="form-row"><label>Season Start</label><input type="text" id="season-start-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
-          <div class="form-row"><label>Season End</label><input type="text" id="season-end-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+          <div class="form-row"><label>Season Start</label><input type="date" id="season-start-input"></div>
+          <div class="form-row"><label>Season End</label><input type="date" id="season-end-input"></div>
         </div>
         <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weekly Pattern</p>
         <div id="template-grid" style="display:grid;gap:6px;"></div>
@@ -1169,8 +1170,6 @@ function addMeet(){
   const name=document.getElementById('meet-name-input').value.trim();
   const priority=document.getElementById('meet-priority-input').value;
   if(!date||!name)return alert('Enter start date and meet name.');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Start date must be YYYY-MM-DD');
-  if(endDate&&!/^\d{4}-\d{2}-\d{2}$/.test(endDate))return alert('End date must be YYYY-MM-DD');
   S.meets.push({date,endDate:endDate||date,name,priority,id:Date.now()});
   S.meets.sort((a,b)=>new Date(a.date)-new Date(b.date));
   DB.set('meets',S.meets);
@@ -1258,7 +1257,6 @@ function applySeasonTemplate(){
   const ss=document.getElementById('season-start-input').value.trim();
   const se=document.getElementById('season-end-input').value.trim();
   if(!ss||!se)return alert('Enter season start and end dates.');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(ss)||!/^\d{4}-\d{2}-\d{2}$/.test(se))return alert('Dates must be YYYY-MM-DD');
   S.seasonTemplate.start=ss;S.seasonTemplate.end=se;
   DB.set('seasonTemplate',S.seasonTemplate);
   // Remove all template-sourced entries that aren't manual overrides
