@@ -285,6 +285,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
           <div class="form-row"><label>Sex</label>
             <select id="sex-select">
+              <option value="" disabled selected>Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
@@ -447,8 +448,8 @@ function toggleUnits(){
   DB.set('useKg',S.useKg);
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  updateHeightField();
-  // Never restore weight from bodyStats when toggling units — field stays blank
+  // Rebuild fuel tab inputs for correct height unit
+  if(document.getElementById('athlete-profile-fields'))renderNutrition();
 }
 document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
 document.getElementById('unit-btn').style.display='none';
@@ -1139,7 +1140,7 @@ function calcNutrition(){
   let wt=parseFloat(document.getElementById('weight-input').value);
   const age=parseInt(document.getElementById('age-input').value)||16;
   const sex=document.getElementById('sex-select').value;
-  if(!htCm||!wt||!age)return alert('Enter height, weight and age.');
+  if(!htCm||!wt||!age||!sex)return alert('Enter height, weight, age and sex.');
   const wtKg=S.useKg?wt:wt/2.205;
   // Mifflin-St Jeor BMR (sex-specific)
   const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
@@ -1254,6 +1255,8 @@ function renderNutrition(){
   // Age field
   const aw=document.getElementById('age-field-wrap');
   if(aw){aw.innerHTML='';aw.appendChild(makeInput('age-input','number','',{min:14,max:25}));}
+  // Reset sex dropdown to blank
+  const sx=document.getElementById('sex-select');if(sx)sx.value='';
   // Delay clear to fire after iOS Safari autofill
   setTimeout(()=>{
     ['height-cm-input','height-ft-input','height-in-input','weight-input','age-input'].forEach(id=>{
