@@ -1249,6 +1249,12 @@ function renderNutrition(){
   // Age field
   const aw=document.getElementById('age-field-wrap');
   if(aw){aw.innerHTML='';aw.appendChild(makeInput('age-input','number','16',{min:14,max:25}));}
+  // Delay clear to fire after iOS Safari autofill
+  setTimeout(()=>{
+    ['height-cm-input','height-ft-input','height-in-input','weight-input','age-input'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value='';
+    });
+  },300);
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
   document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
