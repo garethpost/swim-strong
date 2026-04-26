@@ -241,8 +241,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
-          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="font-size:14px;padding:10px 8px;"></div>
+            <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          </div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -283,7 +285,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div class="form-row"><label>Weight (<span class="unit-label">kg</span>)</label><input type="number" id="weight-input" placeholder="72" step="0.5"></div>
         <div class="form-grid-2">
-          <div class="form-row"><label>Age</label><input type="number" id="age-input" value="16" min="14" max="25"></div>
+          <div class="form-row"><label>Age</label><input type="number" id="age-input" placeholder="16" min="14" max="25"></div>
           <div class="form-row"><label>Sex</label>
             <select id="sex-select">
               <option value="male">Male</option>
@@ -1196,7 +1198,12 @@ function calcNutrition(){
 
   const dl={swim_dryland:'Swim + Dryland',swim_only:'Swim only',dryland_only:'Dryland only',active_recovery:'Active recovery',rest:'Rest day'};
   const wtDisp=S.useKg?wtKg.toFixed(1)+'kg':Math.round(wtKg*2.205)+'lbs';
-  const htDisp=S.useKg?htCm+'cm':(()=>{const totalIn=htCm/2.54;return Math.floor(totalIn/12)+"'"+Math.floor(totalIn%12)+'"';})();
+  // Read display height directly from the input fields to avoid rounding drift
+  const htDisp=S.useKg?htCm+'cm':(()=>{
+    const ft=parseInt(document.getElementById('height-ft-input').value)||0;
+    const inch=parseInt(document.getElementById('height-in-input').value)||0;
+    return ft+"'"+inch+'"';
+  })();
   document.getElementById('nutrition-output').innerHTML=`<div class="card">
     <div class="card-title">Nutrition Plan — ${dl[dayType]}</div>
     <div style="text-align:center;font-size:52px;font-weight:900;color:var(--green);line-height:1;">${target.toLocaleString()}</div>
@@ -1225,14 +1232,23 @@ function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   updateHeightField();
-  if(S.bodyStats){
+  if(S.bodyStats&&S.bodyStats.wtKg&&S.bodyStats.ht){
+    // Restore saved profile values
     document.getElementById('weight-input').value=S.useKg?S.bodyStats.wtKg.toFixed(1):Math.round(S.bodyStats.wtKg*2.205);
-    document.getElementById('age-input').value=S.bodyStats.age||16;
+    if(S.bodyStats.age)document.getElementById('age-input').value=S.bodyStats.age;
     if(S.bodyStats.sex)document.getElementById('sex-select').value=S.bodyStats.sex;
     if(S.bodyStats.dayType)document.getElementById('training-day-select').value=S.bodyStats.dayType;
-    const days=Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000);
+    const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):0;
     document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
+    // Only auto-calc if we have all required fields
     calcNutrition();
+  } else {
+    // No saved data — show empty state prompt
+    document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
+      <div style="font-size:32px;margin-bottom:8px;">🍽️</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Fill in your profile below</div>
+      <div style="font-size:13px;color:var(--muted);">Enter your height, weight, age and sex to get your personalised nutrition plan.</div>
+    </div>`;
   }
 }
 
