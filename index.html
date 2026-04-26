@@ -241,10 +241,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-grid-2">
-            <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="font-size:14px;padding:10px 8px;"></div>
-            <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
-          </div>
+          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
+          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -481,7 +479,7 @@ function esc(s){return(s||'').replace(/'/g,"\\'");}
 function tSec(t){if(!t||t==='n/a'||t===''||t==='—')return Infinity;t=t.trim();if(t.includes(':')){const[m,s]=t.split(':');return parseInt(m)*60+parseFloat(s);}return parseFloat(t);}
 function secDisp(s){if(s===Infinity)return'—';if(s<60)return s.toFixed(2);const m=Math.floor(s/60),r=(s%60).toFixed(2).padStart(5,'0');return`${m}:${r}`;}
 function gapSec(curr,tgt){const c=tSec(curr),t=tSec(tgt);if(c===Infinity||t===Infinity)return null;return c-t;}
-function dKey(d){return d.toISOString().split('T')[0];}
+function dKey(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${dd}`;}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
@@ -1232,22 +1230,28 @@ function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   updateHeightField();
-  if(S.bodyStats&&S.bodyStats.wtKg&&S.bodyStats.ht){
-    // Restore saved profile values
+  // Check if fields already have user-entered values (don't overwrite mid-session)
+  const wtEl=document.getElementById('weight-input');
+  const alreadyFilled=wtEl&&wtEl.value!=='';
+  if(!alreadyFilled&&S.bodyStats&&S.bodyStats.wtKg&&S.bodyStats.ht){
+    // Only restore if the tab hasn't been filled this session
     document.getElementById('weight-input').value=S.useKg?S.bodyStats.wtKg.toFixed(1):Math.round(S.bodyStats.wtKg*2.205);
     if(S.bodyStats.age)document.getElementById('age-input').value=S.bodyStats.age;
     if(S.bodyStats.sex)document.getElementById('sex-select').value=S.bodyStats.sex;
     if(S.bodyStats.dayType)document.getElementById('training-day-select').value=S.bodyStats.dayType;
-    const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):0;
-    document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
-    // Only auto-calc if we have all required fields
+    updateHeightField();
+  }
+  // Show update badge if stale
+  const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):0;
+  document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
+  // Show output if we have a previous calculation, otherwise prompt
+  if(S.bodyStats&&S.bodyStats.target){
     calcNutrition();
   } else {
-    // No saved data — show empty state prompt
     document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
       <div style="font-size:32px;margin-bottom:8px;">🍽️</div>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Fill in your profile below</div>
-      <div style="font-size:13px;color:var(--muted);">Enter your height, weight, age and sex to get your personalised nutrition plan.</div>
+      <div style="font-size:13px;color:var(--muted);">Enter your height, weight, age and sex, then tap Calculate.</div>
     </div>`;
   }
 }
@@ -1384,7 +1388,13 @@ function showSection(name){
   if(name==='more'){renderHistory();renderProgramTargets();}
 }
 
-// INIT
+// INIT — version gate: clear stale bodyStats so fuel tab starts blank
+const APP_VER='v4';
+if(DB.get('appVer','')!==APP_VER){
+  DB.set('bodyStats',null);
+  S.bodyStats=null;
+  DB.set('appVer',APP_VER);
+}
 renderHome();
 </script>
 </body>
