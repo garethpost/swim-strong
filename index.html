@@ -240,26 +240,49 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <span><span class="cal-dot dot-taper"></span> Taper wk</span>
         </div>
       </div>
+
+      <!-- MEETS -->
       <div class="card">
         <div class="card-title">Upcoming Meets</div>
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Date</label><input type="text" id="meet-date-input" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" inputmode="numeric"></div>
           <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Start Date</label><input type="text" id="meet-date-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+            <div class="form-row"><label>End Date</label><input type="text" id="meet-end-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+          </div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
-              <option value="A">A Meet — Dryland taper 7 days prior</option>
-              <option value="B">B Meet — Dryland taper 4 days prior</option>
-              <option value="C">C Meet — No dryland change</option>
+              <option value="A">A Meet — Taper 7 days</option>
+              <option value="B">B Meet — Taper 4 days</option>
+              <option value="C">C Meet — No taper</option>
             </select>
           </div>
           <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
         </div>
       </div>
+
+      <!-- SEASON TEMPLATE -->
+      <div class="card">
+        <div class="card-title">Season Template</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your weekly training pattern and season dates. The calendar fills automatically. Tap any day to override.</p>
+        <div class="form-grid-2">
+          <div class="form-row"><label>Season Start</label><input type="text" id="season-start-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+          <div class="form-row"><label>Season End</label><input type="text" id="season-end-input" placeholder="YYYY-MM-DD" inputmode="numeric"></div>
+        </div>
+        <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weekly Pattern</p>
+        <div id="template-grid" style="display:grid;gap:6px;"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="applySeasonTemplate()">Apply to Season</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearSeasonTemplate()">Clear All</button>
+        </div>
+      </div>
+
+      <!-- POOL LOAD PHASE -->
       <div class="card">
         <div class="card-title">Pool Load Phase</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Update monthly when the coach releases the new training block. This tells the dryland engine how hard pool sessions are so it can balance the load.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Update monthly when the coach releases the new block.</p>
         <select id="swim-phase-select" onchange="saveSwimPhase()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:14px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
           <option value="base">🏗️ Base Building — High volume, easy pace</option>
           <option value="threshold">⚡ Threshold / Aerobic — Moderate-hard sets</option>
@@ -380,7 +403,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div style="margin-top:16px;display:flex;gap:8px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveDayEdit()">Save</button>
   <button class="btn-ghost" style="flex:1" onclick="closeModal('day-modal')">Cancel</button>
-</div></div></div>
+</div>
+<div style="margin-top:8px;" id="reset-template-row" style="display:none;">
+  <button class="btn btn-secondary" style="width:100%;font-size:13px;" onclick="resetDayToTemplate()">↩ Reset to template</button>
+</div>
+</div></div>
 <div class="modal-overlay" id="wh-modal"><div class="modal"><div class="modal-handle"></div><h3 id="wh-modal-title" style="font-size:17px;margin-bottom:12px;"></h3><div id="wh-modal-content"></div><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('wh-modal')">Close</button></div></div></div>
 <div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add PB Entry</h3><div class="form-row"><label>Event</label><select id="at-event"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-grid-2"><div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div><div class="form-row"><label>Course</label><select id="at-course"><option value="scm">SCM (25m pool)</option><option value="lcm">LCM (50m pool)</option></select></div></div><div class="form-row"><label>Time (mm:ss.00 or ss.00)</label><input type="text" id="at-time" placeholder="24.50"></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save PB</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
 <script>
@@ -405,6 +432,7 @@ let S={
   daySchedule:DB.get('daySchedule',{}),
   meets:DB.get('meets',[]),
   swimPhase:DB.get('swimPhase','sprint'),
+  seasonTemplate:DB.get('seasonTemplate',{start:'',end:'',days:{}}),
   bodyStats:DB.get('bodyStats',null),
   lastStatsUpdate:DB.get('lastStatsUpdate',null),
   calYear:new Date().getFullYear(),
@@ -948,6 +976,21 @@ document.getElementById('sleep-slider').value=S.sleep;document.getElementById('r
 // ── Schedule / Calendar ──
 function goToToday(){S.calYear=new Date().getFullYear();S.calMonth=new Date().getMonth();renderCalendar();}
 function changeMonth(d){S.calMonth+=d;if(S.calMonth>11){S.calMonth=0;S.calYear++;}if(S.calMonth<0){S.calMonth=11;S.calYear--;}renderCalendar();}
+function isMeetDay(dt){
+  return S.meets.some(m=>{
+    const ms=localDate(m.date);
+    const me=m.endDate?localDate(m.endDate):ms;
+    return dt>=ms&&dt<=me;
+  });
+}
+function isTaperDay(dt){
+  return S.meets.some(m=>{
+    const ms=localDate(m.date);
+    const td=getTaperDays(m);
+    const dO=Math.round((ms-dt)/86400000);
+    return dO>0&&dO<=td;
+  });
+}
 function renderCalendar(){
   const yr=S.calYear,mo=S.calMonth;
   document.getElementById('sched-month-label').textContent=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})+' — tap any day to edit';
@@ -958,22 +1001,34 @@ function renderCalendar(){
   for(let i=0;i<first;i++)html+=`<div class="cal-day empty"></div>`;
   for(let d=1;d<=days;d++){
     const dt=new Date(yr,mo,d);dt.setHours(0,0,0,0);
-    const key=dKey(dt),sch=S.daySchedule[key]||{};
+    const key=dKey(dt);
+    const sch=S.daySchedule[key]||{};
     const isToday=dt.getTime()===today.getTime();
-    const hasMeet=S.meets.some(m=>{const md=localDate(m.date);return md.getTime()===dt.getTime();});
-    const isTaperDay=S.meets.some(m=>{const md=localDate(m.date);const dO=Math.round((md-dt)/86400000);return dO>0&&dO<=getTaperDays(m);});
-    const sessions=sch.sessions||[];
-    const hasSwim=sessions.some(s=>s.startsWith('swim'))||sch.swim;
-    const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest')||sch.dryland;
-    const swimCount=sessions.filter(s=>s.startsWith('swim')).length||(sch.swim?1:0);
+    const hasMeet=isMeetDay(dt);
+    const taperDay=!hasMeet&&isTaperDay(dt);
+    // Get sessions — manual override takes priority, else check template
+    let sessions=sch.sessions||[];
+    const isOverride=sch.override===true;
+    const isRemoved=sch.removed===true;
+    if(!isOverride&&!isRemoved&&!sessions.length){
+      // Check season template for this day of week
+      const dow=dt.getDay();
+      const tmpl=S.seasonTemplate||{};
+      if(tmpl.start&&tmpl.end){
+        const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+        if(dt>=ss&&dt<=se){sessions=tmpl.days[dow]||[];}
+      }
+    }
+    const hasSwim=sessions.some(s=>s.startsWith('swim'));
+    const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
+    const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
     let dots='';
-    if(swimCount>=2)dots+=`<span class="cal-dot dot-swim"></span><span class="cal-dot dot-swim" style="opacity:0.6;"></span>`;
+    if(swimCount>=2)dots+=`<span class="cal-dot dot-swim"></span><span class="cal-dot dot-swim" style="opacity:0.5;"></span>`;
     else if(hasSwim)dots+=`<span class="cal-dot dot-swim"></span>`;
     if(hasDry)dots+=`<span class="cal-dot dot-dryland"></span>`;
     if(hasMeet)dots+=`<span class="cal-dot dot-meet"></span>`;
-    if(isTaperDay&&!hasMeet)dots+=`<span class="cal-dot dot-taper"></span>`;
-    if(!hasSwim&&!hasDry&&!hasMeet)dots+=`<span class="cal-dot dot-rest"></span>`;
-    html+=`<div class="cal-day${isToday?' today-cal':''}${hasMeet?' has-meet':''}" onclick="editDay('${key}',${d})"><div class="cal-day-num">${d}</div><div class="cal-dots">${dots}</div></div>`;
+    if(taperDay)dots+=`<span class="cal-dot dot-taper"></span>`;
+    html+=`<div class="cal-day${isToday?' today-cal':''}${hasMeet?' has-meet':''}${isRemoved?' removed-day':''}" onclick="editDay('${key}',${d})"><div class="cal-day-num">${d}</div><div class="cal-dots">${dots}</div></div>`;
   }
   document.getElementById('month-cal').innerHTML=html;
   renderMeets();
@@ -1032,14 +1087,26 @@ function editDay(key,d){
   const sch=S.daySchedule[key]||{};
   const dt=localDate(key);
   document.getElementById('day-modal-title').textContent=dt.toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
-  // Migrate old format
+  // Get effective sessions — manual override or template
   let sessions=sch.sessions||[];
   if(!sessions.length&&(sch.swim||sch.dryland||sch.rest)){
     if(sch.swim)sessions.push('swim_am');
     if(sch.dryland)sessions.push('dry_'+(sch.drylandType||'lower'));
     if(sch.rest&&!sessions.length)sessions.push('dry_rest');
   }
+  // If no manual override, show template sessions
+  if(!sch.override){
+    const dow=dt.getDay();
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){
+      const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+      if(dt>=ss&&dt<=se)sessions=[...(tmpl.days[dow]||[])];
+    }
+  }
   S.editSel={sessions:[...sessions]};
+  // Show reset button only if this day has a manual override
+  const resetRow=document.getElementById('reset-template-row');
+  if(resetRow)resetRow.style.display=sch.override?'':'none';
   renderDayGrid();openModal('day-modal');
 }
 function renderDayGrid(){
@@ -1066,12 +1133,18 @@ function saveDayEdit(){
   const s=S.editSel.sessions;
   S.daySchedule[S.editingDay]={
     sessions:s,
-    // Legacy compatibility flags
+    override:true, // marks this day as manually set — won't be overwritten by template
+    removed:s.length===0, // no sessions = day cleared/removed
     swim:s.some(x=>x.startsWith('swim')),
     dryland:s.some(x=>x.startsWith('dry_')&&x!=='dry_rest'),
     drylandType:s.find(x=>x.startsWith('dry_')&&x!=='dry_rest')?.replace('dry_','')||'',
     rest:s.includes('dry_rest')||s.length===0,
   };
+  DB.set('daySchedule',S.daySchedule);closeModal('day-modal');renderCalendar();
+}
+function resetDayToTemplate(){
+  // Remove override so template takes over again
+  delete S.daySchedule[S.editingDay];
   DB.set('daySchedule',S.daySchedule);closeModal('day-modal');renderCalendar();
 }
 function saveSwimPhase(){
@@ -1091,31 +1164,113 @@ function updatePhaseImpact(){
   el.textContent=msgs[S.swimPhase]||'';
 }
 function addMeet(){
-  const date=document.getElementById('meet-date-input').value,name=document.getElementById('meet-name-input').value.trim(),priority=document.getElementById('meet-priority-input').value;
-  if(!date||!name)return alert('Enter date (YYYY-MM-DD) and meet name.');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Date must be in format YYYY-MM-DD, e.g. 2026-08-15');
-  S.meets.push({date,name,priority,id:Date.now()});S.meets.sort((a,b)=>new Date(a.date)-new Date(b.date));DB.set('meets',S.meets);
-  document.getElementById('meet-date-input').value='';document.getElementById('meet-name-input').value='';
+  const date=document.getElementById('meet-date-input').value.trim();
+  const endDate=document.getElementById('meet-end-input').value.trim();
+  const name=document.getElementById('meet-name-input').value.trim();
+  const priority=document.getElementById('meet-priority-input').value;
+  if(!date||!name)return alert('Enter start date and meet name.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Start date must be YYYY-MM-DD');
+  if(endDate&&!/^\d{4}-\d{2}-\d{2}$/.test(endDate))return alert('End date must be YYYY-MM-DD');
+  S.meets.push({date,endDate:endDate||date,name,priority,id:Date.now()});
+  S.meets.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  DB.set('meets',S.meets);
+  document.getElementById('meet-date-input').value='';
+  document.getElementById('meet-end-input').value='';
+  document.getElementById('meet-name-input').value='';
   renderMeets();renderCalendar();
 }
 function deleteMeet(id){S.meets=S.meets.filter(m=>m.id!==id);DB.set('meets',S.meets);renderMeets();renderCalendar();}
 function renderMeets(){
-  const el=document.getElementById('meets-list');if(!S.meets.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:8px 0;">No meets added.</p>';return;}
+  const el=document.getElementById('meets-list');
   const today=new Date();today.setHours(0,0,0,0);
-  el.innerHTML=S.meets.map(m=>{
-    const md=localDate(m.date);
-    const dO=Math.round((md-today)/86400000),td=getTaperDays(m);
-    const dStr=md.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-    const cd=dO<0?'Completed':dO===0?'<b style="color:var(--gold)">TODAY</b>':`${dO}d away`;
-    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;">
+  const upcoming=S.meets.filter(m=>!m.endDate||localDate(m.endDate||m.date)>=today);
+  const past=S.meets.filter(m=>m.endDate?localDate(m.endDate)<today:localDate(m.date)<today);
+  if(!S.meets.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:8px 0;">No meets added.</p>';return;}
+  const renderMeet=(m,isPast)=>{
+    const ms=localDate(m.date);
+    const me=m.endDate&&m.endDate!==m.date?localDate(m.endDate):null;
+    const dO=Math.round((ms-today)/86400000);
+    const td=getTaperDays(m);
+    const startStr=ms.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+    const endStr=me?'–'+me.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):ms.toLocaleDateString('en-CA',{year:'numeric'});
+    const dateStr=startStr+' '+endStr;
+    const multiDay=me&&me.getTime()!==ms.getTime();
+    let countdown='';
+    if(isPast){countdown='<span style="color:var(--muted)">Completed</span>';}
+    else if(dO===0){countdown='<span style="color:var(--gold);font-weight:700;">🏁 TODAY</span>';}
+    else if(dO<0){countdown='<span style="color:var(--accent)">🏊 In progress</span>';}
+    else{
+      const wks=Math.floor(dO/7),days=dO%7;
+      const parts=[];if(wks)parts.push(wks+'w');if(days||!wks)parts.push(days+'d');
+      countdown=`<span style="color:var(--green);font-weight:700;">${parts.join(' ')} away</span>`;
+    }
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;opacity:${isPast?0.5:1};">
       <div style="flex:1;">
-        <div style="font-size:14px;font-weight:600;">${m.name}</div>
-        <div style="font-size:11px;color:var(--muted);">${m.priority==='A'?'🏆 A':m.priority==='B'?'🥈 B':'🏅 C'} Meet · ${dStr} · ${cd}</div>
-        ${td>0?`<div style="font-size:11px;color:var(--orange);">⚡ Dryland taper starts ${td}d before</div>`:''}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span style="font-size:14px;font-weight:700;">${m.name}</span>
+          <span style="font-size:10px;background:${m.priority==='A'?'var(--gold)':m.priority==='B'?'var(--muted)':'var(--border)'};color:var(--bg);padding:1px 6px;border-radius:6px;font-weight:700;">${m.priority}</span>
+          ${multiDay?'<span style="font-size:10px;color:var(--accent);">Multi-day</span>':''}
+        </div>
+        <div style="font-size:12px;color:var(--muted);">${dateStr}</div>
+        <div style="font-size:12px;margin-top:2px;">${countdown}</div>
+        ${td>0&&!isPast?`<div style="font-size:11px;color:var(--orange);margin-top:2px;">⚡ Taper starts ${td}d before</div>`:''}
       </div>
-      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;" onclick="deleteMeet(${m.id})">✕</button>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;" onclick="deleteMeet(${m.id})">✕</button>
+    </div>`;
+  };
+  el.innerHTML=upcoming.map(m=>renderMeet(m,false)).join('')+(past.length?`<div style="font-size:11px;color:var(--muted);margin-top:8px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Past</div>`+past.map(m=>renderMeet(m,true)).join(''):'');
+}
+
+// ── Season Template ──
+const DOW_LABELS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function renderTemplateGrid(){
+  const tmpl=S.seasonTemplate||{start:'',end:'',days:{}};
+  // Populate season dates if saved
+  const ss=document.getElementById('season-start-input');
+  const se=document.getElementById('season-end-input');
+  if(ss&&tmpl.start)ss.value=tmpl.start;
+  if(se&&tmpl.end)se.value=tmpl.end;
+  const grid=document.getElementById('template-grid');
+  if(!grid)return;
+  grid.innerHTML=DOW_LABELS.map((day,dow)=>{
+    const daySess=tmpl.days[dow]||[];
+    const hasAM=daySess.includes('swim_am');
+    const hasPM=daySess.includes('swim_pm');
+    return`<div style="background:var(--surface);border-radius:10px;padding:10px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text);">${day}</div>
+      <div style="display:flex;gap:6px;">
+        <div class="tmpl-btn${hasAM?' tmpl-on':''}" onclick="toggleTemplate(${dow},'swim_am')" style="flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:${hasAM?'rgba(0,198,255,0.2)':'var(--bg)'};color:${hasAM?'var(--accent)':'var(--muted)'};">🏊 AM</div>
+        <div class="tmpl-btn${hasPM?' tmpl-on':''}" onclick="toggleTemplate(${dow},'swim_pm')" style="flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:${hasPM?'rgba(0,198,255,0.2)':'var(--bg)'};color:${hasPM?'var(--accent)':'var(--muted)'};">🏊 PM</div>
+      </div>
     </div>`;
   }).join('');
+}
+function toggleTemplate(dow,session){
+  if(!S.seasonTemplate)S.seasonTemplate={start:'',end:'',days:{}};
+  if(!S.seasonTemplate.days[dow])S.seasonTemplate.days[dow]=[];
+  const idx=S.seasonTemplate.days[dow].indexOf(session);
+  if(idx>=0)S.seasonTemplate.days[dow].splice(idx,1);
+  else S.seasonTemplate.days[dow].push(session);
+  DB.set('seasonTemplate',S.seasonTemplate);
+  renderTemplateGrid();
+}
+function applySeasonTemplate(){
+  const ss=document.getElementById('season-start-input').value.trim();
+  const se=document.getElementById('season-end-input').value.trim();
+  if(!ss||!se)return alert('Enter season start and end dates.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(ss)||!/^\d{4}-\d{2}-\d{2}$/.test(se))return alert('Dates must be YYYY-MM-DD');
+  S.seasonTemplate.start=ss;S.seasonTemplate.end=se;
+  DB.set('seasonTemplate',S.seasonTemplate);
+  // Remove all template-sourced entries that aren't manual overrides
+  // (manual overrides are preserved — we just update the template)
+  renderCalendar();
+  alert('✅ Season template applied! The calendar will show your weekly pattern. Tap any day to override.');
+}
+function clearSeasonTemplate(){
+  if(!confirm('Clear the entire season template? Manual overrides are kept.'))return;
+  S.seasonTemplate={start:'',end:'',days:{}};
+  DB.set('seasonTemplate',S.seasonTemplate);
+  renderTemplateGrid();renderCalendar();
 }
 
 // ── Nutrition ──
@@ -1335,6 +1490,7 @@ function exportData(){
     daySchedule:S.daySchedule,
     meets:S.meets,
     swimPhase:S.swimPhase,
+    seasonTemplate:S.seasonTemplate,
     bodyStats:S.bodyStats,
     lastStatsUpdate:S.lastStatsUpdate,
     useKg:S.useKg,
@@ -1399,7 +1555,7 @@ function showSection(name){
   document.getElementById('unit-btn').style.display=(name==='workout'||name==='fuel')?'':'none';
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
-  if(name==='schedule'){renderCalendar();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
+  if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();}
 }
