@@ -244,8 +244,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="height:45px;"></div>
-          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials" style="height:45px;"></div>
+          <div class="form-row"><label>Date (YYYY-MM-DD)</label><input type="text" id="meet-date-input" placeholder="2026-08-15" pattern="\d{4}-\d{2}-\d{2}" inputmode="numeric"></div>
+          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -1090,7 +1090,8 @@ function updatePhaseImpact(){
 }
 function addMeet(){
   const date=document.getElementById('meet-date-input').value,name=document.getElementById('meet-name-input').value.trim(),priority=document.getElementById('meet-priority-input').value;
-  if(!date||!name)return alert('Enter date and name.');
+  if(!date||!name)return alert('Enter date (YYYY-MM-DD) and meet name.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return alert('Date must be in format YYYY-MM-DD, e.g. 2026-08-15');
   S.meets.push({date,name,priority,id:Date.now()});S.meets.sort((a,b)=>new Date(a.date)-new Date(b.date));DB.set('meets',S.meets);
   document.getElementById('meet-date-input').value='';document.getElementById('meet-name-input').value='';
   renderMeets();renderCalendar();
