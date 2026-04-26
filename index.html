@@ -244,10 +244,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="meets-list"></div>
         <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="form-row"><label>Date</label><input type="date" id="meet-date-input" style="width:100%;font-size:13px;padding:10px 6px;"></div>
-            <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials" style="width:100%;"></div>
-          </div>
+          <div class="form-row"><label>Date</label><input type="date" id="meet-date-input"></div>
+          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
           <div class="form-row"><label>Priority</label>
             <select id="meet-priority-input">
               <option value="A">A Meet — Dryland taper 7 days prior</option>
@@ -1240,29 +1238,15 @@ function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   updateHeightField();
-  // Check if fields already have user-entered values (don't overwrite mid-session)
-  const wtEl=document.getElementById('weight-input');
-  const alreadyFilled=wtEl&&wtEl.value!=='';
-  if(!alreadyFilled&&S.bodyStats&&S.bodyStats.wtKg&&S.bodyStats.ht){
-    // Only restore if the tab hasn't been filled this session
-    document.getElementById('weight-input').value=S.useKg?S.bodyStats.wtKg.toFixed(1):Math.round(S.bodyStats.wtKg*2.205);
-    if(S.bodyStats.age)document.getElementById('age-input').value=S.bodyStats.age;
-    if(S.bodyStats.sex)document.getElementById('sex-select').value=S.bodyStats.sex;
-    updateHeightField();
-  }
-  // Show update badge if stale
-  const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):0;
+  // Never pre-populate fields — user must enter fresh each time
+  // Only show the output card if a previous calculation exists
+  const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
-  // Show output if we have a previous calculation, otherwise prompt
-  if(S.bodyStats&&S.bodyStats.target){
-    calcNutrition();
-  } else {
-    document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
-      <div style="font-size:32px;margin-bottom:8px;">🍽️</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Fill in your profile below</div>
-      <div style="font-size:13px;color:var(--muted);">Enter your height, weight, age and sex, then tap Calculate.</div>
-    </div>`;
-  }
+  document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
+    <div style="font-size:32px;margin-bottom:8px;">🍽️</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Fill in your profile below</div>
+    <div style="font-size:13px;color:var(--muted);">Enter your details and tap Calculate to get your nutrition plan.</div>
+  </div>`;
 }
 
 // ── More ──
