@@ -393,7 +393,7 @@ const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
 
 // Version gate — runs BEFORE S is built so bodyStats is wiped from localStorage first
-const APP_VER='v6';
+const APP_VER='v7';
 if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_VER);}
 
 let S={
@@ -438,18 +438,12 @@ function updateHeightField(){
   const metricRow=document.getElementById('height-metric-row');
   const impRow=document.getElementById('height-imperial-row');
   if(!metricRow||!impRow)return;
-  const storedCm=S.bodyStats?S.bodyStats.ht:null;
   if(S.useKg){
     metricRow.style.display='';impRow.style.display='none';
-    if(storedCm)document.getElementById('height-cm-input').value=Math.round(storedCm);
   } else {
     metricRow.style.display='none';impRow.style.display='';
-    if(storedCm){
-      const totalIn=storedCm/2.54;
-      document.getElementById('height-ft-input').value=Math.floor(totalIn/12);
-      document.getElementById('height-in-input').value=Math.floor(totalIn%12);
-    }
   }
+  // Never restore stored values — fields always start blank
 }
 function getHeightCm(){
   if(S.useKg){
@@ -466,8 +460,7 @@ function toggleUnits(){
   document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   updateHeightField();
-  const wtEl=document.getElementById('weight-input');
-  if(wtEl&&S.bodyStats){wtEl.value=S.useKg?S.bodyStats.wtKg.toFixed(1):(S.bodyStats.wtKg*2.205).toFixed(1);}
+  // Never restore weight from bodyStats when toggling units — field stays blank
 }
 document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
 document.getElementById('unit-btn').style.display='none';
