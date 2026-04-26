@@ -390,6 +390,7 @@ function sW(v){return S.useKg?v:Math.round(v/2.205*4)/4;}
 function uL(){return S.useKg?'kg':'lbs';}
 function toggleUnits(){S.useKg=!S.useKg;DB.set('useKg',S.useKg);document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=uL());document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());}
 document.getElementById('unit-btn').textContent=uL();
+document.getElementById('unit-btn').style.display='none';
 
 // Helpers
 function esc(s){return(s||'').replace(/'/g,"\\'");}
@@ -1039,6 +1040,7 @@ function showSection(name){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('section-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
+  document.getElementById('unit-btn').style.display=(name==='workout'||name==='fuel')?'':'none';
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderCalendar();document.getElementById('swim-phase-select').value=S.swimPhase;}
