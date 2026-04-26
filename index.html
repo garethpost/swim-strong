@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SwimFitPro">
 <meta name="theme-color" content="#0a1628">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>SwimFitPro</title>
 <style>
 :root{--bg:#0a1628;--surface:#111f38;--card:#172a4a;--accent:#00c6ff;--accent2:#0072ff;--gold:#f5c842;--green:#00e676;--red:#ff5252;--orange:#ff9800;--purple:#c084fc;--text:#e8f0fe;--muted:#7a8faa;--border:#1e3258;--radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;}
@@ -291,16 +294,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
             </select>
           </div>
         </div>
-        <div class="form-row"><label>Typical Training Load</label>
-          <select id="training-day-select">
-            <option value="swim_dryland">Swim + Dryland — Double session days</option>
-            <option value="swim_only">Swim only — Pool sessions</option>
-            <option value="dryland_only">Dryland only — Gym sessions</option>
-            <option value="active_recovery">Active recovery — Light movement</option>
-            <option value="rest">Full rest days</option>
-          </select>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Set this to your most common training day. Update every 2 weeks or when your load changes significantly.</p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories are calculated from your athlete profile and this week's schedule in the Schedule tab. Add your swim sessions there for the most accurate result.</p>
         <button class="btn btn-primary" onclick="calcNutrition()">Calculate Nutrition Plan</button>
       </div>
       <div class="card">
@@ -480,6 +474,8 @@ function tSec(t){if(!t||t==='n/a'||t===''||t==='—')return Infinity;t=t.trim();
 function secDisp(s){if(s===Infinity)return'—';if(s<60)return s.toFixed(2);const m=Math.floor(s/60),r=(s%60).toFixed(2).padStart(5,'0');return`${m}:${r}`;}
 function gapSec(curr,tgt){const c=tSec(curr),t=tSec(tgt);if(c===Infinity||t===Infinity)return null;return c-t;}
 function dKey(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${dd}`;}
+// Parse a YYYY-MM-DD string as LOCAL midnight (not UTC) to avoid timezone day-shift
+function localDate(str){const p=str.split('-');return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
@@ -560,7 +556,7 @@ const EX={
 function getTaperDays(m){return m.priority==='A'?7:m.priority==='B'?4:0;}
 function isTaperWeek(){
   const t=new Date();t.setHours(0,0,0,0);
-  for(const m of S.meets){const md=new Date(m.date);md.setHours(0,0,0,0);const d=Math.round((md-t)/86400000);const td=getTaperDays(m);if(d>=0&&d<=td)return{yes:true,meet:m,daysOut:d};}
+  for(const m of S.meets){const md=localDate(m.date);const d=Math.round((md-t)/86400000);const td=getTaperDays(m);if(d>=0&&d<=td)return{yes:true,meet:m,daysOut:d};}
   return{yes:false};
 }
 function getLoadMult(){
@@ -940,7 +936,7 @@ function renderHome(){
     const dd=new Date(now);dd.setDate(now.getDate()-mo+i);dd.setHours(0,0,0,0);
     const dot=document.createElement('div');dot.className='day-dot';
     const key=dKey(dd),sch=S.daySchedule[key]||{};
-    const hasMeet=S.meets.some(m=>{const md=new Date(m.date);md.setHours(0,0,0,0);return md.getTime()===dd.getTime();});
+    const hasMeet=S.meets.some(m=>{const md=localDate(m.date);return md.getTime()===dd.getTime();});
     const hasDone=hist.some(h=>{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===dd.getTime();});
     const daySess=sch.sessions||[];
     const dayHasSwim=daySess.some(s=>s.startsWith('swim'))||sch.swim;
@@ -951,7 +947,7 @@ function renderHome(){
   const tp=isTaperWeek();
   if(tp.yes)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   const td=new Date();td.setHours(0,0,0,0);
-  S.meets.forEach(m=>{const md=new Date(m.date);md.setHours(0,0,0,0);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
+  S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
   updateCheckin();
 }
 function updateCheckin(){
@@ -978,8 +974,8 @@ function renderCalendar(){
     const dt=new Date(yr,mo,d);dt.setHours(0,0,0,0);
     const key=dKey(dt),sch=S.daySchedule[key]||{};
     const isToday=dt.getTime()===today.getTime();
-    const hasMeet=S.meets.some(m=>{const md=new Date(m.date);md.setHours(0,0,0,0);return md.getTime()===dt.getTime();});
-    const isTaperDay=S.meets.some(m=>{const md=new Date(m.date);md.setHours(0,0,0,0);const dO=Math.round((md-dt)/86400000);return dO>0&&dO<=getTaperDays(m);});
+    const hasMeet=S.meets.some(m=>{const md=localDate(m.date);return md.getTime()===dt.getTime();});
+    const isTaperDay=S.meets.some(m=>{const md=localDate(m.date);const dO=Math.round((md-dt)/86400000);return dO>0&&dO<=getTaperDays(m);});
     const sessions=sch.sessions||[];
     const hasSwim=sessions.some(s=>s.startsWith('swim'))||sch.swim;
     const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest')||sch.dryland;
@@ -1003,7 +999,7 @@ function renderCalendar(){
 function smartDrylandSuggest(sessions,key){
   const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
   const hasDryland=sessions.some(s=>s.startsWith('dry'));
-  const dt=new Date(key);
+  const dt=localDate(key);
   const dow=dt.getDay(); // 0=Sun
   // Check adjacent days
   const tmKey=dKey(new Date(dt.getTime()+86400000));
@@ -1048,7 +1044,7 @@ const DRY_SESSIONS=[
 function editDay(key,d){
   S.editingDay=key;
   const sch=S.daySchedule[key]||{};
-  const dt=new Date(key);
+  const dt=localDate(key);
   document.getElementById('day-modal-title').textContent=dt.toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
   // Migrate old format
   let sessions=sch.sessions||[];
@@ -1120,7 +1116,7 @@ function renderMeets(){
   const el=document.getElementById('meets-list');if(!S.meets.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:8px 0;">No meets added.</p>';return;}
   const today=new Date();today.setHours(0,0,0,0);
   el.innerHTML=S.meets.map(m=>{
-    const md=new Date(m.date);md.setHours(0,0,0,0);
+    const md=localDate(m.date);
     const dO=Math.round((md-today)/86400000),td=getTaperDays(m);
     const dStr=md.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
     const cd=dO<0?'Completed':dO===0?'<b style="color:var(--gold)">TODAY</b>':`${dO}d away`;
@@ -1156,28 +1152,36 @@ function calcNutrition(){
   const htCm=getHeightCm();
   let wt=parseFloat(document.getElementById('weight-input').value);
   const age=parseInt(document.getElementById('age-input').value)||16;
-  const dayType=document.getElementById('training-day-select').value;
   const sex=document.getElementById('sex-select').value;
-  if(!htCm||!wt)return alert('Enter height and weight.');
+  if(!htCm||!wt||!age)return alert('Enter height, weight and age.');
   const wtKg=S.useKg?wt:wt/2.205;
   // Mifflin-St Jeor BMR (sex-specific)
   const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
-  // Activity multipliers — calibrated for competitive adolescent swimmers
-  // Based on Trappe et al. (2006) swimmer energy expenditure data
-  // Single swim ~800-1000 kcal/hr, dryland ~600-800 kcal/hr
-  const mults={swim_dryland:2.3,swim_only:1.9,dryland_only:1.7,active_recovery:1.4,rest:1.3};
 
-  // Check if we have real schedule data to refine the estimate
+  // Derive activity multiplier from this week's schedule
   const weekLoad=getWeeklyLoadFromSchedule();
+  let finalMult=1.5; // sedentary baseline if no schedule
+  let dayType='rest';
   let scheduleNote='';
-  let finalMult=mults[dayType];
   if(weekLoad.hasData){
-    // Boost if athlete does double swim days regularly
-    if(weekLoad.doubleDays>=2)finalMult=Math.min(2.5,finalMult+0.15);
-    // Boost if high total session count this week
     const totalSess=weekLoad.swimSessions+weekLoad.drylandSessions;
-    if(totalSess>=10)finalMult=Math.min(2.5,finalMult+0.1);
-    scheduleNote=`Based on this week's schedule: ${weekLoad.swimSessions} swim sessions, ${weekLoad.drylandSessions} dryland sessions${weekLoad.doubleDays>0?`, ${weekLoad.doubleDays} double days`:''}.`;
+    // Scale multiplier based on weekly volume
+    if(weekLoad.doubleDays>=3)finalMult=2.4;
+    else if(weekLoad.doubleDays>=1)finalMult=2.2;
+    else if(totalSess>=8)finalMult=2.0;
+    else if(totalSess>=5)finalMult=1.9;
+    else if(totalSess>=3)finalMult=1.75;
+    else finalMult=1.6;
+    // Determine primary day type label
+    if(weekLoad.doubleDays>=1)dayType='swim_dryland';
+    else if(weekLoad.swimSessions>weekLoad.drylandSessions)dayType='swim_only';
+    else if(weekLoad.drylandSessions>0)dayType='dryland_only';
+    scheduleNote=`${weekLoad.swimSessions} swim + ${weekLoad.drylandSessions} dryland sessions this week${weekLoad.doubleDays>0?`, ${weekLoad.doubleDays} double day${weekLoad.doubleDays>1?'s':''}`:''}.`;
+  } else {
+    // No schedule — use a reasonable competitive swimmer default
+    finalMult=1.9;
+    dayType='swim_only';
+    scheduleNote='No schedule data — using competitive swimmer baseline. Add sessions in Schedule tab for accuracy.';
   }
 
   const target=Math.round(bmr*finalMult);
@@ -1238,7 +1242,6 @@ function renderNutrition(){
     document.getElementById('weight-input').value=S.useKg?S.bodyStats.wtKg.toFixed(1):Math.round(S.bodyStats.wtKg*2.205);
     if(S.bodyStats.age)document.getElementById('age-input').value=S.bodyStats.age;
     if(S.bodyStats.sex)document.getElementById('sex-select').value=S.bodyStats.sex;
-    if(S.bodyStats.dayType)document.getElementById('training-day-select').value=S.bodyStats.dayType;
     updateHeightField();
   }
   // Show update badge if stale
@@ -1389,7 +1392,7 @@ function showSection(name){
 }
 
 // INIT — version gate: clear stale bodyStats so fuel tab starts blank
-const APP_VER='v4';
+const APP_VER='v5';
 if(DB.get('appVer','')!==APP_VER){
   DB.set('bodyStats',null);
   S.bodyStats=null;
