@@ -163,7 +163,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p class="section-title" id="greeting">Let's go.</p>
       <p class="section-sub" id="phase-info">—</p>
       <div id="alert-zone"></div>
-      <div class="stats-row">
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr);grid-template-rows:auto auto;">
         <div class="stat-box" id="stat-cal-box" style="cursor:default;">
           <div class="stat-val" id="stat-cal" style="font-size:18px;">—</div>
           <div class="stat-lbl" id="stat-cal-lbl">kcal<br>Today</div>
@@ -171,9 +171,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Day<br>Streak</div></div>
         <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
-      </div>
-      <!-- KM Tracker -->
-      <div class="card" style="margin-bottom:12px;padding:12px 16px;">
+        <!-- KM Tracker spans all 3 columns -->
+        <div style="grid-column:1/-1;">
+        <div class="card" style="margin-bottom:0;padding:12px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div class="card-title" style="margin-bottom:2px;">Season Distance</div>
@@ -193,7 +193,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
           <button onclick="cancelKm()" class="btn-ghost">✕</button>
         </div>
-      </div>
+        </div><!-- end grid-column span -->
+      </div><!-- end stats-row -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <div class="card" style="margin-bottom:0;min-height:160px;" id="home-today-summary"></div>
         <div class="card" style="margin-bottom:0;min-height:160px;">
