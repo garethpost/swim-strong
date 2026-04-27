@@ -1176,7 +1176,7 @@ function renderTimesContent(){
   const bL=getBest(ev,'lcm'),bS=getBest(ev,'scm');
   const gapLCM=tgtLCM&&bL&&bL.lcm!=='—'?gapSec(bL.lcm,tgtLCM):null;
   const gapSCM=tgtSCM&&bS&&bS.scm!=='—'?gapSec(bS.scm,tgtSCM):null;
-  function gapClass(g){return g===null?'gap-far':g<=0?'gap-done':g<=1?'gap-near':g<=3?'gap-close':'gap-far';}
+  function gapClass(g){return g===null?'gap-far':g<=0?'gap-done':g<=2?'gap-close':'gap-far';}
   function gapLabel(g,t){
     if(g===null)return t?'No PB yet':'—';
     if(g<=0)return'✓ Qualified';
