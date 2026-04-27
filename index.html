@@ -198,6 +198,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p class="section-sub" id="workout-subtitle">—</p>
       <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
       <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>
+      <div id="baseline-card"></div>
       <div id="workout-content"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
         <div class="card" style="margin-bottom:12px;">
@@ -441,6 +442,8 @@ let S={
   meets:DB.get('meets',[]),
   swimPhase:DB.get('swimPhase','sprint'),
   seasonTemplate:DB.get('seasonTemplate',{start:'',end:'',days:{}}),
+  oneRM:DB.get('oneRM',{}),
+  oneRMDate:DB.get('oneRMDate',null),
   bodyStats:DB.get('bodyStats',null),
   lastStatsUpdate:DB.get('lastStatsUpdate',null),
   calYear:new Date().getFullYear(),
@@ -486,6 +489,8 @@ function toggleUnits(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
   // Rebuild fuel tab inputs for correct height unit
   if(document.getElementById('athlete-profile-fields'))renderNutrition();
+  // Re-render baseline card and any active workout in new units
+  if(document.getElementById('baseline-card'))renderBaseline();
 }
 document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
 document.getElementById('unit-btn').style.display='none';
@@ -518,6 +523,34 @@ function suggestWeight(name,schemeReps){
   if(!baseKg)return null;
   return{kg:allHit?baseKg+2.5:baseKg,progressed:allHit,lastKg:baseKg};
 }
+// ── 1RM system ──
+// Key lifts and which exercises they apply to (stored in kg internally)
+const ONE_RM_LIFTS=[
+  {key:'squat',   label:'Back Squat',       exNames:['Back Squat','Goblet Squat','Bulgarian Split Squat'],pcts:{GPP:0.65,Strength:0.85,Power:0.80,Taper:0.75}},
+  {key:'rdl',     label:'Romanian Deadlift',exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'press',   label:'Bench / DB Press', exNames:['Incline DB Press','Landmine Press'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'pull',    label:'Pull / Row',        exNames:['Lat Pulldown','Seated Cable Row','Single-Arm DB Row'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'ohpress', label:'Overhead Press',    exNames:['Tricep Pushdown','Face Pulls','Prone Y-T-W'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
+];
+// Epley formula: estimate 1RM from a weight × reps set
+function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
+// Get the 1RM lift config for a given exercise name
+function getLiftFor(exName){return ONE_RM_LIFTS.find(l=>l.exNames.includes(exName))||null;}
+// Get target kg for an exercise given current phase
+function getTargetKg(exName,phaseName){
+  const lift=getLiftFor(exName);if(!lift)return null;
+  const orm=S.oneRM[lift.key];if(!orm)return null;
+  const pct=lift.pcts[phaseName]||0.70;
+  // Round to nearest 2.5kg
+  return Math.round(orm*pct/2.5)*2.5;
+}
+// Weeks since 1RM was set
+function weeksSinceRM(){
+  if(!S.oneRMDate)return null;
+  const d=new Date(S.oneRMDate);const now=new Date();
+  return Math.floor((now-d)/(7*24*3600*1000));
+}
+
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===e.currentTarget)m.classList.remove('open');}));
 
 // Exercise Library
@@ -640,7 +673,7 @@ function getPhase(w){
 function getDayType(dow){return{1:'lower',2:'upper',3:'mobility',4:'lower',5:'upper',6:'cardio',0:'mobility'}[dow]||'mobility';}
 function getScheme(phaseName,mult){
   const b={GPP:{sets:3,reps:'12-15',pct:'60-70%'},Strength:{sets:4,reps:'4-6',pct:'80-90%'},Power:{sets:4,reps:'5-6',pct:'explosive'},Taper:{sets:3,reps:'4-5',pct:'75%'}};
-  const s={...b[phaseName]||b.GPP};
+  const s={...b[phaseName]||b.GPP,phase:phaseName};
   if(mult<0.7){s.sets=Math.max(2,s.sets-1);s.note='⚠️ Reduced load.';}
   else if(mult>1.15){s.sets=s.sets+1;s.note='🔥 Extra set — you\'re fresh.';}
   return s;
@@ -682,19 +715,24 @@ function buildCard(ex,bi,ei,scheme){
   const ns=ex.sets||scheme.sets;
   const last=ex.weighted?getLastLog(ex.name):null;
   const sugg=ex.weighted?suggestWeight(ex.name,scheme.reps):null;
+  const rmTarget=ex.weighted?getTargetKg(ex.name,scheme.phase):null;
   let lastHtml='';
   if(last){
     const ds=new Date(last.date).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
     const setsStr=last.sets.map((s,i)=>`S${i+1} ${s.weight?dW(s.weight).toFixed(1)+uL():'BW'}×${s.reps||'?'}`).join(' · ');
-    const targStr=sugg?` &nbsp;<span style="color:var(--green);font-weight:700;">${sugg.progressed?'↑':'→'} Target: ${dW(sugg.kg).toFixed(1)}${uL()}</span>`:'';
+    const targStr=sugg?` &nbsp;<span style="color:var(--green);font-weight:700;">${sugg.progressed?'↑':'→'} ${dW(sugg.kg).toFixed(1)}${uL()}</span>`:'';
     lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}</div>`;
+  } else if(rmTarget){
+    const lift=getLiftFor(ex.name);
+    const pct=lift?Math.round((lift.pcts[scheme.phase]||0.70)*100):70;
+    lastHtml=`<div class="ex-last">🎯 Start here: <b style="color:var(--accent);">${dW(rmTarget).toFixed(1)} ${uL()}</b> <span style="color:var(--muted);font-size:10px;">(${pct}% of your 1RM)</span></div>`;
   }
   let sHtml='';
   if(ex.weighted){
     sHtml=`<div class="set-labels"><div class="set-label">Set</div><div class="set-label">${uL()}</div><div class="set-label">Reps</div><div class="set-label">✓</div></div><div class="set-log-grid">`;
     for(let s=1;s<=ns;s++){
-      // Pre-fill with suggested weight (progressed or same as last); fall back to blank
-      const prefill=sugg&&sugg.kg?dW(sugg.kg).toFixed(1):'';
+      // Priority: 1) progression from log, 2) 1RM target, 3) blank
+      const prefill=sugg&&sugg.kg?dW(sugg.kg).toFixed(1):rmTarget?dW(rmTarget).toFixed(1):'';
       const lr=last&&last.sets[s-1]?last.sets[s-1].reps:'';
       sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${prefill||'—'}" value="${prefill}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||scheme.reps.split('-')[0]}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
     }
@@ -1826,6 +1864,8 @@ function exportData(){
     swimPhase:S.swimPhase,
     seasonTemplate:S.seasonTemplate,
     checkinHistory:S.checkinHistory,
+    oneRM:S.oneRM,
+    oneRMDate:S.oneRMDate,
     bodyStats:S.bodyStats,
     lastStatsUpdate:S.lastStatsUpdate,
     useKg:S.useKg,
@@ -1858,6 +1898,8 @@ function importData(event){
       if(data.meets)DB.set('meets',data.meets);
       if(data.swimPhase)DB.set('swimPhase',data.swimPhase);
       if(data.checkinHistory)DB.set('checkinHistory',data.checkinHistory);
+      if(data.oneRM)DB.set('oneRM',data.oneRM);
+      if(data.oneRMDate)DB.set('oneRMDate',data.oneRMDate);
       if(data.bodyStats)DB.set('bodyStats',data.bodyStats);
       if(data.lastStatsUpdate)DB.set('lastStatsUpdate',data.lastStatsUpdate);
       if(typeof data.useKg!=='undefined')DB.set('useKg',data.useKg);
@@ -1880,6 +1922,90 @@ function toggleTimer(){
   else{S.timerRunning=true;document.getElementById('timer-btn').textContent='Stop';
     S.timerInterval=setInterval(()=>{S.timerSecs--;updTimer();if(S.timerSecs<=0){clearInterval(S.timerInterval);S.timerRunning=false;document.getElementById('timer-btn').textContent='Start';S.timerSecs=90;updTimer();try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}}},1000);
   }
+}
+
+// ── 1RM Baseline Card ──
+function renderBaseline(){
+  const el=document.getElementById('baseline-card');if(!el)return;
+  const weeks=weeksSinceRM();
+  const needsRetest=weeks!==null&&weeks>=4;
+  const hasAny=Object.keys(S.oneRM).length>0;
+  // Retest banner
+  let retestBanner='';
+  if(needsRetest)retestBanner=`<div class="alert-banner alert-taper" style="margin-bottom:10px;">⏱ It's been ${weeks} weeks — time to retest your 1RM baselines for accurate targets.</div>`;
+  // Build rows for each lift
+  const rows=ONE_RM_LIFTS.map(lift=>{
+    const existing=S.oneRM[lift.key];
+    const dispRM=existing?`<span style="color:var(--accent);font-weight:700;">${dW(existing).toFixed(1)} ${uL()} 1RM</span>`:`<span style="color:var(--muted);">Not set</span>`;
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:600;">${lift.label}</div>
+        <div style="font-size:12px;">${dispRM}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="number" id="rm-w-${lift.key}" placeholder="Weight (${uL()})" step="2.5" min="0"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+        <span style="font-size:12px;color:var(--muted);">×</span>
+        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="12"
+          style="width:64px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Enter a weight you've done for 1–12 reps. We'll calculate your 1RM.</div>
+    </div>`;
+  }).join('');
+  const subtitle=hasAny
+    ?`Set ${weeks!==null?weeks+'wk ago':'—'} · Based on Epley formula`
+    :'Enter any weight × reps you can do confidently — no need to max out.';
+  el.innerHTML=`<div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="card-title" style="margin-bottom:0;">Strength Baselines (1RM)</div>
+      ${hasAny?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="toggleBaselineExpand()">Edit</button>`:''}
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${subtitle}</div>
+    ${retestBanner}
+    ${hasAny?`<div id="baseline-summary">${buildBaselineSummary()}</div>`:''}
+    <div id="baseline-inputs" style="display:${hasAny?'none':'block'};">
+      ${rows}
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveBaseline()">Save Baselines</button>
+    </div>
+  </div>`;
+}
+function buildBaselineSummary(){
+  const phase=getPhase(S.programWeek);
+  return ONE_RM_LIFTS.map(lift=>{
+    const orm=S.oneRM[lift.key];if(!orm)return'';
+    const pct=lift.pcts[phase.name]||0.70;
+    const targetKg=Math.round(orm*pct/2.5)*2.5;
+    return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <span style="color:var(--text);">${lift.label}</span>
+      <span><span style="color:var(--muted);font-size:11px;">${dW(orm).toFixed(1)}${uL()} 1RM → </span><b style="color:var(--accent);">${dW(targetKg).toFixed(1)} ${uL()}</b> <span style="font-size:10px;color:var(--muted);">(${Math.round(pct*100)}%)</span></span>
+    </div>`;
+  }).join('');
+}
+function toggleBaselineExpand(){
+  const inp=document.getElementById('baseline-inputs');
+  const sum=document.getElementById('baseline-summary');
+  if(!inp)return;
+  const show=inp.style.display==='none';
+  inp.style.display=show?'block':'none';
+  if(sum)sum.style.display=show?'none':'block';
+}
+function saveBaseline(){
+  let saved=0;
+  ONE_RM_LIFTS.forEach(lift=>{
+    const wEl=document.getElementById(`rm-w-${lift.key}`);
+    const rEl=document.getElementById(`rm-r-${lift.key}`);
+    if(!wEl||!rEl)return;
+    const wDisp=parseFloat(wEl.value);const reps=parseInt(rEl.value);
+    if(!wDisp||!reps||reps<1)return;
+    const wKg=S.useKg?wDisp:wDisp/2.205; // convert lbs→kg if needed
+    const orm=epley(wKg,reps);
+    S.oneRM[lift.key]=Math.round(orm*10)/10;
+    saved++;
+  });
+  if(!saved){alert('Enter at least one weight and rep count.');return;}
+  S.oneRMDate=new Date().toISOString();
+  DB.set('oneRM',S.oneRM);DB.set('oneRMDate',S.oneRMDate);
+  renderBaseline();
 }
 
 // ── Check-In History Chart ──
@@ -1950,6 +2076,7 @@ function showSection(name){
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
+  if(name==='workout')renderBaseline();
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();}
 }
