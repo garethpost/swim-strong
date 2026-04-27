@@ -188,6 +188,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           </div>
         </div>
         <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--muted);" id="load-rec">—</div>
+        <div style="margin-top:6px;text-align:center;font-size:11px;color:var(--muted);" id="checkin-avg"></div>
       </div>
     </div>
 
@@ -361,6 +362,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div class="card">
+        <div class="card-title">Check-In History</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">30-day sleep &amp; readiness trend. Use this to spot patterns before they hit your performance.</p>
+        <div id="checkin-chart" style="width:100%;height:120px;position:relative;"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--accent);border-radius:2px;"></div>Sleep (h)</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--green);border-radius:2px;"></div>Readiness (/5)</div>
+        </div>
+        <div id="checkin-history-stats" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;"></div>
+      </div>
+      <div class="card">
         <div class="card-title">Backup & Restore</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export all your data — times, workouts, weight logs, schedule — as a backup file. If you ever clear Safari or get a new phone, restore it in one tap.</p>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -425,6 +436,7 @@ let S={
   programCycle:DB.get('programCycle',1),
   readiness:DB.get('todayReadiness',3),
   sleep:DB.get('todaySleep',8),
+  checkinHistory:DB.get('checkinHistory',[]),
   daySchedule:DB.get('daySchedule',{}),
   meets:DB.get('meets',[]),
   swimPhase:DB.get('swimPhase','sprint'),
@@ -1037,7 +1049,21 @@ function renderHome(){
 function updateCheckin(){
   const sl=parseFloat(document.getElementById('sleep-slider').value),r=parseInt(document.getElementById('readiness-slider').value);
   S.sleep=sl;S.readiness=r;DB.set('todaySleep',sl);DB.set('todayReadiness',r);
+  // Log today's check-in to history (one entry per day, overwrites if same day)
+  const todayKey=dKey(new Date());
+  const existing=S.checkinHistory.findIndex(c=>c.date===todayKey);
+  const entry={date:todayKey,sleep:sl,readiness:r};
+  if(existing>=0)S.checkinHistory[existing]=entry;
+  else S.checkinHistory.push(entry);
+  S.checkinHistory.sort((a,b)=>a.date.localeCompare(b.date));
+  DB.set('checkinHistory',S.checkinHistory);
   document.getElementById('sleep-val').textContent=sl+'h';document.getElementById('readiness-val').textContent=r+'/5';
+  // 7-day averages
+  const last7=S.checkinHistory.slice(-7);
+  const avgSleep=last7.length?(last7.reduce((s,c)=>s+c.sleep,0)/last7.length).toFixed(1):sl;
+  const avgR=last7.length?(last7.reduce((s,c)=>s+c.readiness,0)/last7.length).toFixed(1):r;
+  const avgEl=document.getElementById('checkin-avg');
+  if(avgEl)avgEl.innerHTML=`7-day avg: <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--accent)">${avgR}/5 readiness</b>`;
   const m=getLoadMult(),l=getLoadDesc(m);
   document.getElementById('load-rec').innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
 }
@@ -1770,6 +1796,7 @@ function exportData(){
     meets:S.meets,
     swimPhase:S.swimPhase,
     seasonTemplate:S.seasonTemplate,
+    checkinHistory:S.checkinHistory,
     bodyStats:S.bodyStats,
     lastStatsUpdate:S.lastStatsUpdate,
     useKg:S.useKg,
@@ -1801,6 +1828,7 @@ function importData(event){
       if(data.daySchedule)DB.set('daySchedule',data.daySchedule);
       if(data.meets)DB.set('meets',data.meets);
       if(data.swimPhase)DB.set('swimPhase',data.swimPhase);
+      if(data.checkinHistory)DB.set('checkinHistory',data.checkinHistory);
       if(data.bodyStats)DB.set('bodyStats',data.bodyStats);
       if(data.lastStatsUpdate)DB.set('lastStatsUpdate',data.lastStatsUpdate);
       if(typeof data.useKg!=='undefined')DB.set('useKg',data.useKg);
@@ -1825,6 +1853,64 @@ function toggleTimer(){
   }
 }
 
+// ── Check-In History Chart ──
+function renderCheckinChart(){
+  const el=document.getElementById('checkin-chart');
+  const statsEl=document.getElementById('checkin-history-stats');
+  if(!el)return;
+  const hist=S.checkinHistory.slice(-30); // last 30 days
+  if(hist.length<2){
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;color:var(--muted);">Log a few days to see your trend.</div>';
+    if(statsEl)statsEl.textContent='';
+    return;
+  }
+  const W=el.offsetWidth||300,H=120;
+  const pad={t:8,r:8,b:20,l:28};
+  const gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+  // Scales
+  const sleepMin=4,sleepMax=11,readMin=1,readMax=5;
+  const n=hist.length;
+  const xStep=gW/(n-1);
+  function xPos(i){return pad.l+i*xStep;}
+  function yPosSleep(v){return pad.t+gH-(v-sleepMin)/(sleepMax-sleepMin)*gH;}
+  function yPosRead(v){return pad.t+gH-(v-readMin)/(readMax-readMin)*gH;}
+  // Build SVG path strings
+  let sleepPath='',readPath='';
+  hist.forEach((c,i)=>{
+    const x=xPos(i).toFixed(1);
+    const ys=yPosSleep(c.sleep).toFixed(1);
+    const yr=yPosRead(c.readiness).toFixed(1);
+    sleepPath+=(i===0?`M${x},${ys}`:`L${x},${ys}`);
+    readPath+=(i===0?`M${x},${yr}`:`L${x},${yr}`);
+  });
+  // Y-axis labels (sleep scale on left)
+  const yLabels=[4,6,8,10].map(v=>{
+    const y=yPosSleep(v).toFixed(1);
+    return `<text x="${pad.l-4}" y="${y}" dy="4" text-anchor="end" font-size="9" fill="var(--muted)">${v}</text>`;
+  }).join('');
+  // X-axis: show first and last date labels
+  const fmt=d=>d.slice(5).replace('-','/'); // MM/DD
+  const xLabels=`<text x="${pad.l}" y="${H-2}" text-anchor="middle" font-size="9" fill="var(--muted)">${fmt(hist[0].date)}</text><text x="${(pad.l+(n-1)*xStep).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="9" fill="var(--muted)">${fmt(hist[hist.length-1].date)}</text>`;
+  // Dots for last entry
+  const lastI=n-1;
+  const lastSleepDot=`<circle cx="${xPos(lastI).toFixed(1)}" cy="${yPosSleep(hist[lastI].sleep).toFixed(1)}" r="3" fill="var(--accent)"/>`;
+  const lastReadDot=`<circle cx="${xPos(lastI).toFixed(1)}" cy="${yPosRead(hist[lastI].readiness).toFixed(1)}" r="3" fill="var(--green)"/>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">
+    ${yLabels}${xLabels}
+    <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+gH}" stroke="var(--border)" stroke-width="1"/>
+    <line x1="${pad.l}" y1="${pad.t+gH}" x2="${pad.l+gW}" y2="${pad.t+gH}" stroke="var(--border)" stroke-width="1"/>
+    <path d="${sleepPath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${readPath}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="4,3"/>
+    ${lastSleepDot}${lastReadDot}
+  </svg>`;
+  // Stats summary
+  const avgSleep=(hist.reduce((s,c)=>s+c.sleep,0)/hist.length).toFixed(1);
+  const avgRead=(hist.reduce((s,c)=>s+c.readiness,0)/hist.length).toFixed(1);
+  const best=hist.reduce((b,c)=>c.readiness>b.readiness?c:b,hist[0]);
+  const worst=hist.reduce((b,c)=>c.readiness<b.readiness?c:b,hist[0]);
+  if(statsEl)statsEl.innerHTML=`Avg <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--green)">${avgRead}/5 readiness</b> over ${hist.length} days &nbsp;·&nbsp; Best day: ${fmt(best.date)}`;
+}
+
 // ── Section routing ──
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -1836,7 +1922,7 @@ function showSection(name){
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();}
 }
 
 // INIT — version gate: clear stale bodyStats so fuel tab starts blank
