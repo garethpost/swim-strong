@@ -230,7 +230,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- SCHEDULE -->
     <div id="section-schedule" class="section">
       <p class="section-title">Schedule</p>
-      <div id="today-summary-card"></div>
       <p class="section-sub" id="sched-month-label">—</p>
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
         <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
@@ -248,26 +247,22 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
 
-      <!-- MEETS -->
+      <!-- ADD A MEET -->
       <div class="card">
-        <div class="card-title">Upcoming Meets</div>
-        <div id="meets-list"></div>
-        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-          <p style="font-size:13px;font-weight:600;margin-bottom:10px;">Add a Meet</p>
-          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
-          <div class="form-grid-2">
-            <div class="form-row"><label>Start Date</label><input type="date" id="meet-date-input"></div>
-            <div class="form-row"><label>End Date</label><input type="date" id="meet-end-input"></div>
-          </div>
-          <div class="form-row"><label>Priority</label>
-            <select id="meet-priority-input">
-              <option value="A">A Meet — Taper 7 days</option>
-              <option value="B">B Meet — Taper 4 days</option>
-              <option value="C">C Meet — No taper</option>
-            </select>
-          </div>
-          <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
+        <div class="card-title">Add a Meet</div>
+        <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+        <div class="form-grid-2">
+          <div class="form-row"><label>Start Date</label><input type="date" id="meet-date-input"></div>
+          <div class="form-row"><label>End Date</label><input type="date" id="meet-end-input"></div>
         </div>
+        <div class="form-row"><label>Priority</label>
+          <select id="meet-priority-input">
+            <option value="A">A Meet — Taper 7 days</option>
+            <option value="B">B Meet — Taper 4 days</option>
+            <option value="C">C Meet — No taper</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
       </div>
 
       <!-- SEASON TEMPLATE -->
@@ -1217,8 +1212,6 @@ function renderCalendar(){
     html+=`<div class="cal-day${isToday?' today-cal':''}${hasMeet?' has-meet':''}${isRemoved?' removed-day':''}" onclick="editDay('${key}',${d})"><div class="cal-day-num">${d}</div><div class="cal-dots">${dots}</div></div>`;
   }
   document.getElementById('month-cal').innerHTML=html;
-  renderTodaySummary();
-  renderMeets();
 }
 // ── Smart dryland recommendation engine ──
 // Based on sports science: https://doi.org/10.1519/JSC.0000000000002873
