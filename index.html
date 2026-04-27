@@ -225,6 +225,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- SCHEDULE -->
     <div id="section-schedule" class="section">
       <p class="section-title">Schedule</p>
+      <div id="today-summary-card"></div>
       <p class="section-sub" id="sched-month-label">—</p>
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
         <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
@@ -977,6 +978,103 @@ document.getElementById('sleep-slider').value=S.sleep;document.getElementById('r
 // ── Schedule / Calendar ──
 function goToToday(){S.calYear=new Date().getFullYear();S.calMonth=new Date().getMonth();renderCalendar();}
 function changeMonth(d){S.calMonth+=d;if(S.calMonth>11){S.calMonth=0;S.calYear++;}if(S.calMonth<0){S.calMonth=11;S.calYear--;}renderCalendar();}
+function renderTodaySummary(){
+  const el=document.getElementById('today-summary-card');
+  if(!el)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const key=dKey(today);
+  const sch=S.daySchedule[key]||{};
+  const dow=today.getDay();
+  // Get sessions — override or template
+  let sessions=sch.sessions||[];
+  if(!sch.override&&!sessions.length){
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){
+      const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+      if(today>=ss&&today<=se)sessions=tmpl.days[dow]||[];
+    }
+  }
+  const removed=sch.removed===true;
+  const dayLabel=today.toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
+
+  // Session labels
+  const SESSION_META={
+    swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)'},
+    swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)'},
+    dry_lower:{icon:'🦵',label:'Lower Body Lifting',color:'var(--green)'},
+    dry_upper:{icon:'💪',label:'Upper Body Lifting',color:'var(--green)'},
+    dry_power:{icon:'⚡',label:'Power / Plyo',color:'var(--orange)'},
+    dry_mobility:{icon:'🧘',label:'Mobility & Recovery',color:'var(--purple)'},
+    dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
+    dry_rest:{icon:'😴',label:'Rest Day',color:'var(--muted)'},
+  };
+
+  // Meet status
+  const activeMeet=S.meets.find(m=>{
+    const ms=localDate(m.date);
+    const me=m.endDate?localDate(m.endDate):ms;
+    return today>=ms&&today<=me;
+  });
+  const nextMeet=S.meets.filter(m=>localDate(m.date)>today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+  const taperDay=!activeMeet&&isTaperDay(today);
+  const nextMeetDays=nextMeet?Math.round((localDate(nextMeet.date)-today)/86400000):null;
+
+  let meetBanner='';
+  if(activeMeet){
+    meetBanner=`<div style="background:rgba(245,200,66,0.15);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:24px;">🏆</span>
+      <div><div style="font-size:13px;font-weight:700;color:var(--gold);">${activeMeet.name}</div><div style="font-size:11px;color:var(--muted);">Meet day — race ready</div></div>
+    </div>`;
+  } else if(taperDay&&nextMeet){
+    const td=Math.round((localDate(nextMeet.date)-today)/86400000);
+    meetBanner=`<div style="background:rgba(255,152,0,0.1);border:1px solid var(--orange);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:24px;">🌊</span>
+      <div><div style="font-size:13px;font-weight:700;color:var(--orange);">Taper Week</div><div style="font-size:11px;color:var(--muted);">${nextMeet.name} in ${td}d — dryland is mobility only</div></div>
+    </div>`;
+  } else if(nextMeet&&nextMeetDays<=14){
+    meetBanner=`<div style="background:rgba(0,198,255,0.08);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📅</span>
+      <div style="font-size:12px;color:var(--muted);">${nextMeet.name} <span style="color:var(--accent);font-weight:700;">${nextMeetDays}d away</span></div>
+    </div>`;
+  }
+
+  let sessionHTML='';
+  if(removed||sessions.length===0){
+    sessionHTML=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;"><span style="font-size:22px;">😴</span><div style="font-size:14px;color:var(--muted);">Rest day</div></div>`;
+  } else {
+    sessionHTML=sessions.map(id=>{
+      const m=SESSION_META[id]||{icon:'📌',label:id,color:'var(--muted)'};
+      const isSwim=id.startsWith('swim');
+      return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:22px;">${m.icon}</span>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:600;color:${m.color};">${m.label}</div>
+          <div style="font-size:11px;color:var(--muted);">${isSwim?'Pool session':'Dryland'}</div>
+        </div>
+        ${isSwim?`<span style="font-size:10px;background:rgba(0,198,255,0.15);color:var(--accent);padding:3px 8px;border-radius:8px;">SWIM</span>`:`<span style="font-size:10px;background:rgba(0,230,118,0.15);color:var(--green);padding:3px 8px;border-radius:8px;">DRYLAND</span>`}
+      </div>`;
+    }).join('');
+  }
+
+  // Workout count badge
+  const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
+  const dryCount=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
+  const loadLabel=swimCount>=2?'Double day':swimCount===1&&dryCount>=1?'Full day':swimCount===1?'Swim only':dryCount>=1?'Dryland only':'Rest';
+  const loadColor=swimCount>=2?'var(--orange)':swimCount===1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
+
+  el.innerHTML=`<div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Today</div>
+        <div style="font-size:15px;font-weight:700;">${dayLabel}</div>
+      </div>
+      <div style="background:${loadColor};opacity:0.9;color:var(--bg);font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px;">${loadLabel}</div>
+    </div>
+    ${meetBanner}
+    ${sessionHTML}
+    <button class="btn btn-secondary" style="margin-top:12px;font-size:13px;padding:10px;" onclick="editDay('${key}',${today.getDate()})">✏️ Edit today</button>
+  </div>`;
+}
 function isMeetDay(dt){
   return S.meets.some(m=>{
     const ms=localDate(m.date);
@@ -1032,6 +1130,7 @@ function renderCalendar(){
     html+=`<div class="cal-day${isToday?' today-cal':''}${hasMeet?' has-meet':''}${isRemoved?' removed-day':''}" onclick="editDay('${key}',${d})"><div class="cal-day-num">${d}</div><div class="cal-dots">${dots}</div></div>`;
   }
   document.getElementById('month-cal').innerHTML=html;
+  renderTodaySummary();
   renderMeets();
 }
 // ── Smart dryland recommendation engine ──
