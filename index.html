@@ -1025,19 +1025,6 @@ function renderHome(){
   let streak=0;const t2=new Date();t2.setHours(0,0,0,0);
   for(let i=0;i<hist.length;i++){const d=new Date(hist[hist.length-1-i].date);d.setHours(0,0,0,0);const df=Math.round((t2-d)/86400000);if(df===i||df===i+1)streak++;else break;}
   document.getElementById('stat-streak').textContent=streak;
-  const dotsEl=document.getElementById('week-dots');dotsEl.innerHTML='';
-  const now=new Date(),dow=now.getDay(),mo=dow===0?6:dow-1;
-  for(let i=0;i<7;i++){
-    const dd=new Date(now);dd.setDate(now.getDate()-mo+i);dd.setHours(0,0,0,0);
-    const dot=document.createElement('div');dot.className='day-dot';
-    const key=dKey(dd),sch=S.daySchedule[key]||{};
-    const hasMeet=S.meets.some(m=>{const md=localDate(m.date);return md.getTime()===dd.getTime();});
-    const hasDone=hist.some(h=>{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===dd.getTime();});
-    const daySess=sch.sessions||[];
-    const dayHasSwim=daySess.some(s=>s.startsWith('swim'))||sch.swim;
-    if(hasMeet)dot.classList.add('meet');else if(hasDone)dot.classList.add('done');else if(dayHasSwim)dot.classList.add('swim');else if(i===mo)dot.classList.add('today');
-    dotsEl.appendChild(dot);
-  }
   const az=document.getElementById('alert-zone');az.innerHTML='';
   const tp=isTaperWeek();
   if(tp.yes)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
