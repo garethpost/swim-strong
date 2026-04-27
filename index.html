@@ -190,15 +190,20 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--muted);" id="load-rec">—</div>
       </div>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Preview any workout type</button>
+      <div id="home-today-summary"></div>
+      <div class="card">
+        <div class="card-title">Upcoming Meets</div>
+        <div id="home-meets-list"></div>
+      </div>
     </div>
 
     <!-- WORKOUT -->
     <div id="section-workout" class="section">
       <p class="section-title">Today's Session</p>
       <p class="section-sub" id="workout-subtitle">—</p>
-      <div id="workout-content"><div class="empty-state"><div class="icon">💪</div><p>Generate a workout from Home.</p></div></div>
+      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>
+      <div id="workout-content"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
         <div class="card" style="margin-bottom:12px;">
           <div class="card-title">Rest Timer</div>
@@ -932,6 +937,86 @@ function saveTimeEntry(){
 }
 function delTime(ev,idx){if(!confirm('Delete this entry?'))return;S.timeHistory[ev].splice(idx,1);DB.set('timeHistory',S.timeHistory);renderTimesContent();}
 
+// ── Home widgets ──
+function renderHomeTodaySummary(){
+  const el=document.getElementById('home-today-summary');
+  if(!el)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const key=dKey(today);
+  const sch=S.daySchedule[key]||{};
+  const dow=today.getDay();
+  let sessions=sch.sessions||[];
+  if(!sch.override&&!sessions.length){
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){
+      const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+      if(today>=ss&&today<=se)sessions=tmpl.days[dow]||[];
+    }
+  }
+  if(sch.removed)sessions=[];
+  const SESSION_META={
+    swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)',tag:'SWIM'},
+    swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)',tag:'SWIM'},
+    dry_lower:{icon:'🦵',label:'Lower Body Lifting',color:'var(--green)',tag:'DRYLAND'},
+    dry_upper:{icon:'💪',label:'Upper Body Lifting',color:'var(--green)',tag:'DRYLAND'},
+    dry_power:{icon:'⚡',label:'Power / Plyo',color:'var(--orange)',tag:'DRYLAND'},
+    dry_mobility:{icon:'🧘',label:'Mobility & Recovery',color:'var(--purple)',tag:'DRYLAND'},
+    dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)',tag:'DRYLAND'},
+    dry_rest:{icon:'😴',label:'Rest Day',color:'var(--muted)',tag:'REST'},
+  };
+  const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
+  const dryCount=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
+  const loadLabel=swimCount>=2?'Double Day':swimCount===1&&dryCount>=1?'Full Day':swimCount===1?'Swim Only':dryCount>=1?'Dryland Only':'Rest Day';
+  const loadColor=swimCount>=2?'var(--orange)':swimCount===1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
+  const sessionRows=sessions.length===0
+    ?`<div style="font-size:13px;color:var(--muted);padding:4px 0;">No sessions scheduled — rest up.</div>`
+    :sessions.map(id=>{
+      const m=SESSION_META[id]||{icon:'📌',label:id,color:'var(--muted)',tag:''};
+      return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:20px;">${m.icon}</span>
+        <div style="flex:1;font-size:13px;font-weight:600;color:${m.color};">${m.label}</div>
+        <span style="font-size:10px;background:rgba(255,255,255,0.07);color:var(--muted);padding:2px 7px;border-radius:6px;">${m.tag}</span>
+      </div>`;
+    }).join('');
+  el.innerHTML=`<div class="card" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Today's Plan</div>
+      <span style="font-size:11px;font-weight:700;color:var(--bg);background:${loadColor};padding:3px 9px;border-radius:8px;">${loadLabel}</span>
+    </div>
+    ${sessionRows}
+    <button class="btn btn-secondary" style="margin-top:10px;font-size:13px;padding:9px;" onclick="editDay('${key}',${today.getDate()});showSection('schedule');">✏️ Edit today</button>
+  </div>`;
+}
+function renderHomeMeets(){
+  const el=document.getElementById('home-meets-list');
+  if(!el)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const upcoming=S.meets.filter(m=>localDate(m.endDate||m.date)>=today)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,4);
+  if(!upcoming.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);">No upcoming meets. Add them in the Schedule tab.</p>';return;}
+  el.innerHTML=upcoming.map(m=>{
+    const ms=localDate(m.date);
+    const me=m.endDate&&m.endDate!==m.date?localDate(m.endDate):null;
+    const dO=Math.round((ms-today)/86400000);
+    const startStr=ms.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+    const endStr=me?' – '+me.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):ms.toLocaleDateString('en-CA',{year:'numeric'});
+    const dateStr=startStr+endStr;
+    let countdown,cdColor;
+    if(dO<0){countdown='In progress';cdColor='var(--accent)';}
+    else if(dO===0){countdown='TODAY 🏁';cdColor='var(--gold)';}
+    else{const w=Math.floor(dO/7),d=dO%7;countdown=(w?w+'w ':'')+(d||!w?d+'d':'')+' away';cdColor=dO<=14?'var(--orange)':'var(--green)';}
+    const pri=m.priority==='A'?{bg:'var(--gold)',c:'var(--bg)',l:'A'}:m.priority==='B'?{bg:'var(--muted)',c:'var(--bg)',l:'B'}:{bg:'var(--border)',c:'var(--text)',l:'C'};
+    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:11px;font-weight:800;background:${pri.bg};color:${pri.c};padding:3px 8px;border-radius:6px;flex-shrink:0;">${pri.l}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+        <div style="font-size:11px;color:var(--muted);">${dateStr}</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:${cdColor};flex-shrink:0;">${countdown}</div>
+    </div>`;
+  }).join('');
+}
+
 // ── Home ──
 function renderHome(){
   const h=new Date().getHours();
@@ -965,6 +1050,8 @@ function renderHome(){
   const td=new Date();td.setHours(0,0,0,0);
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
   updateCheckin();
+  renderHomeTodaySummary();
+  renderHomeMeets();
 }
 function updateCheckin(){
   const sl=parseFloat(document.getElementById('sleep-slider').value),r=parseInt(document.getElementById('readiness-slider').value);
