@@ -501,6 +501,23 @@ function localDate(str){const p=str.split('-');return new Date(parseInt(p[0]),pa
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
+// Rotation-aware pick — exercises used in the last 2 sessions get deprioritised
+function pickFresh(arr,n){
+  const recent=new Set((S.history.slice(-2)||[]).flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name))));
+  const fresh=arr.filter(e=>!recent.has(e.name));
+  const stale=arr.filter(e=>recent.has(e.name));
+  const pool=[...fresh,...stale]; // fresh first, stale as fallback
+  return pool.slice(0,Math.min(n,pool.length)).sort(()=>Math.random()-0.5).slice(0,n);
+}
+// Suggest next weight: if athlete hit all reps on all sets, nudge up 2.5kg
+function suggestWeight(name,schemeReps){
+  const last=getLastLog(name);if(!last||!last.sets||!last.sets.length)return null;
+  const targetReps=parseInt((schemeReps||'5').split('-')[0]);
+  const allHit=last.sets.every(s=>{const r=parseInt(s.reps)||0;return r>=targetReps;});
+  const baseKg=last.sets[0]&&last.sets[0].weight?last.sets[0].weight:0;
+  if(!baseKg)return null;
+  return{kg:allHit?baseKg+2.5:baseKg,progressed:allHit,lastKg:baseKg};
+}
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===e.currentTarget)m.classList.remove('open');}));
 
 // Exercise Library
@@ -664,18 +681,22 @@ function buildCard(ex,bi,ei,scheme){
   const id=`ex-${bi}-${ei}`;
   const ns=ex.sets||scheme.sets;
   const last=ex.weighted?getLastLog(ex.name):null;
+  const sugg=ex.weighted?suggestWeight(ex.name,scheme.reps):null;
   let lastHtml='';
   if(last){
     const ds=new Date(last.date).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
-    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${last.sets.map((s,i)=>`S${i+1} ${s.weight?dW(s.weight).toFixed(1)+uL():'BW'}×${s.reps||'?'}`).join(' · ')}</div>`;
+    const setsStr=last.sets.map((s,i)=>`S${i+1} ${s.weight?dW(s.weight).toFixed(1)+uL():'BW'}×${s.reps||'?'}`).join(' · ');
+    const targStr=sugg?` &nbsp;<span style="color:var(--green);font-weight:700;">${sugg.progressed?'↑':'→'} Target: ${dW(sugg.kg).toFixed(1)}${uL()}</span>`:'';
+    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}</div>`;
   }
   let sHtml='';
   if(ex.weighted){
     sHtml=`<div class="set-labels"><div class="set-label">Set</div><div class="set-label">${uL()}</div><div class="set-label">Reps</div><div class="set-label">✓</div></div><div class="set-log-grid">`;
     for(let s=1;s<=ns;s++){
-      const lw=last&&last.sets[s-1]?dW(last.sets[s-1].weight||0).toFixed(1):'';
+      // Pre-fill with suggested weight (progressed or same as last); fall back to blank
+      const prefill=sugg&&sugg.kg?dW(sugg.kg).toFixed(1):'';
       const lr=last&&last.sets[s-1]?last.sets[s-1].reps:'';
-      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${lw||'—'}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||scheme.reps.split('-')[0]}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
+      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${prefill||'—'}" value="${prefill}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||scheme.reps.split('-')[0]}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
     }
     sHtml+=`</div>`;
   } else {
@@ -732,20 +753,20 @@ function generateWorkout(forceType){
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,4).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
-    const wEx=pick(EX.lower.filter(e=>e.weighted),dt?2:4);
+    const wEx=pickFresh(EX.lower.filter(e=>e.weighted),dt?2:4);
     const nordic=EX.lower.find(e=>e.name==='Nordic Ham Curls');
     blocks.push({title:'🦵 Lower Body Strength',exercises:[...wEx,...(dt||!nordic?[]:[nordic])].map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core',exercises:pick(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
   } else if(dayType==='upper'){
     const mand=EX.upper.filter(e=>e.name==='Face Pulls'||e.name==='Prone Y-T-W');
     let rest;
-    if(emp==='fly'&&!dt){const pulls=EX.upper.filter(e=>['Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name));const others=pick(EX.upper.filter(e=>!['Face Pulls','Prone Y-T-W','Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name)),2);rest=[...pulls,...others];}
-    else{rest=pick(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),dt?2:4);}
+    if(emp==='fly'&&!dt){const pulls=EX.upper.filter(e=>['Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name));const others=pickFresh(EX.upper.filter(e=>!['Face Pulls','Prone Y-T-W','Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name)),2);rest=[...pulls,...others];}
+    else{rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),dt?2:4);}
     blocks.push({title:'💪 Upper Body Strength',exercises:[...rest,...mand].map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core Finisher',exercises:pick(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
   } else if(dayType==='power'){
-    blocks.push({title:'⚡ Plyometric Power',exercises:pick(EX.plyos,dt?3:5).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
+    blocks.push({title:'⚡ Plyometric Power',exercises:pickFresh(EX.plyos,dt?3:5).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
+    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='mobility'){
     blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,6).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
