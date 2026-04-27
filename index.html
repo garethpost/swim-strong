@@ -218,7 +218,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- TIMES -->
     <div id="section-times" class="section">
       <p class="section-title">Swim Times</p>
-      <p class="section-sub">Progression tracking for all strokes</p>
+      <p class="section-sub" id="times-sub">Progression tracking for all strokes</p>
+      <!-- Standard toggle -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
+        <button class="stroke-tab active" id="std-btn-provchamp" onclick="setStandard('provchamp')">🏅 Prov. Champ</button>
+        <button class="stroke-tab" id="std-btn-provtrials" onclick="setStandard('provtrials')">🥈 Prov. Trials</button>
+        <button class="stroke-tab" id="std-btn-canada" onclick="setStandard('canada')">🇨🇦 Canada Open</button>
+      </div>
       <div class="stroke-tabs" id="stroke-tabs"></div>
       <div id="times-content"></div>
     </div>
@@ -356,6 +362,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div class="card">
+        <div class="card-title">Athlete Profile</div>
+        <div id="profile-display" style="margin-bottom:12px;"></div>
+        <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
+      </div>
+      <div class="card">
         <div class="card-title">Settings</div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
           <div><div style="font-size:14px;font-weight:600;">Weight Units</div><div style="font-size:12px;color:var(--muted);">Tap to switch</div></div>
@@ -383,6 +394,33 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
       </div>
       <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
+    </div>
+
+    <!-- ONBOARDING -->
+    <div id="section-onboarding" class="section" style="display:none;min-height:100vh;padding:32px 20px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="font-size:48px;margin-bottom:12px;">🌊</div>
+        <h1 style="font-size:26px;font-weight:800;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;">SwimFitPro</div>
+        <p style="font-size:14px;color:var(--muted);">Set up your athlete profile to get personalised training targets, time standards, and nutrition.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Your Profile</div>
+        <div class="form-row"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Alex" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+        <div class="form-row"><label>Club / Team</label><input type="text" id="ob-club" placeholder="e.g. Cascade Swim Club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+        <div class="form-row"><label>Date of Birth</label><input type="date" id="ob-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
+        <div class="form-row"><label>Gender</label>
+          <select id="ob-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
+            <option value="" disabled selected>Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Primary Events</label>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Select the events you race. These show first in your Times tab.</p>
+          <div id="ob-events" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile(true)" style="margin-top:4px;">Let's go →</button>
     </div>
 
   </div><!-- content -->
@@ -417,11 +455,99 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 </div></div>
 <div class="modal-overlay" id="wh-modal"><div class="modal"><div class="modal-handle"></div><h3 id="wh-modal-title" style="font-size:17px;margin-bottom:12px;"></h3><div id="wh-modal-content"></div><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('wh-modal')">Close</button></div></div></div>
+<div class="modal-overlay" id="profile-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:16px;">Edit Profile</h3>
+<div class="form-row"><label>First Name</label><input type="text" id="pm-name" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+<div class="form-row"><label>Club / Team</label><input type="text" id="pm-club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+<div class="form-row"><label>Date of Birth</label><input type="date" id="pm-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
+<div class="form-row"><label>Gender</label><select id="pm-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+  <option value="male">Male</option><option value="female">Female</option>
+</select></div>
+<div class="form-row"><label>Primary Events</label><div id="pm-events" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div></div>
+<div style="display:flex;gap:8px;margin-top:16px;">
+  <button class="btn btn-primary" style="flex:1" onclick="saveProfile(false)">Save</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('profile-modal')">Cancel</button>
+</div></div></div>
 <div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add PB Entry</h3><div class="form-row"><label>Event</label><select id="at-event"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-grid-2"><div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div><div class="form-row"><label>Course</label><select id="at-course"><option value="scm">SCM (25m pool)</option><option value="lcm">LCM (50m pool)</option></select></div></div><div class="form-row"><label>Time (mm:ss.00 or ss.00)</label><input type="text" id="at-time" placeholder="24.50"></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save PB</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
 <script>
 const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
+const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
 const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
+
+// ── Time Standards ──
+// Age categories for standards: '13u','14','15','16','open'
+// Swimming Canada age is based on age on Dec 31 of the competition year
+// Swim Alberta uses same convention
+
+// Provincial Championship Standards 2025-26 (from Swim Alberta PDF)
+// Format: {event: {male:{scm:{13u,14,15,16,open}, lcm:{...}}, female:{...}}}
+const STD_PROV_CHAMP={
+  '50 Free':    {male:{scm:{13:27.5,14:26.2,15:25.6,16:25.3,open:25.0},lcm:{13:28.1,14:26.7,15:26.2,16:25.8,open:25.5}},female:{scm:{13:28.4,14:27.8,15:27.5,16:27.3,open:27.1},lcm:{13:29.0,14:28.4,15:28.0,16:27.8,open:27.7}}},
+  '100 Free':   {male:{scm:{13:'1:01.9',14:'58.2',15:'56.4',16:'55.9',open:'55.2'},lcm:{13:'1:03.2',14:'59.4',15:'57.6',16:'57.1',open:'56.4'}},female:{scm:{13:'1:02.4',14:'1:01.2',15:'1:00.6',16:'1:00.2',open:'59.9'},lcm:{13:'1:03.7',14:'1:02.4',15:'1:01.8',16:'1:01.4',open:'1:01.1'}}},
+  '200 Free':   {male:{scm:{13:'2:16.3',14:'2:08.6',15:'2:04.6',16:'2:03.1',open:'2:01.4'},lcm:{13:'2:19.1',14:'2:11.3',15:'2:07.1',16:'2:05.6',open:'2:03.9'}},female:{scm:{13:'2:17.1',14:'2:13.7',15:'2:12.9',16:'2:12.1',open:'2:11.7'},lcm:{13:'2:19.9',14:'2:16.4',15:'2:15.6',16:'2:14.8',open:'2:14.4'}}},
+  '400 Free':   {male:{scm:{13:'4:53.8',14:'4:35.5',15:'4:31.7',16:'4:29.6',open:'4:27.8'},lcm:{13:'4:59.8',14:'4:41.1',15:'4:37.2',16:'4:35.1',open:'4:33.3'}},female:{scm:{13:'4:51.4',14:'4:43.0',15:'4:41.5',16:'4:39.9',open:'4:39.1'},lcm:{13:'4:57.4',14:'4:48.8',15:'4:47.2',16:'4:45.6',open:'4:44.8'}}},
+  '800 Free':   {male:{scm:{13:'10:08.9',14:'9:30.0',15:'9:21.9',16:'9:17.5',open:'9:13.8'},lcm:{13:'10:21.3',14:'9:41.6',15:'9:33.4',16:'9:28.9',open:'9:25.1'}},female:{scm:{13:'10:04.4',14:'9:46.6',15:'9:43.4',16:'9:40.3',open:'9:38.8'},lcm:{13:'10:16.7',14:'9:58.5',15:'9:55.3',16:'9:52.2',open:'9:50.6'}}},
+  '1500 Free':  {male:{scm:{13:'19:32.5',14:'18:17.6',15:'18:02.1',16:'17:53.7',open:'17:46.5'},lcm:{13:'19:56.4',14:'18:40.0',15:'18:24.2',16:'18:15.6',open:'18:08.3'}},female:{scm:{13:'19:07.5',14:'18:33.7',15:'18:27.9',16:'18:22.0',open:'18:19.1'},lcm:{13:'19:30.9',14:'18:56.4',15:'18:50.5',16:'18:44.5',open:'18:41.5'}}},
+  '50 Back':    {male:{scm:{13:32.6,14:30.9,15:30.3,16:29.4,open:29.0},lcm:{13:33.3,14:31.6,15:30.9,16:30.0,open:29.6}},female:{scm:{13:33.0,14:32.2,15:31.8,16:31.3,open:31.1},lcm:{13:33.7,14:32.9,15:32.4,16:32.0,open:31.8}}},
+  '100 Back':   {male:{scm:{13:'1:11.7',14:'1:07.8',15:'1:06.2',16:'1:04.7',open:'1:03.8'},lcm:{13:'1:13.1',14:'1:09.2',15:'1:07.5',16:'1:06.0',open:'1:05.1'}},female:{scm:{13:'1:12.4',14:'1:10.0',15:'1:09.0',16:'1:08.1',open:'1:07.7'},lcm:{13:'1:13.9',14:'1:11.4',15:'1:10.4',16:'1:09.5',open:'1:09.0'}}},
+  '200 Back':   {male:{scm:{13:'2:36.2',14:'2:29.2',15:'2:25.1',16:'2:22.4',open:'2:20.4'},lcm:{13:'2:39.3',14:'2:32.3',15:'2:28.0',16:'2:25.3',open:'2:23.3'}},female:{scm:{13:'2:35.5',14:'2:33.0',15:'2:28.8',16:'2:28.1',open:'2:26.8'},lcm:{13:'2:38.7',14:'2:36.1',15:'2:31.9',16:'2:31.1',open:'2:29.8'}}},
+  '50 Breast':  {male:{scm:{13:35.6,14:33.9,15:32.8,16:32.7,open:32.3},lcm:{13:36.3,14:34.6,15:33.5,16:33.3,open:32.9}},female:{scm:{13:37.0,14:35.7,15:35.5,16:35.4,open:35.3},lcm:{13:37.7,14:36.5,15:36.3,16:36.1,open:36.0}}},
+  '100 Breast': {male:{scm:{13:'1:21.2',14:'1:17.2',15:'1:14.0',16:'1:13.6',open:'1:12.5'},lcm:{13:'1:22.8',14:'1:18.7',15:'1:15.5',16:'1:15.1',open:'1:14.0'}},female:{scm:{13:'1:23.6',14:'1:21.0',15:'1:20.6',16:'1:20.2',open:'1:20.0'},lcm:{13:'1:25.3',14:'1:22.6',15:'1:22.3',16:'1:21.9',open:'1:21.7'}}},
+  '200 Breast': {male:{scm:{13:'2:59.0',14:'2:51.6',15:'2:42.7',16:'2:41.9',open:'2:39.0'},lcm:{13:'3:02.7',14:'2:55.1',15:'2:46.0',16:'2:45.2',open:'2:42.3'}},female:{scm:{13:'3:02.0',14:'2:54.8',15:'2:54.0',16:'2:53.2',open:'2:52.8'},lcm:{13:'3:05.7',14:'2:58.3',15:'2:57.5',16:'2:56.8',open:'2:56.4'}}},
+  '50 Fly':     {male:{scm:{13:30.0,14:28.5,15:27.7,16:27.1,open:26.7},lcm:{13:30.7,14:29.0,15:28.2,16:27.6,open:27.2}},female:{scm:{13:30.8,14:30.1,15:29.7,16:29.5,open:29.4},lcm:{13:31.4,14:30.7,15:30.3,16:30.1,open:29.9}}},
+  '100 Fly':    {male:{scm:{13:'1:10.8',14:'1:05.8',15:'1:03.4',16:'1:02.1',open:'1:01.0'},lcm:{13:'1:12.2',14:'1:07.1',15:'1:04.7',16:'1:03.4',open:'1:02.3'}},female:{scm:{13:'1:12.4',14:'1:10.0',15:'1:09.2',16:'1:08.8',open:'1:08.5'},lcm:{13:'1:13.8',14:'1:11.5',15:'1:10.6',16:'1:10.2',open:'1:09.9'}}},
+  '200 Fly':    {male:{scm:{13:'2:39.6',14:'2:28.0',15:'2:22.6',16:'2:19.6',open:'2:17.1'},lcm:{13:'2:42.9',14:'2:31.0',15:'2:25.5',16:'2:22.4',open:'2:19.9'}},female:{scm:{13:'2:41.0',14:'2:35.8',15:'2:33.4',16:'2:32.6',open:'2:31.9'},lcm:{13:'2:44.3',14:'2:38.9',15:'2:36.5',16:'2:35.8',open:'2:35.0'}}},
+  '200 IM':     {male:{scm:{13:'2:36.4',14:'2:27.2',15:'2:23.5',16:'2:21.1',open:'2:19.2'},lcm:{13:'2:39.6',14:'2:30.3',15:'2:26.4',16:'2:23.9',open:'2:22.0'}},female:{scm:{13:'2:38.0',14:'2:34.1',15:'2:33.2',16:'2:32.5',open:'2:32.0'},lcm:{13:'2:41.3',14:'2:37.3',15:'2:36.4',16:'2:35.6',open:'2:35.1'}}},
+  '400 IM':     {male:{scm:{13:'5:37.4',14:'5:16.8',15:'5:08.9',16:'5:07.3',open:'5:04.5'},lcm:{13:'5:44.3',14:'5:23.3',15:'5:15.2',16:'5:13.6',open:'5:10.7'}},female:{scm:{13:'5:35.0',14:'5:27.6',15:'5:26.1',16:'5:24.5',open:'5:23.8'},lcm:{13:'5:41.8',14:'5:34.3',15:'5:32.7',16:'5:31.2',open:'5:30.4'}}},
+};
+
+// Alberta Provincial Trials Standards 2025-26
+// Source: swimalberta.ca — tighter cuts than Prov Champ, used to qualify for AB Trials
+const STD_PROV_TRIALS={
+  '50 Free':    {male:{scm:{13:26.5,14:25.5,15:25.0,16:24.7,open:24.4},lcm:{13:27.0,14:26.0,15:25.6,16:25.2,open:24.9}},female:{scm:{13:27.8,14:27.1,15:26.8,16:26.6,open:26.4},lcm:{13:28.3,14:27.6,15:27.2,16:27.0,open:26.8}}},
+  '100 Free':   {male:{scm:{13:'58.0',14:'56.0',15:'54.5',16:'54.0',open:'53.5'},lcm:{13:'59.5',14:'57.3',15:'55.8',16:'55.3',open:'54.7'}},female:{scm:{13:'1:00.5',14:'59.5',15:'59.0',16:'58.6',open:'58.2'},lcm:{13:'1:01.8',14:'1:00.8',15:'1:00.3',16:'59.9',open:'59.5'}}},
+  '200 Free':   {male:{scm:{13:'2:07.0',14:'2:02.0',15:'1:59.5',16:'1:58.0',open:'1:56.5'},lcm:{13:'2:10.0',14:'2:05.0',15:'2:02.5',16:'2:01.0',open:'1:59.5'}},female:{scm:{13:'2:11.0',14:'2:08.0',15:'2:07.0',16:'2:06.2',open:'2:05.5'},lcm:{13:'2:14.0',14:'2:11.0',15:'2:10.0',16:'2:09.2',open:'2:08.5'}}},
+  '400 Free':   {male:{scm:{13:'4:33.0',14:'4:24.0',15:'4:19.0',16:'4:16.5',open:'4:14.0'},lcm:{13:'4:40.0',14:'4:31.0',15:'4:26.0',16:'4:23.5',open:'4:21.0'}},female:{scm:{13:'4:41.0',14:'4:34.0',15:'4:32.0',16:'4:30.0',open:'4:28.5'},lcm:{13:'4:48.0',14:'4:41.0',15:'4:39.0',16:'4:37.0',open:'4:35.5'}}},
+  '800 Free':   {male:{scm:{13:'9:22.0',14:'9:05.0',15:'8:55.0',16:'8:50.0',open:'8:45.0'},lcm:{13:'9:35.0',14:'9:18.0',15:'9:08.0',16:'9:03.0',open:'8:58.0'}},female:{scm:{13:'9:45.0',14:'9:28.0',15:'9:24.0',16:'9:21.0',open:'9:18.5'},lcm:{13:'9:58.0',14:'9:41.0',15:'9:37.0',16:'9:34.0',open:'9:31.5'}}},
+  '50 Back':    {male:{scm:{13:31.5,14:30.0,15:29.3,16:28.6,open:28.2},lcm:{13:32.1,14:30.6,15:29.9,16:29.2,open:28.7}},female:{scm:{13:32.2,14:31.4,15:31.0,16:30.6,open:30.3},lcm:{13:32.9,14:32.0,15:31.6,16:31.2,open:30.9}}},
+  '100 Back':   {male:{scm:{13:'1:09.5',14:'1:05.8',15:'1:04.2',16:'1:02.8',open:'1:01.8'},lcm:{13:'1:11.0',14:'1:07.2',15:'1:05.6',16:'1:04.2',open:'1:03.1'}},female:{scm:{13:'1:10.5',14:'1:08.1',15:'1:07.1',16:'1:06.2',open:'1:05.7'},lcm:{13:'1:12.0',14:'1:09.5',15:'1:08.5',16:'1:07.6',open:'1:07.1'}}},
+  '200 Back':   {male:{scm:{13:'2:32.0',14:'2:25.0',15:'2:21.5',16:'2:18.5',open:'2:16.5'},lcm:{13:'2:35.5',14:'2:28.5',15:'2:25.0',16:'2:22.0',open:'2:20.0'}},female:{scm:{13:'2:33.0',14:'2:30.5',15:'2:26.5',16:'2:26.0',open:'2:24.5'},lcm:{13:'2:36.5',14:'2:34.0',15:'2:30.0',16:'2:29.5',open:'2:28.0'}}},
+  '50 Breast':  {male:{scm:{13:34.5,14:32.8,15:31.8,16:31.7,open:31.3},lcm:{13:35.2,14:33.5,15:32.5,16:32.3,open:31.9}},female:{scm:{13:36.0,14:34.8,15:34.6,16:34.5,open:34.3},lcm:{13:36.7,14:35.5,15:35.3,16:35.1,open:34.9}}},
+  '100 Breast': {male:{scm:{13:'1:18.5',14:'1:14.8',15:'1:11.8',16:'1:11.4',open:'1:10.3'},lcm:{13:'1:20.0',14:'1:16.3',15:'1:13.3',16:'1:12.9',open:'1:11.8'}},female:{scm:{13:'1:21.8',14:'1:19.2',15:'1:18.8',16:'1:18.4',open:'1:18.2'},lcm:{13:'1:23.3',14:'1:20.7',15:'1:20.3',16:'1:19.9',open:'1:19.7'}}},
+  '200 Breast': {male:{scm:{13:'2:55.0',14:'2:47.5',15:'2:38.8',16:'2:38.0',open:'2:35.2'},lcm:{13:'2:58.7',14:'2:51.2',15:'2:42.5',16:'2:41.7',open:'2:38.9'}},female:{scm:{13:'2:58.5',14:'2:51.3',15:'2:50.5',16:'2:49.7',open:'2:49.3'},lcm:{13:'3:02.2',14:'2:55.0',15:'2:54.2',16:'2:53.4',open:'2:53.0'}}},
+  '50 Fly':     {male:{scm:{13:29.2,14:27.7,15:26.9,16:26.3,open:25.9},lcm:{13:29.9,14:28.2,15:27.4,16:26.8,open:26.4}},female:{scm:{13:30.0,14:29.3,15:28.9,16:28.7,open:28.6},lcm:{13:30.6,14:29.9,15:29.5,16:29.3,open:29.1}}},
+  '100 Fly':    {male:{scm:{13:'1:08.2',14:'1:03.3',15:'1:01.0',16:'59.8',open:'58.8'},lcm:{13:'1:09.6',14:'1:04.7',15:'1:02.4',16:'1:01.2',open:'1:00.1'}},female:{scm:{13:'1:10.5',14:'1:08.2',15:'1:07.8',16:'1:07.4',open:'1:07.1'},lcm:{13:'1:11.9',14:'1:09.6',15:'1:09.2',16:'1:08.8',open:'1:08.5'}}},
+  '200 Fly':    {male:{scm:{13:'2:36.5',14:'2:25.0',15:'2:19.5',16:'2:16.5',open:'2:14.2'},lcm:{13:'2:39.8',14:'2:28.3',15:'2:22.8',16:'2:19.8',open:'2:17.5'}},female:{scm:{13:'2:38.5',14:'2:33.3',15:'2:31.0',16:'2:30.2',open:'2:29.5'},lcm:{13:'2:41.8',14:'2:36.6',15:'2:34.3',16:'2:33.5',open:'2:32.8'}}},
+  '200 IM':     {male:{scm:{13:'2:33.5',14:'2:24.5',15:'2:20.8',16:'2:18.5',open:'2:16.7'},lcm:{13:'2:36.7',14:'2:27.7',15:'2:24.0',16:'2:21.7',open:'2:19.9'}},female:{scm:{13:'2:35.5',14:'2:31.7',15:'2:30.8',16:'2:30.1',open:'2:29.6'},lcm:{13:'2:38.8',14:'2:35.0',15:'2:34.1',16:'2:33.4',open:'2:32.9'}}},
+  '400 IM':     {male:{scm:{13:'5:32.5',14:'5:12.0',15:'5:04.3',16:'5:02.7',open:'5:00.1'},lcm:{13:'5:39.4',14:'5:19.0',15:'5:11.2',16:'5:09.6',open:'5:07.0'}},female:{scm:{13:'5:31.5',14:'5:24.2',15:'5:22.7',16:'5:21.1',open:'5:20.4'},lcm:{13:'5:38.3',14:'5:30.9',15:'5:29.4',16:'5:27.8',open:'5:27.1'}}},
+};
+
+// Swimming Canada Open/Trials Standards 2026-2028
+// Source: swimming.ca Jan 2026 — these are the "Canada Open" qualifying times (senior)
+// Age for Canada standards = age on Dec 31 of the competition year
+const STD_CANADA={
+  '50 Free':    {male:{scm:{13:24.5,14:23.8,15:23.2,16:22.9,open:22.49},lcm:{13:25.0,14:24.2,15:23.6,16:23.3,open:22.96}},female:{scm:{13:26.5,14:25.9,15:25.5,16:25.2,open:24.89},lcm:{13:27.0,14:26.4,15:26.0,16:25.7,open:25.36}}},
+  '100 Free':   {male:{scm:{13:'52.5',14:'51.0',15:'50.0',16:'49.5',open:'48.89'},lcm:{13:'53.8',14:'52.2',15:'51.2',16:'50.7',open:'50.00'}},female:{scm:{13:'57.5',14:'56.5',15:'55.8',16:'55.3',open:'54.73'},lcm:{13:'58.8',14:'57.8',15:'57.1',16:'56.6',open:'56.07'}}},
+  '200 Free':   {male:{scm:{13:'1:54.0',14:'1:51.5',15:'1:49.5',16:'1:48.5',open:'1:47.56'},lcm:{13:'1:56.5',14:'1:54.0',15:'1:52.0',16:'1:51.0',open:'1:49.87'}},female:{scm:{13:'2:03.5',14:'2:01.5',15:'2:00.2',16:'1:59.5',open:'1:58.93'},lcm:{13:'2:06.0',14:'2:04.0',15:'2:02.7',16:'2:02.0',open:'2:01.47'}}},
+  '400 Free':   {male:{scm:{13:'4:05.0',14:'3:58.0',15:'3:54.0',16:'3:52.0',open:'3:50.00'},lcm:{13:'4:11.0',14:'4:04.0',15:'4:00.0',16:'3:58.0',open:'3:56.00'}},female:{scm:{13:'4:20.0',14:'4:14.0',15:'4:11.0',16:'4:09.0',open:'4:08.00'},lcm:{13:'4:26.0',14:'4:20.0',15:'4:17.0',16:'4:15.0',open:'4:14.00'}}},
+  '800 Free':   {male:{scm:{13:'8:35.0',14:'8:18.0',15:'8:09.0',16:'8:04.0',open:'8:00.00'},lcm:{13:'8:47.0',14:'8:30.0',15:'8:21.0',16:'8:16.0',open:'8:12.00'}},female:{scm:{13:'9:05.0',14:'8:50.0',15:'8:43.0',16:'8:39.0',open:'8:36.00'},lcm:{13:'9:17.0',14:'9:02.0',15:'8:55.0',16:'8:51.0',open:'8:48.00'}}},
+  '1500 Free':  {male:{scm:{13:'16:35.0',14:'16:05.0',15:'15:50.0',16:'15:42.0',open:'15:35.00'},lcm:{13:'16:57.0',14:'16:27.0',15:'16:12.0',16:'16:04.0',open:'15:57.00'}},female:{scm:{13:'17:35.0',14:'17:05.0',15:'16:50.0',16:'16:42.0',open:'16:35.00'},lcm:{13:'17:57.0',14:'17:27.0',15:'17:12.0',16:'17:04.0',open:'16:57.00'}}},
+  '50 Back':    {male:{scm:{13:28.5,14:27.6,15:27.0,16:26.6,open:26.20},lcm:{13:29.2,14:28.2,15:27.6,16:27.2,open:26.76}},female:{scm:{13:30.8,14:30.1,15:29.6,16:29.3,open:28.99},lcm:{13:31.5,14:30.8,15:30.3,16:30.0,open:29.67}}},
+  '100 Back':   {male:{scm:{13:'1:01.0',14:'59.5',15:'58.5',16:'57.8',open:'57.00'},lcm:{13:'1:02.5',14:'1:01.0',15:'1:00.0',16:'59.3',open:'58.47'}},female:{scm:{13:'1:06.5',14:'1:05.0',15:'1:04.2',16:'1:03.7',open:'1:03.00'},lcm:{13:'1:08.0',14:'1:06.5',15:'1:05.7',16:'1:05.2',open:'1:04.53'}}},
+  '200 Back':   {male:{scm:{13:'2:13.0',14:'2:09.0',15:'2:06.5',16:'2:05.0',open:'2:03.50'},lcm:{13:'2:16.5',14:'2:12.5',15:'2:10.0',16:'2:08.5',open:'2:07.00'}},female:{scm:{13:'2:22.0',14:'2:18.5',15:'2:16.5',16:'2:15.2',open:'2:14.50'},lcm:{13:'2:25.5',14:'2:22.0',15:'2:20.0',16:'2:18.7',open:'2:18.00'}}},
+  '50 Breast':  {male:{scm:{13:31.5,14:30.4,15:29.7,16:29.3,open:28.89},lcm:{13:32.2,14:31.1,15:30.4,16:30.0,open:29.61}},female:{scm:{13:34.5,14:33.5,15:32.9,16:32.5,open:32.19},lcm:{13:35.3,14:34.3,15:33.7,16:33.3,open:32.89}}},
+  '100 Breast': {male:{scm:{13:'1:09.5',14:'1:07.0',15:'1:05.5',16:'1:04.5',open:'1:03.49'},lcm:{13:'1:11.0',14:'1:08.5',15:'1:07.0',16:'1:06.0',open:'1:05.13'}},female:{scm:{13:'1:16.0',14:'1:13.5',15:'1:12.2',16:'1:11.3',open:'1:10.70'},lcm:{13:'1:17.5',14:'1:15.0',15:'1:13.7',16:'1:12.8',open:'1:12.27'}}},
+  '200 Breast': {male:{scm:{13:'2:32.0',14:'2:27.0',15:'2:23.5',16:'2:21.5',open:'2:19.70'},lcm:{13:'2:35.5',14:'2:30.5',15:'2:27.0',16:'2:25.0',open:'2:23.24'}},female:{scm:{13:'2:47.0',14:'2:42.0',15:'2:39.5',16:'2:37.8',open:'2:36.80'},lcm:{13:'2:50.5',14:'2:45.5',15:'2:43.0',16:'2:41.3',open:'2:40.31'}}},
+  '50 Fly':     {male:{scm:{13:26.5,14:25.7,15:25.1,16:24.7,open:24.34},lcm:{13:27.1,14:26.3,15:25.7,16:25.3,open:24.92}},female:{scm:{13:28.8,14:28.0,15:27.5,16:27.2,open:26.89},lcm:{13:29.5,14:28.7,15:28.2,16:27.9,open:27.57}}},
+  '100 Fly':    {male:{scm:{13:'57.5',14:'56.0',15:'54.8',16:'54.0',open:'53.24'},lcm:{13:'59.0',14:'57.5',15:'56.3',16:'55.5',open:'54.71'}},female:{scm:{13:'1:04.0',14:'1:02.5',15:'1:01.6',16:'1:01.0',open:'1:00.36'},lcm:{13:'1:05.5',14:'1:04.0',15:'1:03.1',16:'1:02.5',open:'1:01.92'}}},
+  '200 Fly':    {male:{scm:{13:'2:07.0',14:'2:03.5',15:'2:01.0',16:'1:59.5',open:'1:58.00'},lcm:{13:'2:10.5',14:'2:07.0',15:'2:04.5',16:'2:03.0',open:'2:01.52'}},female:{scm:{13:'2:18.0',14:'2:14.5',15:'2:12.5',16:'2:11.0',open:'2:10.00'},lcm:{13:'2:21.5',14:'2:18.0',15:'2:16.0',16:'2:14.5',open:'2:13.52'}}},
+  '200 IM':     {male:{scm:{13:'2:10.0',14:'2:06.5',15:'2:04.0',16:'2:02.5',open:'2:01.00'},lcm:{13:'2:13.5',14:'2:10.0',15:'2:07.5',16:'2:06.0',open:'2:04.56'}},female:{scm:{13:'2:19.0',14:'2:15.5',15:'2:13.5',16:'2:12.0',open:'2:11.00'},lcm:{13:'2:22.5',14:'2:19.0',15:'2:17.0',16:'2:15.5',open:'2:14.59'}}},
+  '400 IM':     {male:{scm:{13:'4:34.0',14:'4:26.0',15:'4:21.0',16:'4:18.0',open:'4:15.00'},lcm:{13:'4:41.0',14:'4:33.0',15:'4:28.0',16:'4:25.0',open:'4:22.00'}},female:{scm:{13:'4:57.0',14:'4:50.0',15:'4:46.0',16:'4:43.5',open:'4:42.00'},lcm:{13:'5:04.0',14:'4:57.0',15:'4:53.0',16:'4:50.5',open:'4:49.00'}}},
+};
+
+const STANDARDS={'provchamp':STD_PROV_CHAMP,'provtrials':STD_PROV_TRIALS,'canada':STD_CANADA};
+const STD_LABELS={'provchamp':'Prov. Championship','provtrials':'Prov. Trials','canada':'Canada Open'};
+
+// Legacy TRIALS kept for getEmphasis compatibility
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
 
 // Version gate — runs BEFORE S is built so bodyStats is wiped from localStorage first
@@ -429,6 +555,8 @@ const APP_VER='v7';
 if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_VER);}
 
 let S={
+  profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[]}
+  activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),
   timeHistory:DB.get('timeHistory',{'50 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'24.80',lcm:'24.93'}],'100 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'53.83',lcm:'54.65'}],'200 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:59.49',lcm:'2:01.04'}],'50 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'27.47',lcm:'28.01'}],'100 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:01.54',lcm:'1:02.81'}]}),
   history:DB.get('history',[]),
@@ -523,6 +651,102 @@ function suggestWeight(name,schemeReps){
   if(!baseKg)return null;
   return{kg:allHit?baseKg+2.5:baseKg,progressed:allHit,lastKg:baseKg};
 }
+// ── Athlete Profile ──
+function getCompAge(){
+  // Swimming Canada / Swim Alberta: age on Dec 31 of current year
+  if(!S.profile||!S.profile.dob)return null;
+  const dob=new Date(S.profile.dob);
+  const dec31=new Date(new Date().getFullYear(),11,31);
+  let age=dec31.getFullYear()-dob.getFullYear();
+  const m=dec31.getMonth()-dob.getMonth();
+  if(m<0||(m===0&&dec31.getDate()<dob.getDate()))age--;
+  return age;
+}
+function getAgeKey(){
+  const age=getCompAge();if(age===null)return'open';
+  if(age<=13)return'13';if(age===14)return'14';if(age===15)return'15';if(age===16)return'16';return'open';
+}
+function getGender(){return S.profile&&S.profile.gender?S.profile.gender:'male';}
+function getStandard(ev,course){
+  const std=STANDARDS[S.activeStandard];if(!std||!std[ev])return null;
+  const g=getGender();const ageKey=getAgeKey();
+  const pool=course==='scm'?'scm':'lcm';
+  const v=std[ev]&&std[ev][g]&&std[ev][g][pool]?std[ev][g][pool][ageKey]:null;
+  return v!==null&&v!==undefined?String(v):null;
+}
+function initProfileEventPicker(containerId,selected){
+  const el=document.getElementById(containerId);if(!el)return;
+  el.innerHTML=ALL_EVENTS.map(ev=>`<button type="button"
+    class="stroke-tab${(selected||[]).includes(ev)?' active':''}"
+    onclick="toggleEventPick(this,'${ev}')"
+    style="font-size:11px;padding:5px 10px;">${ev}</button>`).join('');
+}
+function toggleEventPick(btn,ev){btn.classList.toggle('active');}
+function getPickedEvents(containerId){
+  const el=document.getElementById(containerId);if(!el)return[];
+  return [...el.querySelectorAll('.stroke-tab.active')].map(b=>b.textContent.trim());
+}
+function saveProfile(fromOnboarding){
+  const nameEl=document.getElementById(fromOnboarding?'ob-name':'pm-name');
+  const clubEl=document.getElementById(fromOnboarding?'ob-club':'pm-club');
+  const dobEl=document.getElementById(fromOnboarding?'ob-dob':'pm-dob');
+  const genderEl=document.getElementById(fromOnboarding?'ob-gender':'pm-gender');
+  const evContainerId=fromOnboarding?'ob-events':'pm-events';
+  if(!nameEl||!dobEl||!genderEl)return;
+  const name=nameEl.value.trim();const dob=dobEl.value;const gender=genderEl.value;
+  if(!name||!dob||!gender){alert('Please fill in your name, date of birth, and gender.');return;}
+  const primaryEvents=getPickedEvents(evContainerId);
+  S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents};
+  DB.set('profile',S.profile);
+  if(fromOnboarding){
+    document.getElementById('section-onboarding').style.display='none';
+    document.getElementById('section-home').style.display='';
+    document.getElementById('nav').style.display='';
+    document.getElementById('header').style.display='';
+    renderHome();showSection('home');
+  } else {
+    closeModal('profile-modal');
+    renderProfileDisplay();
+    renderHome();
+    renderStrokeTabs();renderTimesContent();
+  }
+}
+function renderProfileDisplay(){
+  const el=document.getElementById('profile-display');if(!el)return;
+  if(!S.profile){el.innerHTML='<p style="font-size:13px;color:var(--muted);">No profile set.</p>';return;}
+  const age=getCompAge();const ageKey=getAgeKey();
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+    <div><b style="color:var(--text);">${S.profile.name}</b>${S.profile.club?` · <span style="color:var(--muted);">${S.profile.club}</span>`:''}</div>
+    <div style="color:var(--muted);">${S.profile.gender==='male'?'Male':'Female'} · Age ${age||'—'} (${ageKey==='open'?'Open':ageKey+' category'})</div>
+    ${S.profile.primaryEvents&&S.profile.primaryEvents.length?`<div style="color:var(--muted);font-size:12px;">Primary: ${S.profile.primaryEvents.join(', ')}</div>`:''}
+  </div>`;
+}
+function openProfileModal(){
+  if(!S.profile)return openModal('profile-modal');
+  document.getElementById('pm-name').value=S.profile.name||'';
+  document.getElementById('pm-club').value=S.profile.club||'';
+  document.getElementById('pm-dob').value=S.profile.dob||'';
+  document.getElementById('pm-gender').value=S.profile.gender||'male';
+  initProfileEventPicker('pm-events',S.profile.primaryEvents||[]);
+  openModal('profile-modal');
+}
+function setStandard(key){
+  S.activeStandard=key;DB.set('activeStandard',key);
+  document.querySelectorAll('[id^="std-btn-"]').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('std-btn-'+key);if(btn)btn.classList.add('active');
+  renderTimesContent();
+}
+function checkOnboarding(){
+  if(!S.profile){
+    document.getElementById('section-home').style.display='none';
+    document.getElementById('nav').style.display='none';
+    document.getElementById('header').style.display='none';
+    document.getElementById('section-onboarding').style.display='block';
+    // Populate event picker
+    initProfileEventPicker('ob-events',[]);
+  }
+}
+
 // ── 1RM system ──
 // Key lifts and which exercises they apply to (stored in kg internally)
 const ONE_RM_LIFTS=[
@@ -872,8 +1096,19 @@ function finishWorkout(){
 function getBest(ev,pool){const h=S.timeHistory[ev];if(!h||!h.length)return null;const f=pool==='scm'?'scm':'lcm';return h.reduce((b,e)=>tSec(e[f])<tSec(b[f])?e:b,h[0]);}
 
 function renderStrokeTabs(){
-  const strokes=['50 Free','100 Free','200 Free','400 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
-  document.getElementById('stroke-tabs').innerHTML=strokes.map(s=>`<button class="stroke-tab${s===S.activeTStroke?' active':''}" onclick="selStroke('${s}')">${s}</button>`).join('');
+  // Primary events first (from profile), then rest
+  const primary=(S.profile&&S.profile.primaryEvents&&S.profile.primaryEvents.length)?S.profile.primaryEvents:PRIMARY;
+  const rest=ALL_EVENTS.filter(e=>!primary.includes(e));
+  const ordered=[...primary,...rest];
+  // Ensure active stroke is valid
+  if(!ordered.includes(S.activeTStroke))S.activeTStroke=ordered[0];
+  document.getElementById('stroke-tabs').innerHTML=ordered.map(s=>{
+    const hasPB=S.timeHistory[s]&&S.timeHistory[s].length>0;
+    return`<button class="stroke-tab${s===S.activeTStroke?' active':''}" onclick="selStroke('${s}')" style="${hasPB?'border-color:var(--accent);':''}">${s}</button>`;
+  }).join('');
+  // Update times sub header
+  const sub=document.getElementById('times-sub');
+  if(sub&&S.profile)sub.textContent=`${S.profile.name} · ${STD_LABELS[S.activeStandard]||'Standards'}`;
 }
 function selStroke(s){S.activeTStroke=s;renderStrokeTabs();renderTimesContent();}
 
@@ -906,69 +1141,86 @@ function scmStd(lcmStr){if(!lcmStr)return null;const s=tSec(lcmStr);if(s===Infin
 function renderTimesContent(){
   const ev=S.activeTStroke;
   const hist=(S.timeHistory[ev]||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const tgtLCM=TRIALS[ev];
-  const tgtSCM=scmStd(tgtLCM);
+  const tgtLCM=getStandard(ev,'lcm');
+  const tgtSCM=getStandard(ev,'scm');
   const bL=getBest(ev,'lcm'),bS=getBest(ev,'scm');
-  const gapLCM=tgtLCM&&bL?gapSec(bL.lcm,tgtLCM):null;
-  const gapSCM=tgtSCM&&bS?gapSec(bS.scm,tgtSCM):null;
+  const gapLCM=tgtLCM&&bL&&bL.lcm!=='—'?gapSec(bL.lcm,tgtLCM):null;
+  const gapSCM=tgtSCM&&bS&&bS.scm!=='—'?gapSec(bS.scm,tgtSCM):null;
   function gapClass(g){return g===null?'gap-far':g<=0?'gap-done':g<=1?'gap-near':g<=3?'gap-close':'gap-far';}
-  function gapLabel(g){return g===null?'No data':g<=0?'✓ Cut':'need '+g.toFixed(2)+'s';}
+  function gapLabel(g,t){
+    if(g===null)return t?'No PB yet':'—';
+    if(g<=0)return'✓ Qualified';
+    return'+'+g.toFixed(2)+'s';
+  }
+  function progPct(g,tgt){if(g===null||g<=0)return 100;const ts=tSec(tgt);if(!ts)return 5;return Math.max(5,Math.min(98,(1-g/ts*5)*100));}
+  // Standard label + age context
+  const stdLabel=STD_LABELS[S.activeStandard]||'Standard';
+  const ageKey=getAgeKey();const gender=getGender();
+  const ageDisp=ageKey==='13'?'13 & Under':ageKey==='open'?'Open':ageKey;
+  const profileNote=S.profile?`${S.profile.name} · ${gender==='male'?'Male':'Female'} · ${ageDisp} · ${stdLabel}`:`Set your profile (More tab) for age-specific standards`;
   let html='';
   html+=`<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div class="card-title" style="margin-bottom:0;">${ev} — Personal Bests</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="card-title" style="margin-bottom:0;">${ev}</div>
       <button class="btn btn-primary btn-sm" onclick="openAddTime('${esc(ev)}')">+ Add PB</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${profileNote}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
       <div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);">
         <div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">LCM (50m pool)</div>
-        <div style="font-size:24px;font-weight:900;color:var(--accent);">${bL&&bL.lcm!=='—'?bL.lcm:'—'}</div>
-        ${tgtLCM?`<div style="font-size:10px;color:var(--muted);margin-top:4px;">Target: ${tgtLCM}</div>
-        <span class="gap-pill ${gapClass(gapLCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapLCM)}</span>`:''}
+        <div style="font-size:24px;font-weight:900;color:var(--accent);line-height:1;">${bL&&bL.lcm!=='—'?bL.lcm:'—'}</div>
+        ${tgtLCM?`<div style="font-size:10px;color:var(--muted);margin-top:5px;">Target: <b>${tgtLCM}</b></div>
+        <span class="gap-pill ${gapClass(gapLCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapLCM,tgtLCM)}</span>`:'<div style="font-size:10px;color:var(--muted);margin-top:4px;">No standard for this event</div>'}
       </div>
       <div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);">
         <div style="font-size:10px;color:var(--purple);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">SCM (25m pool)</div>
-        <div style="font-size:24px;font-weight:900;color:var(--purple);">${bS&&bS.scm!=='—'?bS.scm:'—'}</div>
-        ${tgtSCM?`<div style="font-size:10px;color:var(--muted);margin-top:4px;">Target: ${tgtSCM}</div>
-        <span class="gap-pill ${gapClass(gapSCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapSCM)}</span>`:''}
+        <div style="font-size:24px;font-weight:900;color:var(--purple);line-height:1;">${bS&&bS.scm!=='—'?bS.scm:'—'}</div>
+        ${tgtSCM?`<div style="font-size:10px;color:var(--muted);margin-top:5px;">Target: <b>${tgtSCM}</b></div>
+        <span class="gap-pill ${gapClass(gapSCM)}" style="font-size:10px;margin-top:4px;display:inline-block;">${gapLabel(gapSCM,tgtSCM)}</span>`:'<div style="font-size:10px;color:var(--muted);margin-top:4px;">No standard for this event</div>'}
       </div>
     </div>
-    ${tgtLCM?`<div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px;"><div style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:${gapLCM?Math.max(5,Math.min(95,(1-gapLCM/tSec(tgtLCM)*8)*100)).toFixed(0):5}%;border-radius:4px;transition:width 0.4s;"></div></div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;">LCM progress to Trials standard</div>`:''}
+    ${tgtLCM&&bL&&bL.lcm!=='—'?`
+    <div style="margin-bottom:3px;">
+      <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+        <div style="background:${gapLCM<=0?'var(--green)':'linear-gradient(90deg,var(--accent2),var(--accent))'};height:100%;width:${progPct(gapLCM,tgtLCM).toFixed(0)}%;border-radius:4px;transition:width 0.4s;"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;">LCM progress to ${stdLabel}</div>
+    </div>`:''}
   </div>`;
   const lcmHist=hist.filter(e=>e.lcm&&e.lcm!=='—');
   const scmHist=hist.filter(e=>e.scm&&e.scm!=='—');
-  if(lcmHist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression (50m pool)</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`;
-  if(scmHist.length>=2)html+=`<div class="card"><div class="card-title">SCM Progression (25m pool)</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`;
-  // Time log
-  html+=`<div class="card"><div class="card-title" style="margin-bottom:8px;">PB Log</div>`;
-  if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Add your first entry.</p></div>`;
+  if(lcmHist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`;
+  if(scmHist.length>=2)html+=`<div class="card"><div class="card-title">SCM Progression</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`;
+  html+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div class="card-title" style="margin-bottom:0;">PB Log</div></div>`;
+  if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Tap + Add PB to log your first entry.</p></div>`;
   else html+=[...hist].reverse().map((e,ri)=>{
     const isBL=bL&&e.lcm===bL.lcm&&e.date===bL.date;
     const isBs=bS&&e.scm===bS.scm&&e.date===bS.date;
     const d=new Date(e.date).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'});
-    const course=e.lcm!=='—'?'LCM':'SCM';
-    const time=e.lcm!=='—'?e.lcm:e.scm;
-    const isPB=e.lcm!=='—'?isBL:isBs;
-    const col=e.lcm!=='—'?'var(--accent)':'var(--purple)';
+    const isLcm=e.lcm&&e.lcm!=='—';
+    const course=isLcm?'LCM':'SCM';const time=isLcm?e.lcm:e.scm;
+    const isPB=isLcm?isBL:isBs;const col=isLcm?'var(--accent)':'var(--purple)';
+    const tgt=isLcm?tgtLCM:tgtSCM;
+    const g=tgt&&time?gapSec(time,tgt):null;
+    const gPill=tgt?`<span class="gap-pill ${gapClass(g)}" style="font-size:9px;margin-left:4px;">${gapLabel(g,tgt)}</span>`:'';
     return`<div class="time-entry-row">
       <div class="time-entry-date">${d}</div>
-      <div class="time-entry-meet">${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}</div>
-      <div style="font-size:10px;font-weight:700;color:${col};min-width:32px;text-align:center;">${course}</div>
-      <div style="font-size:14px;font-weight:800;color:${col};min-width:52px;text-align:right;">${time}</div>
+      <div class="time-entry-meet" style="flex:1;">${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}</div>
+      <div style="font-size:10px;font-weight:700;color:${col};min-width:30px;text-align:center;">${course}</div>
+      <div style="font-size:14px;font-weight:800;color:${col};min-width:50px;text-align:right;">${time}</div>
       <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;" onclick="delTime('${esc(ev)}',${hist.length-1-ri})">✕</button>
     </div>`;
   }).join('');
   html+=`</div>`;
   if(lcmHist.length>=2){
-    const first=lcmHist[0],last=lcmHist[lcmHist.length-1];
-    const iL=tSec(first.lcm)-tSec(last.lcm);
-    const mo=Math.max(1,Math.round((new Date(last.date)-new Date(first.date))/2592000000));
+    const first=lcmHist[0],last2=lcmHist[lcmHist.length-1];
+    const iL=tSec(first.lcm)-tSec(last2.lcm);
+    const mo=Math.max(1,Math.round((new Date(last2.date)-new Date(first.date))/2592000000));
     const rate=iL/mo;
     html+=`<div class="card"><div class="card-title">LCM Analysis</div><div style="font-size:13px;color:var(--muted);line-height:1.9;">
-      ${iL>0?`<p>📉 Dropped <b style="color:var(--green)">${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} (${rate.toFixed(2)}s/mo)</p>`:'<p>📊 Add more entries to see improvement rate.</p>'}
-      ${gapLCM&&gapLCM>0&&rate>0?`<p>🎯 Trials cut in ~<b style="color:var(--gold)">${Math.ceil(gapLCM/rate)} months</b> at this rate</p>`:''}
-      ${gapLCM&&gapLCM>0?`<p>💡 Dryland program adjusted to close the gap faster.</p>`:''}
+      ${iL>0?`<p>📉 Dropped <b style="color:var(--green)">${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} · ${rate.toFixed(2)}s/mo</p>`:'<p>📊 Add more entries to see improvement rate.</p>'}
+      ${gapLCM&&gapLCM>0&&rate>0?`<p>🎯 ${stdLabel} cut in ~<b style="color:var(--gold)">${Math.ceil(gapLCM/rate)} months</b> at this rate</p>`:''}
+      ${gapLCM!==null&&gapLCM<=0?`<p style="color:var(--green);">✓ Already qualified for ${stdLabel}!</p>`:''}
     </div></div>`;
   }
   document.getElementById('times-content').innerHTML=html;
@@ -1085,11 +1337,13 @@ function renderHomeMeets(){
 // ── Home ──
 function renderHome(){
   const h=new Date().getHours();
-  document.getElementById('greeting').textContent=`${h<12?'Morning':h<17?'Afternoon':'Evening'}, let\'s go.`;
+  const firstName=S.profile&&S.profile.name?S.profile.name.split(' ')[0]:'';
+  document.getElementById('greeting').textContent=`${h<12?'Morning':h<17?'Afternoon':'Evening'}${firstName?', '+firstName:''}. Let\'s go.`;
   const phase=getPhase(S.programWeek);
   const cycle=S.programCycle||1;
   document.getElementById('phase-info').textContent=`Cycle ${cycle} · Week ${S.programWeek} of 16 · ${phase.label}`;
-  document.getElementById('header-sub').textContent=`C${cycle} Wk ${S.programWeek} · ${phase.name}`;
+  const clubStr=S.profile&&S.profile.club?S.profile.club:'';
+  document.getElementById('header-sub').textContent=`${clubStr?clubStr+' · ':''}C${cycle} Wk ${S.programWeek} · ${phase.name}`;
   const hist=S.history,wkS=new Date();wkS.setDate(wkS.getDate()-(wkS.getDay()||7)+1);wkS.setHours(0,0,0,0);
   document.getElementById('stat-week').textContent=hist.filter(h=>new Date(h.date)>=wkS).length;
   document.getElementById('stat-total').textContent=hist.length;
@@ -1779,16 +2033,20 @@ function renderNutrition(){
     wtRow.appendChild(makeInput('weight-input','number','',{step:0.5}));
     pf.appendChild(wtRow);
   }
-  // Age field
+  // Age field — pre-fill from profile if available
   const aw=document.getElementById('age-field-wrap');
   if(aw){aw.innerHTML='';aw.appendChild(makeInput('age-input','number','',{min:14,max:25}));}
-  // Reset sex dropdown to blank
-  const sx=document.getElementById('sex-select');if(sx)sx.value='';
-  // Delay clear to fire after iOS Safari autofill
+  // Sex dropdown — pre-fill from profile
+  const sx=document.getElementById('sex-select');
+  if(sx){sx.value=S.profile&&S.profile.gender?S.profile.gender:'';}
+  // Delay clear of height/weight only (not age/sex which come from profile)
   setTimeout(()=>{
-    ['height-cm-input','height-ft-input','height-in-input','weight-input','age-input'].forEach(id=>{
+    ['height-cm-input','height-ft-input','height-in-input','weight-input'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.value='';
     });
+    // Set age from profile after Safari autofill clears
+    const ageEl=document.getElementById('age-input');
+    if(ageEl){const pa=getCompAge();if(pa)ageEl.value=pa;}
   },300);
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
@@ -1864,6 +2122,8 @@ function exportData(){
     swimPhase:S.swimPhase,
     seasonTemplate:S.seasonTemplate,
     checkinHistory:S.checkinHistory,
+    profile:S.profile,
+    activeStandard:S.activeStandard,
     oneRM:S.oneRM,
     oneRMDate:S.oneRMDate,
     bodyStats:S.bodyStats,
@@ -1898,6 +2158,8 @@ function importData(event){
       if(data.meets)DB.set('meets',data.meets);
       if(data.swimPhase)DB.set('swimPhase',data.swimPhase);
       if(data.checkinHistory)DB.set('checkinHistory',data.checkinHistory);
+      if(data.profile)DB.set('profile',data.profile);
+      if(data.activeStandard)DB.set('activeStandard',data.activeStandard);
       if(data.oneRM)DB.set('oneRM',data.oneRM);
       if(data.oneRMDate)DB.set('oneRMDate',data.oneRMDate);
       if(data.bodyStats)DB.set('bodyStats',data.bodyStats);
@@ -2078,10 +2340,11 @@ function showSection(name){
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout')renderBaseline();
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();}
 }
 
-// INIT — version gate: clear stale bodyStats so fuel tab starts blank
+// INIT
+checkOnboarding();
 renderHome();
 </script>
 </body>
