@@ -337,7 +337,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p class="section-sub">Nutrition for a competitive swimmer</p>
       <!-- Dynamic daily fuel — auto-updates from schedule -->
       <div id="fuel-today-card"></div>
-      <div id="nutrition-output"></div>
       <div class="card">
         <div class="card-title">Update Body Stats <span id="update-due-badge"></span></div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="update-frequency-note">Enter your current measurements to keep calories accurate.</p>
@@ -2272,89 +2271,29 @@ function getWeeklyLoadFromSchedule(){
 }
 
 function calcNutrition(){
+  // Saves height/weight to bodyStats so getDailyCalFromSchedule() can use them
+  // Does NOT output a separate plan card — Today's Fuel card handles all display
   const htCm=getHeightCm();
   let wt=parseFloat(document.getElementById('weight-input').value);
   const age=parseInt(document.getElementById('age-input').value)||(getRealAge()||16);
   const sex=document.getElementById('sex-select').value;
-  const realAge=getRealAge()||age;
-  const updateDays=realAge<18?14:30;
   if(!htCm||!wt||!age||!sex)return alert('Enter height, weight, age and sex.');
   const wtKg=S.useKg?wt:wt/2.205;
-  // Mifflin-St Jeor BMR (sex-specific)
-  const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
-
-  // Derive activity multiplier from this week's schedule
-  const weekLoad=getWeeklyLoadFromSchedule();
-  let finalMult=1.5; // sedentary baseline if no schedule
-  let dayType='rest';
-  let scheduleNote='';
-  if(weekLoad.hasData){
-    const totalSess=weekLoad.swimSessions+weekLoad.drylandSessions;
-    // Scale multiplier based on weekly volume
-    if(weekLoad.doubleDays>=3)finalMult=2.4;
-    else if(weekLoad.doubleDays>=1)finalMult=2.2;
-    else if(totalSess>=8)finalMult=2.0;
-    else if(totalSess>=5)finalMult=1.9;
-    else if(totalSess>=3)finalMult=1.75;
-    else finalMult=1.6;
-    // Determine primary day type label
-    if(weekLoad.doubleDays>=1)dayType='swim_dryland';
-    else if(weekLoad.swimSessions>weekLoad.drylandSessions)dayType='swim_only';
-    else if(weekLoad.drylandSessions>0)dayType='dryland_only';
-    scheduleNote=`${weekLoad.swimSessions} swim + ${weekLoad.drylandSessions} dryland sessions this week${weekLoad.doubleDays>0?`, ${weekLoad.doubleDays} double day${weekLoad.doubleDays>1?'s':''}`:''}.`;
-  } else {
-    // No schedule — use a reasonable competitive swimmer default
-    finalMult=1.9;
-    dayType='swim_only';
-    scheduleNote='No schedule data — using competitive swimmer baseline. Add sessions in Schedule tab for accuracy.';
-  }
-
-  const target=Math.round(bmr*finalMult);
-  // Swimmer-specific macros: high protein + high carb for glycogen
-  const protein=Math.round(wtKg*2.4);
-  const fat=Math.round(wtKg*1.1);
-  const carbs=Math.max(50,Math.round((target-protein*4-fat*9)/4));
-  // Water: 35-45ml/kg + 600ml per swim session + 400ml per dryland
-  const sessToday={swim_dryland:2,swim_only:1,dryland_only:1,active_recovery:0.5,rest:0}[dayType];
-  const waterMl=Math.round(wtKg*40+sessToday*550);
-  const waterL=(waterMl/1000).toFixed(1);
-
-  S.bodyStats={ht:htCm,wtKg,age,sex,dayType,target,protein,carbs,fat,waterL,updated:new Date().toISOString()};
+  S.bodyStats={ht:htCm,wtKg,age,sex,updated:new Date().toISOString()};
   S.lastStatsUpdate=new Date().toISOString();
-  DB.set('bodyStats',S.bodyStats);DB.set('lastStatsUpdate',S.lastStatsUpdate);
-  renderFuelTodayCard();renderHomeCals();
-
-  const dl={swim_dryland:'Swim + Dryland',swim_only:'Swim only',dryland_only:'Dryland only',active_recovery:'Active recovery',rest:'Rest day'};
-  const wtDisp=S.useKg?wtKg.toFixed(1)+'kg':Math.round(wtKg*2.205)+'lbs';
-  // Read display height directly from the input fields to avoid rounding drift
-  const htDisp=S.useKg?htCm+'cm':(()=>{
-    const ft=parseInt(document.getElementById('height-ft-input').value)||0;
-    const inch=parseInt(document.getElementById('height-in-input').value)||0;
-    return ft+"'"+inch+'"';
-  })();
-  document.getElementById('nutrition-output').innerHTML=`<div class="card">
-    <div class="card-title">Nutrition Plan — ${dl[dayType]}</div>
-    <div style="text-align:center;font-size:52px;font-weight:900;color:var(--green);line-height:1;">${target.toLocaleString()}</div>
-    <div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:4px;">kcal/day · ${htDisp} · ${wtDisp}</div>
-    <div style="text-align:center;font-size:11px;color:var(--muted);margin-bottom:16px;">BMR ${Math.round(bmr)} × ${finalMult.toFixed(2)} activity</div>
-    <div class="macro-grid">
-      <div class="macro-box"><div class="macro-val macro-carb">${carbs}g</div><div class="macro-lbl">Carbs</div></div>
-      <div class="macro-box"><div class="macro-val macro-prot">${protein}g</div><div class="macro-lbl">Protein</div></div>
-      <div class="macro-box"><div class="macro-val macro-fat">${fat}g</div><div class="macro-lbl">Fat</div></div>
-    </div>
-    <div style="margin-top:12px;background:var(--surface);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;">
-      <div style="font-size:28px;">💧</div>
-      <div><div style="font-size:22px;font-weight:800;color:var(--accent);">${waterL}L</div><div style="font-size:11px;color:var(--muted);">Water today · sip consistently, never all at once</div></div>
-    </div>
-    ${scheduleNote?`<div style="margin-top:8px;font-size:11px;color:var(--accent);padding:6px 8px;background:rgba(0,198,255,0.08);border-radius:6px;">📅 ${scheduleNote}</div>`:''}
-    <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.8;">
-      <p>🍗 Protein: ${Math.round(protein/4)}g per meal across 4 meals — post-training meal is priority</p>
-      <p>🍚 Carbs: ${carbs}g — front-load before training, replenish immediately after</p>
-      <p>🥑 Fat: ${fat}g — salmon, nuts, avocado, olive oil (not pre-workout)</p>
-      <p>🌙 Before bed: casein protein — cottage cheese, Greek yogurt</p>
-      <p style="margin-top:8px;color:var(--gold);">⚠️ Update every ${updateDays} days — ${realAge<18?'growth shifts your numbers fast':'body composition changes over time'}.</p>
-    </div>
-  </div>`;
+  DB.set('bodyStats',S.bodyStats);
+  DB.set('lastStatsUpdate',S.lastStatsUpdate);
+  // Clear the input fields after save (anti-autofill)
+  ['height-cm-input','height-ft-input','height-in-input','weight-input'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  // Refresh today's fuel card and home calorie tile
+  renderFuelTodayCard();
+  renderHomeCals();
+  // Show confirmation in the badge area
+  const badge=document.getElementById('update-due-badge');
+  if(badge)badge.innerHTML='<span style="background:#0a2a0a;color:var(--green);padding:2px 8px;border-radius:10px;font-size:11px;">✓ Saved</span>';
+  setTimeout(()=>{if(badge)badge.innerHTML='';},3000);
 }
 function makeInput(id,type,placeholder,extra){
   const inp=document.createElement('input');
@@ -2446,10 +2385,6 @@ function renderNutrition(){
   document.getElementById('update-due-badge').innerHTML=days>=updateDays?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
   // Render dynamic today card
   renderFuelTodayCard();
-  // If no bodyStats yet, show prompt
-  if(!S.bodyStats){
-    document.getElementById('nutrition-output').innerHTML='';
-  }
 }
 
 // ── More ──
