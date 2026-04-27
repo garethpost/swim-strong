@@ -654,8 +654,17 @@ function suggestWeight(name,schemeReps){
   return{kg:allHit?baseKg+2.5:baseKg,progressed:allHit,lastKg:baseKg};
 }
 // ── Athlete Profile ──
+function getRealAge(){
+  // Actual age today
+  if(!S.profile||!S.profile.dob)return null;
+  const dob=new Date(S.profile.dob);const now=new Date();
+  let age=now.getFullYear()-dob.getFullYear();
+  const m=now.getMonth()-dob.getMonth();
+  if(m<0||(m===0&&now.getDate()<dob.getDate()))age--;
+  return age;
+}
 function getCompAge(){
-  // Swimming Canada / Swim Alberta: age on Dec 31 of current year
+  // Swimming Canada / Swim Alberta: competition age = age on Dec 31 of current year
   if(!S.profile||!S.profile.dob)return null;
   const dob=new Date(S.profile.dob);
   const dec31=new Date(new Date().getFullYear(),11,31);
@@ -713,10 +722,11 @@ function saveProfile(fromOnboarding){
 function renderProfileDisplay(){
   const el=document.getElementById('profile-display');if(!el)return;
   if(!S.profile){el.innerHTML='<p style="font-size:13px;color:var(--muted);">No profile set.</p>';return;}
-  const age=getCompAge();const ageKey=getAgeKey();
+  const realAge=getRealAge();const compAge=getCompAge();const ageKey=getAgeKey();
+  const compNote=compAge!==realAge?`<span style="font-size:11px;color:var(--muted);"> (competes as ${ageKey==='open'?'Open':ageKey} · Dec 31 rule)</span>`:``;
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
     <div><b style="color:var(--text);">${S.profile.name}</b>${S.profile.club?` · <span style="color:var(--muted);">${S.profile.club}</span>`:''}</div>
-    <div style="color:var(--muted);">${S.profile.gender==='male'?'Male':'Female'} · Age ${age||'—'} (${ageKey==='open'?'Open':ageKey+' category'})</div>
+    <div style="color:var(--muted);">${S.profile.gender==='male'?'Male':'Female'} · Age ${realAge||'—'}${compNote}</div>
     ${S.profile.primaryEvents&&S.profile.primaryEvents.length?`<div style="color:var(--muted);font-size:12px;">Primary: ${S.profile.primaryEvents.join(', ')}</div>`:''}
   </div>`;
 }
@@ -2042,7 +2052,7 @@ function renderNutrition(){
     });
     // Set age from profile after Safari autofill clears
     const ageEl=document.getElementById('age-input');
-    if(ageEl){const pa=getCompAge();if(pa)ageEl.value=pa;}
+    if(ageEl){const pa=getRealAge();if(pa)ageEl.value=pa;}
   },300);
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
