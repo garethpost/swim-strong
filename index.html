@@ -165,8 +165,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div class="card" style="margin-bottom:0;" id="home-today-summary"></div>
-        <div class="card" style="margin-bottom:0;">
+        <div class="card" style="margin-bottom:0;min-height:160px;" id="home-today-summary"></div>
+        <div class="card" style="margin-bottom:0;min-height:160px;">
           <div class="card-title">Next Meet</div>
           <div id="home-meets-list"></div>
         </div>
@@ -980,11 +980,15 @@ function renderHomeMeets(){
   // Find next meet — either not started yet or currently in progress
   const sorted=S.meets.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
   const next=sorted.find(m=>{
-    const end=m.endDate?localDate(m.endDate):localDate(m.date);
-    return end>=today;
+    try{
+      const endStr=m.endDate||m.date;
+      const end=endStr.includes('-')?localDate(endStr):new Date(endStr);
+      end.setHours(23,59,59,0);
+      return end>=today;
+    }catch(e){return false;}
   });
   if(!next){
-    el.innerHTML='<div style="font-size:22px;margin-bottom:6px;">🏊</div><div style="font-size:11px;color:var(--muted);">No upcoming meets. Add one in Schedule.</div>';
+    el.innerHTML=`<div style="font-size:22px;margin-bottom:6px;">🏊</div><div style="font-size:11px;color:var(--muted);">${S.meets.length?'All meets completed.':'No meets added yet.'}</div>`;
     return;
   }
   const ms=localDate(next.date);
