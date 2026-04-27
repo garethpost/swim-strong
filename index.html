@@ -558,18 +558,16 @@ const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
 const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
 const LONG_TERM_GOALS=[
-  'Make Provincial Championships',
-  'Make Provincial Trials / Team Alberta',
-  'Qualify for Canadian Nationals',
-  'Qualify for Canadian Trials',
-  'Earn a US College Scholarship',
+  'Make the Olympic team',
+  'Earn a US college scholarship',
   'Represent Canada internationally',
-  'Improve starts & underwater dolphins',
-  'Improve race turns & walls',
-  'Build aerobic base & endurance',
-  'Develop explosive power & sprint speed',
-  'Stay injury-free & athletic longevity',
-  'Master technique in my best stroke',
+  'Qualify for Canadian Trials',
+  'Qualify for Canadian Nationals',
+  'Make Team Alberta',
+  'Make Provincial Championships',
+  'Become a professional swimmer',
+  'Break a national record',
+  'Compete at World Championships',
 ];
 
 // ── Time Standards ──
@@ -1429,13 +1427,18 @@ function generateWorkout(forceType){
 
 // ── Goal Program ──
 // Maps long-term goals to exercise emphasis tags
-const GOAL_BIAS={
-  'Improve starts & underwater dolphins':   {lower:['explosive','plyos'],upper:[],core:['rotational'],extra:'power'},
-  'Develop explosive power & sprint speed': {lower:['explosive'],upper:['push'],core:[],extra:'power'},
-  'Improve race turns & walls':             {lower:['explosive','single-leg'],upper:[],core:['rotational'],extra:'power'},
-  'Build aerobic base & endurance':         {lower:['hinge'],upper:['pull'],core:['anti-rotation'],extra:'cardio'},
-  'Master technique in my best stroke':     {lower:[],upper:['pull','shoulder'],core:['rotational'],extra:'upper'},
-  'Stay injury-free & athletic longevity':  {lower:['hinge','single-leg'],upper:['shoulder'],core:['stability'],extra:'mobility'},
+// Coach-assigned training focus areas — drive the workout engine
+const TRAINING_FOCUS={
+  'Explosive power off the block':          {lower:['explosive','plyos'],upper:[],core:['rotational'],extra:'power'},
+  'Underwater dolphin power':               {lower:['explosive','plyos'],upper:[],core:['rotational'],extra:'power'},
+  'Sprint top-end speed':                   {lower:['explosive'],upper:['push'],core:[],extra:'power'},
+  'Race endurance & pace control':          {lower:['hinge'],upper:['pull'],core:['anti-rotation'],extra:'cardio'},
+  'Turn speed & walls':                     {lower:['explosive','single-leg'],upper:[],core:['rotational'],extra:'power'},
+  'Stroke power & pull strength':           {lower:[],upper:['pull','push'],core:['rotational'],extra:'upper'},
+  'Shoulder health & injury prevention':    {lower:['hinge','single-leg'],upper:['shoulder'],core:['stability'],extra:'mobility'},
+  'Core stability & body position':         {lower:[],upper:[],core:['stability','anti-rotation','rotational'],extra:'core'},
+  'Hip flexibility & kick range':           {lower:['single-leg','hinge'],upper:[],core:['stability'],extra:'mobility'},
+  'General strength base':                  {lower:['hinge','squat'],upper:['push','pull'],core:['stability'],extra:'balanced'},
 };
 // Compute weeks remaining to a meet
 function weeksToMeet(meet){
@@ -1496,8 +1499,7 @@ function renderWorkoutTab(){
       const d=localDate(m.date);const now=new Date();now.setHours(0,0,0,0);
       return (m.priority==='A'||m.priority==='B')&&d>=now;
     }).sort((a,b)=>localDate(a.date)-localDate(b.date));
-    const goals=(S.profile&&S.profile.longTermGoals)||[];
-    const goalBiasable=goals.filter(g=>GOAL_BIAS[g]);
+    const trainingFocusOptions=Object.keys(TRAINING_FOCUS);
 
     const meetOptions=abMeets.length
       ?abMeets.map(m=>{
@@ -1508,17 +1510,15 @@ function renderWorkoutTab(){
         }).join('')
       :'<option value="">No upcoming A/B meets — add one first</option>';
 
-    const goalsHtml=goalBiasable.length
-      ?goalBiasable.map((g,gi)=>`
+    const goalsHtml=trainingFocusOptions.map((g,gi)=>`
           <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
             <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
             <span style="font-size:13px;">${g}</span>
-          </label>`).join('')
-      :`<p style="font-size:13px;color:var(--muted);">No goal-compatible goals found. Add long-term goals in your profile.</p>`;
+          </label>`).join('');
 
     modeHtml=`
       <p class="section-title">Goal Program</p>
-      <p class="section-sub">Train with purpose — workouts biased toward your specific goals.</p>
+      <p class="section-sub">Pick the areas your coach wants you to focus on before your next target meet.</p>
       <div class="card" style="margin-bottom:12px;">
         <div class="card-title">Target Meet</div>
         <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
@@ -1526,7 +1526,7 @@ function renderWorkoutTab(){
         </select>
       </div>
       <div class="card" style="margin-bottom:12px;">
-        <div class="card-title">Goal Focus (pick 1–3)</div>
+        <div class="card-title">Training Focus — pick 1 to 3</div>
         ${goalsHtml}
       </div>
       <button class="btn btn-primary" onclick="activateGoalProgramUI()" style="margin-bottom:8px;" ${!abMeets.length?'disabled':''}>Activate Goal Program 🎯</button>
@@ -1605,7 +1605,7 @@ function generateGoalWorkout(forceType){
   }
   // Build goal-biased blocks
   const goals=gp?gp.goals:[];
-  const biases=goals.map(g=>GOAL_BIAS[g]).filter(Boolean);
+  const biases=goals.map(g=>TRAINING_FOCUS[g]).filter(Boolean);
   // Collect extra emphasis from goals
   const extraTypes=biases.map(b=>b.extra).filter(Boolean);
   const wantsPower=extraTypes.includes('power');
