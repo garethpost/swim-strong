@@ -396,33 +396,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
     </div>
 
-    <!-- ONBOARDING -->
-    <div id="section-onboarding" class="section" style="display:none;padding:60px 20px 32px;">
-      <div style="text-align:center;margin-bottom:28px;">
-        <div style="font-size:52px;margin-bottom:10px;">🌊</div>
-        <h1 style="font-size:26px;font-weight:800;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;">SwimFitPro</h1>
-        <p style="font-size:14px;color:var(--muted);line-height:1.5;">Set up your athlete profile to get personalised training targets, time standards, and nutrition.</p>
-      </div>
-      <div class="card">
-        <div class="card-title">Your Profile</div>
-        <div class="form-row"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Alex" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
-        <div class="form-row"><label>Club / Team</label><input type="text" id="ob-club" placeholder="e.g. Cascade Swim Club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
-        <div class="form-row"><label>Date of Birth</label><input type="date" id="ob-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
-        <div class="form-row"><label>Gender</label>
-          <select id="ob-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
-            <option value="" disabled selected>Select gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </div>
-        <div class="form-row"><label>Primary Events</label>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Select the events you race. These show first in your Times tab.</p>
-          <div id="ob-events" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="saveProfile(true)" style="margin-top:4px;">Let's go →</button>
-    </div>
-
   </div><!-- content -->
 
   <nav id="nav">
@@ -433,6 +406,35 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <button class="nav-btn" id="nav-fuel" onclick="showSection('fuel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>Fuel</button>
     <button class="nav-btn" id="nav-more" onclick="showSection('more')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More</button>
   </nav>
+</div>
+
+<!-- ONBOARDING — fixed full-screen overlay, completely outside #app flex so no inherited spacing -->
+<div id="section-onboarding" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="padding:env(safe-area-inset-top,24px) 20px 40px;max-width:480px;margin:0 auto;">
+    <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
+      <div style="font-size:52px;margin-bottom:10px;">🌊</div>
+      <h1 style="font-size:26px;font-weight:800;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;">SwimFitPro</h1>
+      <p style="font-size:14px;color:var(--muted);line-height:1.5;">Set up your athlete profile to get personalised training targets, time standards, and nutrition.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Your Profile</div>
+      <div class="form-row"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Alex" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+      <div class="form-row"><label>Club / Team</label><input type="text" id="ob-club" placeholder="e.g. Cascade Swim Club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+      <div class="form-row"><label>Date of Birth</label><input type="date" id="ob-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
+      <div class="form-row"><label>Gender</label>
+        <select id="ob-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
+          <option value="" disabled selected>Select gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Primary Events</label>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Select the events you race. These show first in your Times tab.</p>
+        <div id="ob-events" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveProfile(true)" style="margin-top:12px;">Let's go →</button>
+  </div>
 </div>
 
 <!-- MODALS -->
@@ -700,9 +702,6 @@ function saveProfile(fromOnboarding){
   DB.set('profile',S.profile);
   if(fromOnboarding){
     document.getElementById('section-onboarding').style.display='none';
-    document.getElementById('section-home').style.display='';
-    document.getElementById('nav').style.display='';
-    document.getElementById('header').style.display='';
     renderHome();showSection('home');
   } else {
     closeModal('profile-modal');
@@ -738,11 +737,8 @@ function setStandard(key){
 }
 function checkOnboarding(){
   if(!S.profile){
-    document.getElementById('section-home').style.display='none';
-    document.getElementById('nav').style.display='none';
-    document.getElementById('header').style.display='none';
+    // Show as fixed overlay — no need to hide underlying app
     document.getElementById('section-onboarding').style.display='block';
-    // Populate event picker
     initProfileEventPicker('ob-events',[]);
   }
 }
