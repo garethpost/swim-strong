@@ -164,12 +164,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Day<br>Streak</div></div>
         <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
       </div>
-      <div class="card">
-        <div class="card-title">This Week</div>
-        <div class="week-progress" id="week-dots"></div>
-        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--muted);"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-        <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;flex-wrap:wrap;">
-          <span style="color:var(--purple)">● Today</span><span style="color:var(--green)">● Done</span><span style="color:var(--accent)">● Swim</span><span style="color:var(--gold)">● Meet</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div id="home-today-summary"></div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">Next Meet</div>
+          <div id="home-meets-list"></div>
         </div>
       </div>
       <div class="card">
@@ -189,11 +188,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           </div>
         </div>
         <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--muted);" id="load-rec">—</div>
-      </div>
-      <div id="home-today-summary"></div>
-      <div class="card">
-        <div class="card-title">Upcoming Meets</div>
-        <div id="home-meets-list"></div>
       </div>
     </div>
 
@@ -949,67 +943,60 @@ function renderHomeTodaySummary(){
     }
   }
   if(sch.removed)sessions=[];
-  const SESSION_META={
-    swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)',tag:'SWIM'},
-    swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)',tag:'SWIM'},
-    dry_lower:{icon:'🦵',label:'Lower Body Lifting',color:'var(--green)',tag:'DRYLAND'},
-    dry_upper:{icon:'💪',label:'Upper Body Lifting',color:'var(--green)',tag:'DRYLAND'},
-    dry_power:{icon:'⚡',label:'Power / Plyo',color:'var(--orange)',tag:'DRYLAND'},
-    dry_mobility:{icon:'🧘',label:'Mobility & Recovery',color:'var(--purple)',tag:'DRYLAND'},
-    dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)',tag:'DRYLAND'},
-    dry_rest:{icon:'😴',label:'Rest Day',color:'var(--muted)',tag:'REST'},
+  const META={
+    swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)'},
+    swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)'},
+    dry_lower:{icon:'🦵',label:'Weights\nLower',color:'var(--green)'},
+    dry_upper:{icon:'💪',label:'Weights\nUpper',color:'var(--green)'},
+    dry_power:{icon:'⚡',label:'Power\nPlyo',color:'var(--orange)'},
+    dry_mobility:{icon:'🧘',label:'Mobility',color:'var(--purple)'},
+    dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
+    dry_rest:{icon:'😴',label:'Rest',color:'var(--muted)'},
   };
   const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
   const dryCount=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
-  const loadLabel=swimCount>=2?'Double Day':swimCount===1&&dryCount>=1?'Full Day':swimCount===1?'Swim Only':dryCount>=1?'Dryland Only':'Rest Day';
+  const loadLabel=swimCount>=2?'Double':swimCount===1&&dryCount>=1?'Full Day':swimCount===1?'Swim':dryCount>=1?'Dryland':'Rest';
   const loadColor=swimCount>=2?'var(--orange)':swimCount===1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
-  const sessionRows=sessions.length===0
-    ?`<div style="font-size:13px;color:var(--muted);padding:4px 0;">No sessions scheduled — rest up.</div>`
+  const rows=sessions.length===0
+    ?`<div style="font-size:11px;color:var(--muted);margin-top:6px;">Rest day</div>`
     :sessions.map(id=>{
-      const m=SESSION_META[id]||{icon:'📌',label:id,color:'var(--muted)',tag:''};
-      return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:20px;">${m.icon}</span>
-        <div style="flex:1;font-size:13px;font-weight:600;color:${m.color};">${m.label}</div>
-        <span style="font-size:10px;background:rgba(255,255,255,0.07);color:var(--muted);padding:2px 7px;border-radius:6px;">${m.tag}</span>
+      const m=META[id]||{icon:'📌',label:id,color:'var(--muted)'};
+      return`<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span style="font-size:16px;">${m.icon}</span>
+        <span style="font-size:11px;font-weight:600;color:${m.color};white-space:pre-line;line-height:1.3;">${m.label}</span>
       </div>`;
     }).join('');
-  el.innerHTML=`<div class="card" style="margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-title" style="margin-bottom:0;">Today's Plan</div>
-      <span style="font-size:11px;font-weight:700;color:var(--bg);background:${loadColor};padding:3px 9px;border-radius:8px;">${loadLabel}</span>
+  el.innerHTML=`<div class="card" style="margin-bottom:0;height:100%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="card-title" style="margin-bottom:0;">Today</div>
+      <span style="font-size:9px;font-weight:700;color:var(--bg);background:${loadColor};padding:2px 7px;border-radius:6px;">${loadLabel}</span>
     </div>
-    ${sessionRows}
-    <button class="btn btn-secondary" style="margin-top:10px;font-size:13px;padding:9px;" onclick="editDay('${key}',${today.getDate()});showSection('schedule');">✏️ Edit today</button>
+    ${rows}
   </div>`;
 }
 function renderHomeMeets(){
   const el=document.getElementById('home-meets-list');
   if(!el)return;
   const today=new Date();today.setHours(0,0,0,0);
-  const upcoming=S.meets.filter(m=>localDate(m.endDate||m.date)>=today)
-    .sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,4);
-  if(!upcoming.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);">No upcoming meets. Add them in the Schedule tab.</p>';return;}
-  el.innerHTML=upcoming.map(m=>{
-    const ms=localDate(m.date);
-    const me=m.endDate&&m.endDate!==m.date?localDate(m.endDate):null;
-    const dO=Math.round((ms-today)/86400000);
-    const startStr=ms.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
-    const endStr=me?' – '+me.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):ms.toLocaleDateString('en-CA',{year:'numeric'});
-    const dateStr=startStr+endStr;
-    let countdown,cdColor;
-    if(dO<0){countdown='In progress';cdColor='var(--accent)';}
-    else if(dO===0){countdown='TODAY 🏁';cdColor='var(--gold)';}
-    else{const w=Math.floor(dO/7),d=dO%7;countdown=(w?w+'w ':'')+(d||!w?d+'d':'')+' away';cdColor=dO<=14?'var(--orange)':'var(--green)';}
-    const pri=m.priority==='A'?{bg:'var(--gold)',c:'var(--bg)',l:'A'}:m.priority==='B'?{bg:'var(--muted)',c:'var(--bg)',l:'B'}:{bg:'var(--border)',c:'var(--text)',l:'C'};
-    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:11px;font-weight:800;background:${pri.bg};color:${pri.c};padding:3px 8px;border-radius:6px;flex-shrink:0;">${pri.l}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
-        <div style="font-size:11px;color:var(--muted);">${dateStr}</div>
-      </div>
-      <div style="font-size:12px;font-weight:700;color:${cdColor};flex-shrink:0;">${countdown}</div>
-    </div>`;
-  }).join('');
+  const next=S.meets.filter(m=>localDate(m.endDate||m.date)>=today)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+  if(!next){el.innerHTML='<div style="font-size:11px;color:var(--muted);">No meets added yet.</div>';return;}
+  const ms=localDate(next.date);
+  const me=next.endDate&&next.endDate!==next.date?localDate(next.endDate):null;
+  const dO=Math.round((ms-today)/86400000);
+  const startStr=ms.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  const endStr=me?' – '+me.toLocaleDateString('en-CA',{month:'short',day:'numeric'}):' '+ms.toLocaleDateString('en-CA',{year:'numeric'});
+  let countdown,cdColor;
+  if(dO<0){countdown='In progress';cdColor='var(--accent)';}
+  else if(dO===0){countdown='TODAY 🏁';cdColor='var(--gold)';}
+  else{const w=Math.floor(dO/7),d=dO%7;countdown=(w?w+'w ':'')+(d||!w?d+'d':'');cdColor=dO<=14?'var(--orange)':'var(--green)';}
+  const pri=next.priority==='A'?{bg:'var(--gold)',c:'var(--bg)'}:next.priority==='B'?{bg:'var(--muted)',c:'var(--bg)'}:{bg:'var(--border)',c:'var(--text)'};
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+    <span style="font-size:9px;font-weight:800;background:${pri.bg};color:${pri.c};padding:2px 6px;border-radius:5px;">${next.priority}</span>
+  </div>
+  <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;">${next.name}</div>
+  <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">${startStr}${endStr}</div>
+  <div style="font-size:13px;font-weight:800;color:${cdColor};">${countdown}</div>`;
 }
 
 // ── Home ──
