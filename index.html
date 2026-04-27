@@ -1253,16 +1253,121 @@ function toggleTemplate(dow,session){
   DB.set('seasonTemplate',S.seasonTemplate);
   renderTemplateGrid();
 }
+// ── Dryland Intelligence Engine ──
+// Rules based on sports science: dryland 4-6h after pool (never before hard swim),
+// heavy lifting on single/no-swim days, mobility on double-swim days.
+function autoDryland(tmplDays, phase){
+  // tmplDays: {0:[sessions], 1:[sessions], ...} for Sun-Sat
+  // Returns {0:[sessions], 1:[], ...} with dryland added
+  const result={};
+  for(let dow=0;dow<7;dow++){
+    const daySess=tmplDays[dow]||[];
+    result[dow]=[...daySess]; // start with swim sessions
+  }
+  for(let dow=0;dow<7;dow++){
+    const daySess=result[dow];
+    const hasAM=daySess.includes('swim_am');
+    const hasPM=daySess.includes('swim_pm');
+    const swimCount=(hasAM?1:0)+(hasPM?1:0);
+    const nextDow=(dow+1)%7;
+    const prevDow=(dow+6)%7;
+    const nextHasSwim=(result[nextDow]||[]).some(s=>s.startsWith('swim'));
+    const prevHasSwim=(result[prevDow]||[]).some(s=>s.startsWith('swim'));
+
+    // Taper phase: mobility/activation only, no heavy lifting
+    if(phase==='taper'){
+      if(swimCount>0)result[dow].push('dry_mobility');
+      else result[dow].push('dry_mobility'); // light activation on rest days too
+      continue;
+    }
+    // Rest/recovery week: mobility only
+    if(phase==='rest'){
+      result[dow].push('dry_mobility');
+      continue;
+    }
+
+    if(swimCount===0){
+      // No swim — suggest mobility or rest
+      // If adjacent to a heavy swim day, prefer mobility; otherwise can do strength
+      if(nextHasSwim||prevHasSwim){
+        result[dow].push('dry_mobility');
+      } else {
+        // Isolated rest day — light mobility
+        result[dow].push('dry_mobility');
+      }
+    } else if(swimCount>=2){
+      // Double swim — high CNS load, mobility/activation only
+      result[dow].push('dry_mobility');
+    } else if(hasAM&&!hasPM){
+      // Single AM swim — dryland in PM is ideal (4-6h gap)
+      // Heavy lifting OK unless hard swim tomorrow
+      if(nextHasSwim&&(phase==='sprint'||phase==='threshold')){
+        // Hard swim tomorrow — keep moderate, upper body bias
+        result[dow].push('dry_upper');
+      } else {
+        // Best day for strength — alternate lower/upper through week
+        const drylandType=_pickStrengthType(dow,phase,result);
+        result[dow].push(drylandType);
+      }
+    } else if(hasPM&&!hasAM){
+      // Single PM swim — dryland must be AM, before pool
+      // Must be light: activation, mobility, or upper body only (no heavy legs before PM swim)
+      if(phase==='base'){
+        result[dow].push('dry_upper'); // upper body AM, legs rest before PM pool
+      } else {
+        result[dow].push('dry_mobility'); // activation only before PM session
+      }
+    }
+  }
+  return result;
+}
+function _pickStrengthType(dow,phase,result){
+  // Alternate lower/upper through the week for balance
+  // Count what's already been assigned this week
+  let lowerCount=0,upperCount=0;
+  for(let d=0;d<dow;d++){
+    if((result[d]||[]).includes('dry_lower'))lowerCount++;
+    if((result[d]||[]).includes('dry_upper'))upperCount++;
+  }
+  if(phase==='sprint'){
+    // Sprint phase: prioritise power and plyo over straight strength
+    return'dry_power';
+  }
+  if(phase==='base'){
+    // Base: alternate lower and upper, foundation strength
+    return lowerCount<=upperCount?'dry_lower':'dry_upper';
+  }
+  if(phase==='threshold'){
+    // Threshold: upper body bias (legs take more pool stress at threshold)
+    return upperCount<2?'dry_upper':'dry_lower';
+  }
+  return lowerCount<=upperCount?'dry_lower':'dry_upper';
+}
+
 function applySeasonTemplate(){
   const ss=document.getElementById('season-start-input').value.trim();
   const se=document.getElementById('season-end-input').value.trim();
   if(!ss||!se)return alert('Enter season start and end dates.');
   S.seasonTemplate.start=ss;S.seasonTemplate.end=se;
+  // Run dryland intelligence — adds dryland to each day of the weekly pattern
+  const optimised=autoDryland(S.seasonTemplate.days,S.swimPhase);
+  S.seasonTemplate.days=optimised;
   DB.set('seasonTemplate',S.seasonTemplate);
-  // Remove all template-sourced entries that aren't manual overrides
-  // (manual overrides are preserved — we just update the template)
-  renderCalendar();
-  alert('✅ Season template applied! The calendar will show your weekly pattern. Tap any day to override.');
+  renderTemplateGrid();renderCalendar();
+  // Show what was decided
+  const summary=_drylandSummary(optimised);
+  alert('✅ Season template applied with smart dryland!\n\n'+summary+'\n\nTap any day on the calendar to override.');
+}
+function _drylandSummary(days){
+  const lines=[];
+  DOW_LABELS.forEach((label,dow)=>{
+    const sess=days[dow]||[];
+    const swim=sess.filter(s=>s.startsWith('swim')).map(s=>s==='swim_am'?'Swim AM':'Swim PM').join(' + ');
+    const dry=sess.find(s=>s.startsWith('dry_'));
+    const dryLabel={dry_lower:'🦵 Lower body',dry_upper:'💪 Upper body',dry_power:'⚡ Power/Plyo',dry_mobility:'🧘 Mobility',dry_cardio:'🏃 Cardio',dry_rest:'😴 Rest'}[dry]||'';
+    if(swim||dryLabel)lines.push(`${label}: ${[swim,dryLabel].filter(Boolean).join(' · ')}`);
+  });
+  return lines.join('\n');
 }
 function clearSeasonTemplate(){
   if(!confirm('Clear the entire season template? Manual overrides are kept.'))return;
