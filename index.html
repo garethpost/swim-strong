@@ -1046,26 +1046,34 @@ function renderHome(){
   renderHomeTodaySummary();
   renderHomeMeets();
 }
+let checkinSaveTimer=null;
 function updateCheckin(){
   const sl=parseFloat(document.getElementById('sleep-slider').value),r=parseInt(document.getElementById('readiness-slider').value);
   S.sleep=sl;S.readiness=r;DB.set('todaySleep',sl);DB.set('todayReadiness',r);
-  // Log today's check-in to history (one entry per day, overwrites if same day)
-  const todayKey=dKey(new Date());
-  const existing=S.checkinHistory.findIndex(c=>c.date===todayKey);
-  const entry={date:todayKey,sleep:sl,readiness:r};
-  if(existing>=0)S.checkinHistory[existing]=entry;
-  else S.checkinHistory.push(entry);
-  S.checkinHistory.sort((a,b)=>a.date.localeCompare(b.date));
-  DB.set('checkinHistory',S.checkinHistory);
-  document.getElementById('sleep-val').textContent=sl+'h';document.getElementById('readiness-val').textContent=r+'/5';
-  // 7-day averages
-  const last7=S.checkinHistory.slice(-7);
-  const avgSleep=last7.length?(last7.reduce((s,c)=>s+c.sleep,0)/last7.length).toFixed(1):sl;
-  const avgR=last7.length?(last7.reduce((s,c)=>s+c.readiness,0)/last7.length).toFixed(1):r;
-  const avgEl=document.getElementById('checkin-avg');
-  if(avgEl)avgEl.innerHTML=`7-day avg: <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--accent)">${avgR}/5 readiness</b>`;
+  // Instant feedback — values and load rec update immediately
+  document.getElementById('sleep-val').textContent=sl+'h';
+  document.getElementById('readiness-val').textContent=r+'/5';
   const m=getLoadMult(),l=getLoadDesc(m);
   document.getElementById('load-rec').innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
+  // Debounce the log write — commit 800ms after slider settles
+  const avgEl=document.getElementById('checkin-avg');
+  if(avgEl)avgEl.innerHTML=`<span style="color:var(--muted);font-style:italic;">saving…</span>`;
+  clearTimeout(checkinSaveTimer);
+  checkinSaveTimer=setTimeout(()=>{
+    const todayKey=dKey(new Date());
+    const existing=S.checkinHistory.findIndex(c=>c.date===todayKey);
+    const entry={date:todayKey,sleep:sl,readiness:r};
+    if(existing>=0)S.checkinHistory[existing]=entry;
+    else S.checkinHistory.push(entry);
+    S.checkinHistory.sort((a,b)=>a.date.localeCompare(b.date));
+    DB.set('checkinHistory',S.checkinHistory);
+    // 7-day averages — computed from committed history
+    const last7=S.checkinHistory.slice(-7);
+    const avgSleep=last7.length?(last7.reduce((s,c)=>s+c.sleep,0)/last7.length).toFixed(1):sl;
+    const avgR=last7.length?(last7.reduce((s,c)=>s+c.readiness,0)/last7.length).toFixed(1):r;
+    const now=new Date();const hh=now.getHours().toString().padStart(2,'0'),mm=now.getMinutes().toString().padStart(2,'0');
+    if(avgEl)avgEl.innerHTML=`Saved ${hh}:${mm} &nbsp;·&nbsp; 7-day avg: <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--accent)">${avgR}/5 readiness</b>`;
+  },800);
 }
 document.getElementById('sleep-slider').value=S.sleep;document.getElementById('readiness-slider').value=S.readiness;
 
