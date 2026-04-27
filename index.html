@@ -1557,15 +1557,26 @@ function clearSeasonTemplate(){
 
 // ── Nutrition ──
 function getWeeklyLoadFromSchedule(){
-  // Read this week's schedule and compute average daily load type
   const now=new Date();const dow=now.getDay();const mo=dow===0?6:dow-1;
   let swimSessions=0,drylandSessions=0,doubleDays=0;
+  const tmpl=S.seasonTemplate||{};
   for(let i=0;i<7;i++){
     const dd=new Date(now);dd.setDate(now.getDate()-mo+i);dd.setHours(0,0,0,0);
-    const sch=S.daySchedule[dKey(dd)]||{};
-    const sess=sch.sessions||[];
-    const sw=sess.filter(s=>s.startsWith('swim')).length+(sch.swim&&!sess.length?1:0);
-    const dr=sess.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length+(sch.dryland&&!sess.length?1:0);
+    const key=dKey(dd);
+    const sch=S.daySchedule[key]||{};
+    let sess=sch.sessions||[];
+    // Legacy compat
+    if(!sess.length&&(sch.swim||sch.dryland)){
+      if(sch.swim)sess=['swim_am'];
+      if(sch.dryland)sess.push('dry_'+(sch.drylandType||'lower'));
+    }
+    // Fall back to season template if no manual override
+    if(!sch.override&&!sch.removed&&!sess.length&&tmpl.start&&tmpl.end){
+      const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+      if(dd>=ss&&dd<=se)sess=tmpl.days[dd.getDay()]||[];
+    }
+    const sw=sess.filter(s=>s.startsWith('swim')).length;
+    const dr=sess.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
     swimSessions+=sw;drylandSessions+=dr;
     if(sw>=2)doubleDays++;
   }
