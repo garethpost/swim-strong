@@ -164,9 +164,35 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p class="section-sub" id="phase-info">—</p>
       <div id="alert-zone"></div>
       <div class="stats-row">
-        <div class="stat-box"><div class="stat-val" id="stat-week">0</div><div class="stat-lbl">This<br>Week</div></div>
+        <div class="stat-box" id="stat-cal-box" style="cursor:default;">
+          <div class="stat-val" id="stat-cal" style="font-size:18px;">—</div>
+          <div class="stat-lbl" id="stat-cal-lbl">kcal<br>Today</div>
+          <div id="stat-macros" style="font-size:9px;color:var(--muted);margin-top:3px;line-height:1.5;"></div>
+        </div>
         <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Day<br>Streak</div></div>
         <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
+      </div>
+      <!-- KM Tracker -->
+      <div class="card" style="margin-bottom:12px;padding:12px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Season Distance</div>
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <div style="font-size:28px;font-weight:900;color:var(--accent);" id="km-display">0.0</div>
+              <div style="font-size:13px;color:var(--muted);" id="km-unit-label">km</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="km-session-label">tap + to log today's distance</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button onclick="adjustKm(1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+            <button onclick="adjustKm(-1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:22px;font-weight:700;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
+          </div>
+        </div>
+        <div id="km-input-row" style="display:none;margin-top:10px;display:flex;gap:8px;align-items:center;">
+          <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+          <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
+          <button onclick="cancelKm()" class="btn-ghost">✕</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
         <div class="card" style="margin-bottom:0;min-height:160px;" id="home-today-summary"></div>
@@ -309,9 +335,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-fuel" class="section">
       <p class="section-title">Fuel</p>
       <p class="section-sub">Nutrition for a competitive swimmer</p>
+      <!-- Dynamic daily fuel — auto-updates from schedule -->
+      <div id="fuel-today-card"></div>
       <div id="nutrition-output"></div>
       <div class="card">
-        <div class="card-title">Athlete Profile <span id="update-due-badge"></span></div>
+        <div class="card-title">Update Body Stats <span id="update-due-badge"></span></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="update-frequency-note">Enter your current measurements to keep calories accurate.</p>
         <div id="athlete-profile-fields"></div>
         <div class="form-grid-2">
           <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
@@ -323,8 +352,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
             </select>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories are calculated from your athlete profile and this week's schedule in the Schedule tab. Add your swim sessions there for the most accurate result.</p>
-        <button class="btn btn-primary" onclick="calcNutrition()">Calculate Nutrition Plan</button>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories update daily based on your schedule. Re-enter height &amp; weight when prompted to keep the calculation sharp.</p>
+        <button class="btn btn-primary" onclick="calcNutrition()">Save &amp; Recalculate</button>
       </div>
       <div class="card">
         <div class="card-title">Meal Timing</div>
@@ -674,6 +703,8 @@ if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_V
 let S={
   profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[],longTermGoals:[],preferredStandard:'provchamp',useKgPref:'metric'}
   clubLogo:DB.get('clubLogo',null), // base64 data URL
+  swimKmTotal:DB.get('swimKmTotal',0), // cumulative season km
+  swimKmLog:DB.get('swimKmLog',[]), // [{date,km}]
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),
   timeHistory:DB.get('timeHistory',{'50 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'24.80',lcm:'24.93'}],'100 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'53.83',lcm:'54.65'}],'200 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:59.49',lcm:'2:01.04'}],'50 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'27.47',lcm:'28.01'}],'100 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:01.54',lcm:'1:02.81'}]}),
@@ -944,6 +975,125 @@ function applyClubLogo(){
   const rb=document.getElementById('remove-logo-btn');
   if(pw&&pi){pi.src=logo||'';pw.style.display=logo?'block':'none';}
   if(rb){rb.style.display=logo?'inline-block':'none';}
+}
+
+// ── KM Tracker ──
+function renderKmTracker(){
+  const total=S.swimKmTotal||0;
+  const useKm=S.useKg; // metric = km, imperial = miles
+  const disp=useKm?total.toFixed(1):(total*0.621371).toFixed(1);
+  const unit=useKm?'km':'mi';
+  const el=document.getElementById('km-display');
+  const ul=document.getElementById('km-unit-label');
+  if(el)el.textContent=disp;
+  if(ul)ul.textContent=unit;
+  // Last entry label
+  const log=S.swimKmLog||[];
+  const lbl=document.getElementById('km-session-label');
+  if(lbl){
+    if(log.length){
+      const last=log[log.length-1];
+      const d=new Date(last.date);
+      const dStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+      const lastDisp=useKm?last.km.toFixed(1)+'km':(last.km*0.621371).toFixed(1)+'mi';
+      lbl.textContent=`Last: ${lastDisp} on ${dStr}`;
+    } else {
+      lbl.textContent='tap + to log today\'s distance';
+    }
+  }
+  // Hide input row initially
+  const ir=document.getElementById('km-input-row');
+  if(ir)ir.style.display='none';
+}
+function adjustKm(dir){
+  if(dir===1){
+    // Show input row
+    const ir=document.getElementById('km-input-row');
+    if(ir){ir.style.display='flex';document.getElementById('km-amount-input').focus();}
+  } else {
+    // Subtract last entry
+    const log=S.swimKmLog||[];
+    if(!log.length)return;
+    const last=log.pop();
+    S.swimKmTotal=Math.max(0,(S.swimKmTotal||0)-last.km);
+    S.swimKmLog=log;
+    DB.set('swimKmTotal',S.swimKmTotal);DB.set('swimKmLog',S.swimKmLog);
+    renderKmTracker();
+  }
+}
+function logKm(){
+  const inp=document.getElementById('km-amount-input');
+  if(!inp)return;
+  let val=parseFloat(inp.value);
+  if(!val||val<=0)return;
+  // Convert miles to km if imperial
+  const kmVal=S.useKg?val:val/0.621371;
+  const today=new Date().toISOString().slice(0,10);
+  S.swimKmLog=(S.swimKmLog||[]);
+  S.swimKmLog.push({date:today,km:kmVal});
+  S.swimKmTotal=(S.swimKmTotal||0)+kmVal;
+  DB.set('swimKmTotal',S.swimKmTotal);DB.set('swimKmLog',S.swimKmLog);
+  inp.value='';
+  const ir=document.getElementById('km-input-row');
+  if(ir)ir.style.display='none';
+  renderKmTracker();
+}
+function cancelKm(){
+  const ir=document.getElementById('km-input-row');
+  if(ir)ir.style.display='none';
+}
+
+// ── Dynamic daily calories ──
+function getDailyCalFromSchedule(){
+  // Returns {cal, carbs, protein, fat, waterL} based on TODAY's schedule and stored bodyStats
+  if(!S.bodyStats)return null;
+  const {wtKg,ht:htCm,age,sex}=S.bodyStats;
+  if(!wtKg||!htCm||!age||!sex)return null;
+  const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
+  // Get TODAY's sessions
+  const today=new Date();today.setHours(0,0,0,0);
+  const key=dKey(today);
+  const sch=S.daySchedule[key]||{};
+  let sess=sch.sessions||[];
+  if(!sess.length&&(sch.swim||sch.dryland)){
+    if(sch.swim)sess=['swim_am'];
+    if(sch.dryland)sess.push('dry_'+(sch.drylandType||'lower'));
+  }
+  const tmpl=S.seasonTemplate||{};
+  if(!sch.override&&!sch.removed&&!sess.length&&tmpl.start&&tmpl.end){
+    const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+    if(today>=ss&&today<=se)sess=tmpl.days[today.getDay()]||[];
+  }
+  const swimCount=sess.filter(s=>s.startsWith('swim')).length;
+  const dryCount=sess.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
+  const isDouble=swimCount>=2||(swimCount>=1&&dryCount>=1);
+  // Activity multiplier for TODAY
+  let mult=1.5;
+  if(isDouble)mult=2.3;
+  else if(swimCount>=1&&dryCount>=1)mult=2.1;
+  else if(swimCount>=2)mult=2.2;
+  else if(swimCount===1)mult=1.85;
+  else if(dryCount>=1)mult=1.7;
+  else mult=1.4; // rest day
+  const cal=Math.round(bmr*mult);
+  const protein=Math.round(wtKg*2.4);
+  const fat=Math.round(wtKg*1.1);
+  const carbs=Math.max(50,Math.round((cal-protein*4-fat*9)/4));
+  const waterMl=Math.round(wtKg*40+(swimCount+dryCount)*550);
+  const waterL=(waterMl/1000).toFixed(1);
+  return{cal,carbs,protein,fat,waterL,swimCount,dryCount,mult};
+}
+function renderHomeCals(){
+  const data=getDailyCalFromSchedule();
+  const calEl=document.getElementById('stat-cal');
+  const macEl=document.getElementById('stat-macros');
+  if(!data){
+    if(calEl)calEl.textContent='—';
+    if(macEl)macEl.textContent='Set up Fuel tab';
+    return;
+  }
+  if(calEl)calEl.textContent=data.cal.toLocaleString();
+  if(macEl)macEl.innerHTML=`C:${data.carbs}g P:${data.protein}g F:${data.fat}g`;
 }
 
 // ── 1RM system ──
@@ -1548,9 +1698,10 @@ function renderHome(){
   document.getElementById('phase-info').textContent=`Cycle ${cycle} · Week ${S.programWeek} of 16 · ${phase.label}`;
   const clubStr=S.profile&&S.profile.club?S.profile.club:'';
   document.getElementById('header-sub').textContent=`${clubStr?clubStr+' · ':''}C${cycle} Wk ${S.programWeek} · ${phase.name}`;
-  const hist=S.history,wkS=new Date();wkS.setDate(wkS.getDate()-(wkS.getDay()||7)+1);wkS.setHours(0,0,0,0);
-  document.getElementById('stat-week').textContent=hist.filter(h=>new Date(h.date)>=wkS).length;
+  const hist=S.history;
   document.getElementById('stat-total').textContent=hist.length;
+  renderHomeCals();
+  renderKmTracker();
   let streak=0;const t2=new Date();t2.setHours(0,0,0,0);
   for(let i=0;i<hist.length;i++){const d=new Date(hist[hist.length-1-i].date);d.setHours(0,0,0,0);const df=Math.round((t2-d)/86400000);if(df===i||df===i+1)streak++;else break;}
   document.getElementById('stat-streak').textContent=streak;
@@ -2123,8 +2274,10 @@ function getWeeklyLoadFromSchedule(){
 function calcNutrition(){
   const htCm=getHeightCm();
   let wt=parseFloat(document.getElementById('weight-input').value);
-  const age=parseInt(document.getElementById('age-input').value)||16;
+  const age=parseInt(document.getElementById('age-input').value)||(getRealAge()||16);
   const sex=document.getElementById('sex-select').value;
+  const realAge=getRealAge()||age;
+  const updateDays=realAge<18?14:30;
   if(!htCm||!wt||!age||!sex)return alert('Enter height, weight, age and sex.');
   const wtKg=S.useKg?wt:wt/2.205;
   // Mifflin-St Jeor BMR (sex-specific)
@@ -2169,6 +2322,7 @@ function calcNutrition(){
   S.bodyStats={ht:htCm,wtKg,age,sex,dayType,target,protein,carbs,fat,waterL,updated:new Date().toISOString()};
   S.lastStatsUpdate=new Date().toISOString();
   DB.set('bodyStats',S.bodyStats);DB.set('lastStatsUpdate',S.lastStatsUpdate);
+  renderFuelTodayCard();renderHomeCals();
 
   const dl={swim_dryland:'Swim + Dryland',swim_only:'Swim only',dryland_only:'Dryland only',active_recovery:'Active recovery',rest:'Rest day'};
   const wtDisp=S.useKg?wtKg.toFixed(1)+'kg':Math.round(wtKg*2.205)+'lbs';
@@ -2198,7 +2352,7 @@ function calcNutrition(){
       <p>🍚 Carbs: ${carbs}g — front-load before training, replenish immediately after</p>
       <p>🥑 Fat: ${fat}g — salmon, nuts, avocado, olive oil (not pre-workout)</p>
       <p>🌙 Before bed: casein protein — cottage cheese, Greek yogurt</p>
-      <p style="margin-top:8px;color:var(--gold);">⚠️ Recalculate every 2 weeks. Growth + training load shifts fast at 16.</p>
+      <p style="margin-top:8px;color:var(--gold);">⚠️ Update every ${updateDays} days — ${realAge<18?'growth shifts your numbers fast':'body composition changes over time'}.</p>
     </div>
   </div>`;
 }
@@ -2214,6 +2368,37 @@ function makeInput(id,type,placeholder,extra){
   style.textContent='#'+id+'::placeholder{color:var(--muted);opacity:0.5;}';
   document.head.appendChild(style);
   return inp;
+}
+function renderFuelTodayCard(){
+  const el=document.getElementById('fuel-today-card');if(!el)return;
+  const data=getDailyCalFromSchedule();
+  if(!data){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:20px 16px;">
+      <div style="font-size:28px;margin-bottom:6px;">🍽️</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">No nutrition data yet</div>
+      <div style="font-size:12px;color:var(--muted);">Enter your height &amp; weight below to get daily fuel targets.</div>
+    </div>`;
+    return;
+  }
+  const dl=data.swimCount>=2?'Double Day':data.swimCount>=1&&data.dryCount>=1?'Swim + Dryland':data.swimCount>=1?'Swim Day':data.dryCount>=1?'Dryland Day':'Rest Day';
+  const dlColor=data.swimCount>=2?'var(--orange)':data.swimCount>=1&&data.dryCount>=1?'var(--green)':data.swimCount>=1?'var(--accent)':data.dryCount>=1?'var(--purple)':'var(--muted)';
+  el.innerHTML=`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">Today's Fuel</div>
+      <span style="font-size:11px;font-weight:700;color:${dlColor};background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px;">${dl}</span>
+    </div>
+    <div style="text-align:center;font-size:48px;font-weight:900;color:var(--green);line-height:1;margin-bottom:4px;">${data.cal.toLocaleString()}</div>
+    <div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px;">kcal — updates automatically with your schedule</div>
+    <div class="macro-grid">
+      <div class="macro-box"><div class="macro-val macro-carb">${data.carbs}g</div><div class="macro-lbl">Carbs</div></div>
+      <div class="macro-box"><div class="macro-val macro-prot">${data.protein}g</div><div class="macro-lbl">Protein</div></div>
+      <div class="macro-box"><div class="macro-val macro-fat">${data.fat}g</div><div class="macro-lbl">Fat</div></div>
+    </div>
+    <div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+      <div style="font-size:24px;">💧</div>
+      <div><div style="font-size:20px;font-weight:800;color:var(--accent);">${data.waterL}L</div><div style="font-size:11px;color:var(--muted);">Water today</div></div>
+    </div>
+  </div>`;
 }
 function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
@@ -2252,13 +2437,19 @@ function renderNutrition(){
     const ageEl=document.getElementById('age-input');
     if(ageEl){const pa=getRealAge();if(pa)ageEl.value=pa;}
   },300);
+  // Update frequency: under 18 = 14 days, 18+ = 30 days
+  const realAge=getRealAge()||16;
+  const updateDays=realAge<18?14:30;
+  const freqNote=document.getElementById('update-frequency-note');
+  if(freqNote)freqNote.textContent=`Update every ${updateDays} days — ${realAge<18?'you\'re still growing, so weight & height shift fast':'monthly is enough at this stage'}.`;
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
-  document.getElementById('update-due-badge').innerHTML=days>=14?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
-  document.getElementById('nutrition-output').innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
-    <div style="font-size:32px;margin-bottom:8px;">🍽️</div>
-    <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Fill in your profile below</div>
-    <div style="font-size:13px;color:var(--muted);">Enter your details and tap Calculate to get your nutrition plan.</div>
-  </div>`;
+  document.getElementById('update-due-badge').innerHTML=days>=updateDays?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
+  // Render dynamic today card
+  renderFuelTodayCard();
+  // If no bodyStats yet, show prompt
+  if(!S.bodyStats){
+    document.getElementById('nutrition-output').innerHTML='';
+  }
 }
 
 // ── More ──
