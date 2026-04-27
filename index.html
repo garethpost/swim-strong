@@ -226,10 +226,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
     <!-- WORKOUT -->
     <div id="section-workout" class="section">
-      <p class="section-title">Today's Session</p>
-      <p class="section-sub" id="workout-subtitle">—</p>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>
+      <div id="workout-top"></div>
       <div id="baseline-card"></div>
       <div id="workout-content"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
@@ -706,6 +703,9 @@ let S={
   clubLogo:DB.get('clubLogo',null), // base64 data URL
   swimKmTotal:DB.get('swimKmTotal',0), // cumulative season km
   swimKmLog:DB.get('swimKmLog',[]), // [{date,km}]
+  workoutMode:DB.get('workoutMode','standard'), // 'standard' | 'goal'
+  goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
+  shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),
   timeHistory:DB.get('timeHistory',{'50 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'24.80',lcm:'24.93'}],'100 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'53.83',lcm:'54.65'}],'200 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:59.49',lcm:'2:01.04'}],'50 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'27.47',lcm:'28.01'}],'100 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:01.54',lcm:'1:02.81'}]}),
@@ -1248,6 +1248,32 @@ function getPhase(w){
   }
 }
 function getDayType(dow){return{1:'lower',2:'upper',3:'mobility',4:'lower',5:'upper',6:'cardio',0:'mobility'}[dow]||'mobility';}
+
+// Read today's dryland type from schedule — schedule is source of truth
+function getTodayDrylandType(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const key=dKey(today);
+  const sch=S.daySchedule[key]||{};
+  let sess=sch.sessions||[];
+  // Legacy compat
+  if(!sess.length&&sch.dryland)sess=['dry_'+(sch.drylandType||'lower')];
+  // Fall back to season template
+  const tmpl=S.seasonTemplate||{};
+  if(!sch.override&&!sch.removed&&!sess.length&&tmpl.start&&tmpl.end){
+    const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+    if(today>=ss&&today<=se)sess=tmpl.days[today.getDay()]||[];
+  }
+  // Map dry_ session types to workout types
+  const dryMap={dry_lower:'lower',dry_upper:'upper',dry_power:'power',dry_mobility:'mobility',dry_cardio:'cardio',dry_rest:'rest'};
+  const drySess=sess.find(s=>s.startsWith('dry_'));
+  if(drySess&&dryMap[drySess])return dryMap[drySess];
+  // No dryland scheduled — check if it's a rest day
+  const hasDryland=sess.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
+  const hasSwim=sess.some(s=>s.startsWith('swim'));
+  if(!hasDryland&&!hasSwim)return'rest';
+  // Swim-only day — use day-of-week default for dryland type but flag as optional
+  return getDayType(today.getDay());
+}
 function getScheme(phaseName,mult){
   const b={GPP:{sets:3,reps:'12-15',pct:'60-70%'},Strength:{sets:4,reps:'4-6',pct:'80-90%'},Power:{sets:4,reps:'5-6',pct:'explosive'},Taper:{sets:3,reps:'4-5',pct:'75%'}};
   const s={...b[phaseName]||b.GPP,phase:phaseName};
@@ -1361,8 +1387,9 @@ function generateWorkout(forceType){
   const load=getLoadDesc(mult);
   const tp=isTaperWeek();
   const emp=getEmphasis();
-  const dow=new Date().getDay();
-  const dayType=forceType||(phase.name==='Power'?'power':getDayType(dow));
+  // Schedule is source of truth — only use forceType for manual preview
+  const scheduledType=getTodayDrylandType();
+  const dayType=forceType||(phase.name==='Power'&&scheduledType!=='rest'?'power':scheduledType);
   const scheme=getScheme(phase.name,mult);
   const dt=tp.yes&&!forceType&&tp.meet.priority!=='C';
   let blocks=[];
@@ -1387,21 +1414,255 @@ function generateWorkout(forceType){
   } else if(dayType==='cardio'){
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
     blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
+  } else if(dayType==='rest'){
+    // Rest day — return early with a recovery-only plan
+    return{phase,dayType:'rest',mult,load,scheme,emp,taperNote:null,
+      title:'Rest Day',subtitle:`Recovery · Wk ${S.programWeek} · Sleep ${S.sleep}h · R ${S.readiness}/5`,
+      blocks:[{title:'😴 Scheduled Rest',exercises:[{name:'Active Recovery',note:'Light walk, stretch, or swim easy 20min. No dryland today.',sets:0,weighted:false}]}],
+      readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isRest:true};
   }
   blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
   const labels={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'};
-  return{phase,dayType,mult,load,scheme,emp,taperNote:tp.yes?`Dryland tapered — ${tp.meet.name} in ${tp.daysOut}d`:null,title:`${phase.label} — ${labels[dayType]||dayType}`,subtitle:`${load.label} · Wk ${S.programWeek} · Sleep ${S.sleep}h · R ${S.readiness}/5`,blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString()};
+  const schedNote=forceType?'Manual preview':scheduledType!=='rest'?'From your schedule':'Day-of-week default';
+  return{phase,dayType,mult,load,scheme,emp,taperNote:tp.yes?`Dryland tapered — ${tp.meet.name} in ${tp.daysOut}d`:null,title:`${phase.label} — ${labels[dayType]||dayType}`,subtitle:`${load.label} · Wk ${S.programWeek} · Sleep ${S.sleep}h · R ${S.readiness}/5`,schedNote,blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString()};
 }
 
-function startWorkout(){S.currentWorkout=generateWorkout(null);completedSets={};renderWorkout(S.currentWorkout);showSection('workout');}
-function forceWorkout(t){closeModal('picker-modal');S.currentWorkout=generateWorkout(t);completedSets={};renderWorkout(S.currentWorkout);showSection('workout');}
+// ── Goal Program ──
+// Maps long-term goals to exercise emphasis tags
+const GOAL_BIAS={
+  'Improve starts & underwater dolphins':   {lower:['explosive','plyos'],upper:[],core:['rotational'],extra:'power'},
+  'Develop explosive power & sprint speed': {lower:['explosive'],upper:['push'],core:[],extra:'power'},
+  'Improve race turns & walls':             {lower:['explosive','single-leg'],upper:[],core:['rotational'],extra:'power'},
+  'Build aerobic base & endurance':         {lower:['hinge'],upper:['pull'],core:['anti-rotation'],extra:'cardio'},
+  'Master technique in my best stroke':     {lower:[],upper:['pull','shoulder'],core:['rotational'],extra:'upper'},
+  'Stay injury-free & athletic longevity':  {lower:['hinge','single-leg'],upper:['shoulder'],core:['stability'],extra:'mobility'},
+};
+// Compute weeks remaining to a meet
+function weeksToMeet(meet){
+  const md=localDate(meet.date);
+  const now=new Date();now.setHours(0,0,0,0);
+  const days=Math.round((md-now)/86400000);
+  return Math.max(1,Math.ceil(days/7));
+}
+// Derive a phase name from weeks remaining
+function goalPhaseFromWeeks(weeks){
+  if(weeks>12)return'GPP';
+  if(weeks>8)return'Strength';
+  if(weeks>4)return'Power';
+  return'Taper';
+}
+function activateGoalProgram(meetId,goals){
+  const meet=S.meets.find(m=>m.id===meetId);
+  if(!meet)return;
+  const weeks=weeksToMeet(meet);
+  const phase=goalPhaseFromWeeks(weeks);
+  S.goalProgram={meetId,goals,weeksToMeet:weeks,startDate:new Date().toISOString(),phase};
+  S.workoutMode='goal';
+  DB.set('goalProgram',S.goalProgram);
+  DB.set('workoutMode',S.workoutMode);
+  renderWorkoutTab();
+}
+function deactivateGoalProgram(){
+  S.workoutMode='standard';
+  S.goalProgram=null;
+  DB.set('workoutMode','standard');
+  DB.set('goalProgram',null);
+  renderWorkoutTab();
+}
+
+function renderWorkoutTab(){
+  const el=document.getElementById('workout-top');if(!el)return;
+  const isGoal=S.workoutMode==='goal';
+  const gp=S.goalProgram;
+
+  // ── Mode toggle ──
+  const toggleHtml=`
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="setWorkoutMode('standard')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">📋 Standard</button>
+      <button onclick="setWorkoutMode('goal')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">🎯 Goal Program</button>
+    </div>`;
+
+  let modeHtml='';
+  if(!isGoal){
+    // Standard mode — show subtitle + action buttons
+    modeHtml=`
+      <p class="section-title">Today's Session</p>
+      <p class="section-sub" id="workout-subtitle">—</p>
+      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
+  } else if(!gp){
+    // Goal mode — setup card
+    const abMeets=S.meets.filter(m=>{
+      const d=localDate(m.date);const now=new Date();now.setHours(0,0,0,0);
+      return (m.priority==='A'||m.priority==='B')&&d>=now;
+    }).sort((a,b)=>localDate(a.date)-localDate(b.date));
+    const goals=(S.profile&&S.profile.longTermGoals)||[];
+    const goalBiasable=goals.filter(g=>GOAL_BIAS[g]);
+
+    const meetOptions=abMeets.length
+      ?abMeets.map(m=>{
+          const dO=Math.round((localDate(m.date)-new Date().setHours(0,0,0,0))/86400000);
+          const wks=Math.ceil(dO/7);
+          const badge=m.priority==='A'?'🥇':'🥈';
+          return`<option value="${m.id}">${badge} ${m.name} · ${wks}w away</option>`;
+        }).join('')
+      :'<option value="">No upcoming A/B meets — add one first</option>';
+
+    const goalsHtml=goalBiasable.length
+      ?goalBiasable.map((g,gi)=>`
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+            <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
+            <span style="font-size:13px;">${g}</span>
+          </label>`).join('')
+      :`<p style="font-size:13px;color:var(--muted);">No goal-compatible goals found. Add long-term goals in your profile.</p>`;
+
+    modeHtml=`
+      <p class="section-title">Goal Program</p>
+      <p class="section-sub">Train with purpose — workouts biased toward your specific goals.</p>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">Target Meet</div>
+        <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
+          ${meetOptions}
+        </select>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">Goal Focus (pick 1–3)</div>
+        ${goalsHtml}
+      </div>
+      <button class="btn btn-primary" onclick="activateGoalProgramUI()" style="margin-bottom:8px;" ${!abMeets.length?'disabled':''}>Activate Goal Program 🎯</button>
+      <button class="btn btn-secondary btn-sm" onclick="setWorkoutMode('standard')" style="width:100%;">← Back to Standard</button>`;
+  } else {
+    // Goal mode — active state
+    const meet=S.meets.find(m=>m.id===gp.meetId);
+    const weeks=meet?weeksToMeet(meet):gp.weeksToMeet;
+    const phase=goalPhaseFromWeeks(weeks);
+    const phaseColors={GPP:'var(--green)',Strength:'var(--red)',Power:'var(--purple)',Taper:'var(--accent)'};
+    const phaseColor=phaseColors[phase]||'var(--accent)';
+    const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">🎯 ${g}</div>`).join('');
+    const totalW=gp.weeksToMeet||12;
+    const pct=Math.min(100,Math.round(((totalW-weeks)/totalW)*100));
+    modeHtml=`
+      <p class="section-title">Goal Program Active</p>
+      <div class="card" style="border:1px solid ${phaseColor};margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Current Phase</div>
+            <div style="font-size:20px;font-weight:800;color:${phaseColor};">${phase}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${meet?meet.name:'Target Meet'}</div>
+            <div style="font-size:20px;font-weight:800;color:var(--gold);">${weeks}w</div>
+            <div style="font-size:10px;color:var(--muted);">to meet</div>
+          </div>
+        </div>
+        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px;">
+          <div style="background:${phaseColor};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s;"></div>
+        </div>
+        ${goalsDisplay}
+      </div>
+      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Preview any workout type</button>
+      <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
+  }
+  el.innerHTML=toggleHtml+modeHtml;
+}
+
+function setWorkoutMode(mode){
+  if(mode==='goal'&&S.workoutMode!=='goal'){S.workoutMode='goal';DB.set('workoutMode','goal');renderWorkoutTab();return;}
+  if(mode==='standard'){if(S.workoutMode==='goal'&&S.goalProgram){if(!confirm('Deactivate your goal program and switch to standard mode?'))return;deactivateGoalProgram();return;}S.workoutMode='standard';DB.set('workoutMode','standard');renderWorkoutTab();}
+}
+
+function activateGoalProgramUI(){
+  const sel=document.getElementById('goal-meet-select');
+  if(!sel||!sel.value)return alert('Select a target meet first.');
+  const meetId=sel.value;
+  const goals=[];
+  document.querySelectorAll('#workout-top input[type=checkbox]:checked').forEach(cb=>goals.push(cb.value));
+  if(!goals.length)return alert('Select at least one goal to focus on.');
+  activateGoalProgram(meetId,goals);
+}
+
+function confirmDeactivate(){
+  if(confirm('Stop goal program and return to standard mode?'))deactivateGoalProgram();
+}
+
+function generateGoalWorkout(forceType){
+  const gp=S.goalProgram;
+  const meet=gp?S.meets.find(m=>m.id===gp.meetId):null;
+  const weeks=meet?weeksToMeet(meet):S.programWeek;
+  const phaseName=goalPhaseFromWeeks(weeks);
+  const phase={name:phaseName,label:{GPP:'General Prep',Strength:'Strength',Power:'Power',Taper:'Taper'}[phaseName],cls:{GPP:'phase-gpp',Strength:'phase-strength',Power:'phase-power',Taper:'phase-taper'}[phaseName]};
+  const mult=getLoadMult();
+  const load=getLoadDesc(mult);
+  const scheme=getScheme(phaseName,mult);
+  const scheduledType=getTodayDrylandType();
+  const dayType=forceType||(phaseName==='Power'&&scheduledType!=='rest'?'power':scheduledType);
+  if(dayType==='rest'){
+    return{phase,dayType:'rest',mult,load,scheme,emp:'balanced',taperNote:null,
+      title:'Rest Day',subtitle:`Recovery · Goal: ${meet?meet.name:'—'} · ${weeks}w out`,
+      blocks:[{title:'😴 Scheduled Rest',exercises:[{name:'Active Recovery',note:'Light walk, stretch, or swim easy 20min.',sets:0,weighted:false}]}],
+      readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isRest:true,isGoal:true};
+  }
+  // Build goal-biased blocks
+  const goals=gp?gp.goals:[];
+  const biases=goals.map(g=>GOAL_BIAS[g]).filter(Boolean);
+  // Collect extra emphasis from goals
+  const extraTypes=biases.map(b=>b.extra).filter(Boolean);
+  const wantsPower=extraTypes.includes('power');
+  const wantsMobility=extraTypes.includes('mobility');
+  let blocks=[];
+  blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,4).map(e=>({...e,sets:1}))});
+  if(dayType==='lower'){
+    // Prefer explosive exercises if goals point that way
+    let pool=wantsPower?EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('plyos'))):EX.lower.filter(e=>e.weighted);
+    if(pool.length<3)pool=EX.lower.filter(e=>e.weighted); // fallback
+    const wEx=pickFresh(pool,4);
+    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:wEx.map(e=>({...e,sets:e.sets||scheme.sets}))});
+    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+  } else if(dayType==='upper'){
+    const mand=EX.upper.filter(e=>e.name==='Face Pulls'||e.name==='Prone Y-T-W');
+    const rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),4);
+    blocks.push({title:'💪 Upper Body',exercises:[...rest,...mand].map(e=>({...e,sets:e.sets||scheme.sets}))});
+    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+  } else if(dayType==='power'){
+    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:pickFresh(EX.plyos,5).map(e=>({...e,sets:e.sets||scheme.sets}))});
+    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+  } else if(dayType==='mobility'){
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,6).map(e=>({...e,sets:2}))});
+  } else if(dayType==='cardio'){
+    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
+    blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
+  }
+  // Add goal-specific finisher if power/mobility goal
+  if(wantsPower&&dayType!=='power'&&dayType!=='mobility'){
+    blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(EX.plyos,2).map(e=>({...e,sets:3}))});
+  }
+  if(wantsMobility&&dayType!=='mobility'){
+    blocks.push({title:'🎯 Goal Finisher — Injury Prevention',exercises:pick(EX.mobility,3).map(e=>({...e,sets:2}))});
+  }
+  blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
+  const meetNote=meet?`Target: ${meet.name} · ${weeks}w out`:'Goal Program';
+  return{phase,dayType,mult,load,scheme,emp:'balanced',taperNote:null,
+    title:`${phase.label} — ${({lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'})[dayType]||dayType}`,
+    subtitle:`${load.label} · ${meetNote} · R ${S.readiness}/5`,
+    schedNote:'From your schedule',goals,meetNote,
+    blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isGoal:true};
+}
+
+function startWorkout(){
+  const w=S.workoutMode==='goal'?generateGoalWorkout(null):generateWorkout(null);
+  S.currentWorkout=w;completedSets={};renderWorkout(w);
+}
+function forceWorkout(t){closeModal('picker-modal');S.currentWorkout=S.workoutMode==='goal'?generateGoalWorkout(t):generateWorkout(t);completedSets={};showSection('workout');renderWorkout(S.currentWorkout);}
 
 function renderWorkout(w){
-  document.getElementById('workout-subtitle').textContent=w.subtitle;
+  const subEl=document.getElementById('workout-subtitle');if(subEl)subEl.textContent=w.subtitle;
   let html=`<span class="phase-badge ${w.phase.cls}">${w.phase.name} Phase</span>`;
   if(w.taperNote)html+=`<div class="alert-banner alert-taper">⚡ ${w.taperNote}</div>`;
-  if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Adaptive focus: ${w.emp==='fly'?'Butterfly pull & power — closing gap to trials':'Freestyle speed — closing gap to trials'}</div>`;
+  if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Goal Program: ${w.goals.slice(0,2).join(' · ')}</div>`;
+  else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Adaptive focus: ${w.emp==='fly'?'Butterfly pull & power — closing gap to trials':'Freestyle speed — closing gap to trials'}</div>`;
   html+=`<div class="alert-banner" style="background:#0a1a2a;border:1px solid var(--accent);color:var(--accent);">📊 <strong>${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?' '+w.scheme.note:''}</div>`;
+  if(w.schedNote)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:5px 8px;background:var(--surface);border-radius:6px;">📅 Session type: <b style="color:var(--text);">${w.schedNote}</b></div>`;
   w.blocks.forEach((block,bi)=>{
     html+=`<div class="workout-block"><div class="block-header">${block.title}</div>`;
     block.exercises.forEach((ex,ei)=>{html+=buildCard(ex,bi,ei,w.scheme);});
@@ -2673,7 +2934,7 @@ function showSection(name){
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
-  if(name==='workout')renderBaseline();
+  if(name==='workout'){renderWorkoutTab();renderBaseline();}
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();}
 }
