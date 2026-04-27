@@ -1455,7 +1455,7 @@ function goalPhaseFromWeeks(weeks){
   return'Taper';
 }
 function activateGoalProgram(meetId,goals){
-  const meet=S.meets.find(m=>m.id===meetId);
+  const meet=S.meets.find(m=>String(m.id)===String(meetId));
   if(!meet)return;
   const weeks=weeksToMeet(meet);
   const phase=goalPhaseFromWeeks(weeks);
@@ -1533,7 +1533,7 @@ function renderWorkoutTab(){
       <button class="btn btn-secondary btn-sm" onclick="setWorkoutMode('standard')" style="width:100%;">← Back to Standard</button>`;
   } else {
     // Goal mode — active state
-    const meet=S.meets.find(m=>m.id===gp.meetId);
+    const meet=S.meets.find(m=>String(m.id)===String(gp.meetId));
     const weeks=meet?weeksToMeet(meet):gp.weeksToMeet;
     const phase=goalPhaseFromWeeks(weeks);
     const phaseColors={GPP:'var(--green)',Strength:'var(--red)',Power:'var(--purple)',Taper:'var(--accent)'};
@@ -1588,7 +1588,7 @@ function confirmDeactivate(){
 
 function generateGoalWorkout(forceType){
   const gp=S.goalProgram;
-  const meet=gp?S.meets.find(m=>m.id===gp.meetId):null;
+  const meet=gp?S.meets.find(m=>String(m.id)===String(gp.meetId)):null;
   const weeks=meet?weeksToMeet(meet):S.programWeek;
   const phaseName=goalPhaseFromWeeks(weeks);
   const phase={name:phaseName,label:{GPP:'General Prep',Strength:'Strength',Power:'Power',Taper:'Taper'}[phaseName],cls:{GPP:'phase-gpp',Strength:'phase-strength',Power:'phase-power',Taper:'phase-taper'}[phaseName]};
