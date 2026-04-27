@@ -149,13 +149,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <body>
 <div id="app">
   <div id="header">
-    <div><h1>SwimFitPro 🌊</h1><div class="sub" id="header-sub">Loading...</div></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
+      <div><h1>SwimFitPro 🌊</h1><div class="sub" id="header-sub">Loading...</div></div>
+    </div>
     <button class="unit-toggle" onclick="toggleUnits()" id="unit-btn">kg</button>
   </div>
   <div id="content">
 
     <!-- HOME -->
     <div id="section-home" class="section active">
+      <div id="home-club-logo-wrap" style="display:none;text-align:center;margin-bottom:8px;"><img id="home-club-logo" src="" alt="" style="height:56px;object-fit:contain;border-radius:8px;"></div>
       <p class="section-title" id="greeting">Let's go.</p>
       <p class="section-sub" id="phase-info">—</p>
       <div id="alert-zone"></div>
@@ -365,7 +369,15 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div class="card">
         <div class="card-title">Athlete Profile</div>
         <div id="profile-display" style="margin-bottom:12px;"></div>
-        <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
+          <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
+        </div>
+        <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
+        <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
+          <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
+        </div>
       </div>
       <div class="card">
         <div class="card-title">Settings</div>
@@ -582,6 +594,7 @@ if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_V
 
 let S={
   profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[]}
+  clubLogo:DB.get('clubLogo',null), // base64 data URL
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),
   timeHistory:DB.get('timeHistory',{'50 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'24.80',lcm:'24.93'}],'100 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'53.83',lcm:'54.65'}],'200 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:59.49',lcm:'2:01.04'}],'50 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'27.47',lcm:'28.01'}],'100 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:01.54',lcm:'1:02.81'}]}),
@@ -775,6 +788,41 @@ function checkOnboarding(){
     document.getElementById('section-onboarding').style.display='block';
     initProfileEventPicker('ob-events',[]);
   }
+}
+
+// ── Club logo ──
+function uploadClubLogo(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const dataUrl=e.target.result;
+    S.clubLogo=dataUrl;
+    DB.set('clubLogo',dataUrl);
+    applyClubLogo();
+  };
+  reader.readAsDataURL(file);
+  // Reset input so same file can be re-selected if needed
+  event.target.value='';
+}
+function removeClubLogo(){
+  S.clubLogo=null;DB.set('clubLogo',null);
+  applyClubLogo();
+}
+function applyClubLogo(){
+  const logo=S.clubLogo;
+  // Header
+  const hdr=document.getElementById('header-club-logo');
+  if(hdr){hdr.src=logo||'';hdr.style.display=logo?'block':'none';}
+  // Home
+  const hw=document.getElementById('home-club-logo-wrap');
+  const hi=document.getElementById('home-club-logo');
+  if(hw&&hi){hi.src=logo||'';hw.style.display=logo?'block':'none';}
+  // More tab preview
+  const pw=document.getElementById('logo-preview-wrap');
+  const pi=document.getElementById('logo-preview');
+  const rb=document.getElementById('remove-logo-btn');
+  if(pw&&pi){pi.src=logo||'';pw.style.display=logo?'block':'none';}
+  if(rb){rb.style.display=logo?'inline-block':'none';}
 }
 
 // ── 1RM system ──
@@ -2375,6 +2423,7 @@ function showSection(name){
 
 // INIT
 checkOnboarding();
+applyClubLogo();
 renderHome();
 </script>
 </body>
