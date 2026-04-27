@@ -523,6 +523,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <!-- MODALS -->
 <div class="modal-overlay" id="ex-modal"><div class="modal"><div class="modal-handle"></div><h3 id="ex-modal-title" style="font-size:17px;margin-bottom:8px;"></h3><p id="ex-modal-desc" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;"></p><p id="ex-modal-cue" style="font-size:13px;color:var(--accent);"></p><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('ex-modal')">Close</button></div></div></div>
 <div class="modal-overlay" id="picker-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')">Cancel</button></div></div></div>
+<div class="modal-overlay" id="goal-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:4px;">Goal Program Setup</h3><p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Your workouts will be biased toward your chosen goals.</p><div id="goal-modal-body"></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('goal-modal')">Cancel</button></div></div></div>
 <div class="modal-overlay" id="day-modal"><div class="modal"><div class="modal-handle"></div>
 <h3 id="day-modal-title" style="font-size:17px;margin-bottom:4px;"></h3>
 <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tap to add/remove sessions. Multiple allowed.</p>
@@ -1472,104 +1473,99 @@ function deactivateGoalProgram(){
 
 function renderWorkoutTab(){
   const el=document.getElementById('workout-top');if(!el)return;
-  const isGoal=S.workoutMode==='goal';
   const gp=S.goalProgram;
 
-  // ── Mode toggle ──
-  const toggleHtml=`
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button onclick="setWorkoutMode('standard')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">📋 Standard</button>
-      <button onclick="setWorkoutMode('goal')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">🎯 Goal Program</button>
-    </div>`;
+  // Always show the standard generate buttons
+  let html=`
+    <p class="section-title">Today's Session</p>
+    <p class="section-sub" id="workout-subtitle">—</p>`;
 
-  let modeHtml='';
-  if(!isGoal){
-    // Standard mode — show subtitle + action buttons
-    modeHtml=`
-      <p class="section-title">Today's Session</p>
-      <p class="section-sub" id="workout-subtitle">—</p>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
-  } else if(!gp){
-    // Goal mode — setup card
-    const abMeets=S.meets.filter(m=>{
-      const d=localDate(m.date);const now=new Date();now.setHours(0,0,0,0);
-      return (m.priority==='A'||m.priority==='B')&&d>=now;
-    }).sort((a,b)=>localDate(a.date)-localDate(b.date));
-    const goals=(S.profile&&S.profile.longTermGoals)||[];
-    const goalBiasable=goals.filter(g=>GOAL_BIAS[g]);
-
-    const meetOptions=abMeets.length
-      ?abMeets.map(m=>{
-          const dO=Math.round((localDate(m.date)-new Date().setHours(0,0,0,0))/86400000);
-          const wks=Math.ceil(dO/7);
-          const badge=m.priority==='A'?'🥇':'🥈';
-          return`<option value="${m.id}">${badge} ${m.name} · ${wks}w away</option>`;
-        }).join('')
-      :'<option value="">No upcoming A/B meets — add one first</option>';
-
-    const goalsHtml=goalBiasable.length
-      ?goalBiasable.map((g,gi)=>`
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-            <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
-            <span style="font-size:13px;">${g}</span>
-          </label>`).join('')
-      :`<p style="font-size:13px;color:var(--muted);">No goal-compatible goals found. Add long-term goals in your profile.</p>`;
-
-    modeHtml=`
-      <p class="section-title">Goal Program</p>
-      <p class="section-sub">Train with purpose — workouts biased toward your specific goals.</p>
-      <div class="card" style="margin-bottom:12px;">
-        <div class="card-title">Target Meet</div>
-        <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
-          ${meetOptions}
-        </select>
-      </div>
-      <div class="card" style="margin-bottom:12px;">
-        <div class="card-title">Goal Focus (pick 1–3)</div>
-        ${goalsHtml}
-      </div>
-      <button class="btn btn-primary" onclick="activateGoalProgramUI()" style="margin-bottom:8px;" ${!abMeets.length?'disabled':''}>Activate Goal Program 🎯</button>
-      <button class="btn btn-secondary btn-sm" onclick="setWorkoutMode('standard')" style="width:100%;">← Back to Standard</button>`;
-  } else {
-    // Goal mode — active state
+  if(gp){
+    // Goal program active — compact status banner above generate button
     const meet=S.meets.find(m=>m.id===gp.meetId);
     const weeks=meet?weeksToMeet(meet):gp.weeksToMeet;
     const phase=goalPhaseFromWeeks(weeks);
     const phaseColors={GPP:'var(--green)',Strength:'var(--red)',Power:'var(--purple)',Taper:'var(--accent)'};
-    const phaseColor=phaseColors[phase]||'var(--accent)';
-    const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">🎯 ${g}</div>`).join('');
+    const phaseColor=phaseColors[phase]||'var(--purple)';
     const totalW=gp.weeksToMeet||12;
     const pct=Math.min(100,Math.round(((totalW-weeks)/totalW)*100));
-    modeHtml=`
-      <p class="section-title">Goal Program Active</p>
-      <div class="card" style="border:1px solid ${phaseColor};margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-          <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Current Phase</div>
-            <div style="font-size:20px;font-weight:800;color:${phaseColor};">${phase}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${meet?meet.name:'Target Meet'}</div>
-            <div style="font-size:20px;font-weight:800;color:var(--gold);">${weeks}w</div>
-            <div style="font-size:10px;color:var(--muted);">to meet</div>
-          </div>
+    const goalTags=(gp.goals||[]).map(g=>`<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:rgba(192,132,252,0.15);color:var(--purple);font-size:11px;font-weight:600;margin:2px 2px 0 0;">${g}</span>`).join('');
+    html+=`
+    <div style="background:#17103a;border:1px solid var(--purple);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:700;color:var(--purple);">🎯 Goal Program</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${phaseColor}22;color:${phaseColor};font-weight:700;">${phase}</span>
         </div>
-        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px;">
-          <div style="background:${phaseColor};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s;"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:13px;font-weight:800;color:var(--gold);">${weeks}w</span>
+          <button onclick="confirmDeactivate()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1;" title="Stop goal program">✕</button>
         </div>
-        ${goalsDisplay}
       </div>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Preview any workout type</button>
-      <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
+      <div style="background:var(--border);border-radius:3px;height:4px;overflow:hidden;margin-bottom:8px;">
+        <div style="background:${phaseColor};height:100%;width:${pct}%;border-radius:3px;"></div>
+      </div>
+      <div>${goalTags}</div>
+      ${meet?`<div style="font-size:11px;color:var(--muted);margin-top:6px;">Target: ${meet.name}</div>`:''}
+    </div>`;
+  } else {
+    // No goal program — small "Set up Goal Program" link
+    html+=`
+    <div style="margin-bottom:10px;">
+      <button onclick="openGoalSetup()" style="background:none;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px;padding:8px 14px;width:100%;cursor:pointer;font-family:var(--font);">🎯 Set up Goal Program</button>
+    </div>`;
   }
-  el.innerHTML=toggleHtml+modeHtml;
+
+  html+=`
+    <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
+
+  el.innerHTML=html;
 }
 
-function setWorkoutMode(mode){
-  if(mode==='goal'&&S.workoutMode!=='goal'){S.workoutMode='goal';DB.set('workoutMode','goal');renderWorkoutTab();return;}
-  if(mode==='standard'){if(S.workoutMode==='goal'&&S.goalProgram){if(!confirm('Deactivate your goal program and switch to standard mode?'))return;deactivateGoalProgram();return;}S.workoutMode='standard';DB.set('workoutMode','standard');renderWorkoutTab();}
+function openGoalSetup(){
+  const abMeets=S.meets.filter(m=>{
+    const d=localDate(m.date);const now=new Date();now.setHours(0,0,0,0);
+    return (m.priority==='A'||m.priority==='B')&&d>=now;
+  }).sort((a,b)=>localDate(a.date)-localDate(b.date));
+  const goals=(S.profile&&S.profile.longTermGoals)||[];
+  const goalBiasable=goals.filter(g=>GOAL_BIAS[g]);
+
+  const meetOptions=abMeets.length
+    ?abMeets.map(m=>{
+        const dO=Math.round((localDate(m.date)-new Date().setHours(0,0,0,0))/86400000);
+        const wks=Math.ceil(dO/7);
+        const badge=m.priority==='A'?'🥇':'🥈';
+        return`<option value="${m.id}">${badge} ${m.name} · ${wks}w away</option>`;
+      }).join('')
+    :'<option value="">No upcoming A/B meets — add one in Schedule first</option>';
+
+  const goalsHtml=goalBiasable.length
+    ?goalBiasable.map((g,gi)=>`
+        <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+          <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
+          <span style="font-size:14px;">${g}</span>
+        </label>`).join('')
+    :`<p style="font-size:13px;color:var(--muted);padding:10px 0;">No matching goals found. Add long-term goals in your profile first.</p>`;
+
+  const body=document.getElementById('goal-modal-body');
+  const modal=document.getElementById('goal-modal');
+  if(!body||!modal)return;
+  body.innerHTML=`
+    <div style="margin-bottom:16px;">
+      <div class="card-title">Target Meet</div>
+      <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
+        ${meetOptions}
+      </select>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Only your A (major) and B (target) meets are shown.</div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="card-title">Goal Focus — pick 1 to 3</div>
+      ${goalsHtml}
+    </div>
+    <button class="btn btn-primary" onclick="activateGoalProgramUI()" ${!abMeets.length?'disabled':''}>Start Goal Program 🎯</button>
+  `;
+  modal.classList.add('open');
 }
 
 function activateGoalProgramUI(){
@@ -1577,13 +1573,14 @@ function activateGoalProgramUI(){
   if(!sel||!sel.value)return alert('Select a target meet first.');
   const meetId=sel.value;
   const goals=[];
-  document.querySelectorAll('#workout-top input[type=checkbox]:checked').forEach(cb=>goals.push(cb.value));
-  if(!goals.length)return alert('Select at least one goal to focus on.');
+  document.querySelectorAll('#goal-modal-body input[type=checkbox]:checked').forEach(cb=>goals.push(cb.value));
+  if(!goals.length)return alert('Pick at least one goal to focus on.');
+  closeModal('goal-modal');
   activateGoalProgram(meetId,goals);
 }
 
 function confirmDeactivate(){
-  if(confirm('Stop goal program and return to standard mode?'))deactivateGoalProgram();
+  if(confirm('Stop goal program? Your workout history stays — you can restart any time.'))deactivateGoalProgram();
 }
 
 function generateGoalWorkout(forceType){
