@@ -507,6 +507,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       </button>
       <div id="more-settings-body" style="display:none;">
         <div class="card">
+          <div class="card-title">App Theme</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Pick your look. Changes apply instantly across the whole app.</p>
+          <div id="theme-picker" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="card">
           <div class="card-title">Units</div>
           <!-- Weight units -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
@@ -936,6 +941,7 @@ let S={
   poolLog:DB.get('poolLog',[]), // [{date,feel,timedSwim,timedTime,distKm,notes}]
   mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
   mealCompliance:DB.get('mealCompliance',{}), // {YYYY-MM-DD:{pre:bool,intra:bool,post:bool}}
+  appTheme:DB.get('appTheme','original'),
 };
 
 // Units
@@ -1019,6 +1025,121 @@ function toggleMoreSection(bodyId,chevronId){
   const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   if(chev)chev.style.transform=open?'rotate(-90deg)':'rotate(0deg)';
+}
+
+// ── Theme System ──
+const THEMES={
+  original:{
+    name:'Original',
+    desc:'Deep navy · cyan — the classic',
+    preview:['#0a1628','#00c6ff','#172a4a'],
+    vars:{
+      '--bg':'#0a1628','--surface':'#111f38','--card':'#172a4a',
+      '--accent':'#00c6ff','--accent2':'#0072ff',
+      '--text':'#e8f0fe','--muted':'#7a8faa','--border':'#1e3258',
+      '--gold':'#f5c842','--green':'#00e676','--red':'#ff5252',
+      '--orange':'#ff9800','--purple':'#c084fc',
+    }
+  },
+  bioluminescence:{
+    name:'Bioluminescence',
+    desc:'Black ocean · electric teal',
+    preview:['#000000','#1affe4','#080808'],
+    vars:{
+      '--bg':'#000000','--surface':'#0a0a0a','--card':'#080808',
+      '--accent':'#1affe4','--accent2':'#00c9b1',
+      '--text':'#e8fffe','--muted':'rgba(26,255,228,0.45)','--border':'#0d2e2a',
+      '--gold':'#1affe4','--green':'#1affe4','--red':'#ff5252',
+      '--orange':'#1affe4','--purple':'#1affe4',
+    }
+  },
+  tide:{
+    name:'Tide',
+    desc:'Warm off-white · ink navy',
+    preview:['#f7f4ef','#1a1f2e','#ffffff'],
+    vars:{
+      '--bg':'#f7f4ef','--surface':'#ffffff','--card':'#ffffff',
+      '--accent':'#0a5c8a','--accent2':'#1a1f2e',
+      '--text':'#1a1f2e','--muted':'#8a8070','--border':'#e8e0d0',
+      '--gold':'#8a6a00','--green':'#1a6632','--red':'#c0392b',
+      '--orange':'#b35a00','--purple':'#5a3a8a',
+    }
+  },
+  speedstripe:{
+    name:'Speed Stripe',
+    desc:'White · fire orange · bold',
+    preview:['#fafafa','#ff4500','#ffffff'],
+    vars:{
+      '--bg':'#fafafa','--surface':'#ffffff','--card':'#ffffff',
+      '--accent':'#ff4500','--accent2':'#cc3700',
+      '--text':'#111111','--muted':'#999999','--border':'#eeeeee',
+      '--gold':'#ff8c00','--green':'#1a8c3a','--red':'#cc0000',
+      '--orange':'#ff4500','--purple':'#7b2fff',
+    }
+  },
+  oceandepth:{
+    name:'Ocean Depth',
+    desc:'Deep teal · aquamarine',
+    preview:['#061e27','#7de8d0','#0a2d3a'],
+    vars:{
+      '--bg':'#061e27','--surface':'#0a2d3a','--card':'#0a2d3a',
+      '--accent':'#7de8d0','--accent2':'#2cb8a0',
+      '--text':'#e0f8f4','--muted':'#3a8a7a','--border':'#0f4055',
+      '--gold':'#f5c842','--green':'#7de8d0','--red':'#ff6b6b',
+      '--orange':'#ffb347','--purple':'#c084fc',
+    }
+  },
+};
+
+function applyTheme(key){
+  const theme=THEMES[key];
+  if(!theme)return;
+  const root=document.documentElement;
+  Object.entries(theme.vars).forEach(([k,v])=>root.style.setProperty(k,v));
+  // Fix text for special themes
+  if(key==='bioluminescence'){root.style.setProperty('--text','#e8fffe');}
+  // Light themes: header title needs to be readable (gradient clips to transparent on light bg)
+  const h1=document.querySelector('#header h1');
+  const isLight=(key==='tide'||key==='speedstripe');
+  if(h1){
+    if(isLight){
+      h1.style.background='none';
+      h1.style['-webkit-background-clip']='unset';
+      h1.style['-webkit-text-fill-color']=theme.vars['--accent2']||theme.vars['--accent'];
+    } else {
+      h1.style.background='linear-gradient(90deg,var(--accent),#7b61ff)';
+      h1.style['-webkit-background-clip']='text';
+      h1.style['-webkit-text-fill-color']='transparent';
+    }
+  }
+  // btn-primary: on light themes the white text is fine, but we need readable btn text
+  // All btn-primary already use var(--accent2) and var(--accent) in their gradient — auto follows
+  DB.set('appTheme',key);
+  S.appTheme=key;
+  renderThemePicker();
+  renderHome();
+}
+
+function renderThemePicker(){
+  const el=document.getElementById('theme-picker');
+  if(!el)return;
+  const current=S.appTheme||'original';
+  el.innerHTML=Object.entries(THEMES).map(([key,t])=>{
+    const active=key===current;
+    const [bg,accent,card]=t.preview;
+    return`<div onclick="applyTheme('${key}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(0,198,255,0.06)':'var(--surface)'};cursor:pointer;transition:all 0.15s;">
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        <div style="width:18px;height:32px;border-radius:5px 0 0 5px;background:${bg};border:1px solid rgba(255,255,255,0.08);"></div>
+        <div style="width:10px;height:32px;background:${card};border-top:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.08);"></div>
+        <div style="width:5px;height:32px;border-radius:0 5px 5px 0;background:${accent};"></div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">${t.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">${t.desc}</div>
+      </div>
+      ${active?`<div style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#000;font-size:11px;font-weight:900;">✓</span></div>`:''}
+    </div>`;
+  }).join('');
 }
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
 // Rotation-aware pick — exercises used in the last 2 sessions get deprioritised
@@ -4012,10 +4133,11 @@ function showSection(name){
   if(name==='schedule'){renderCalendar();renderSchedulePoolShortcut();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();}
 }
 
 // INIT
+if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
 checkOnboarding();
 applyClubLogo();
 renderHome();
