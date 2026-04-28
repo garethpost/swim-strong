@@ -785,17 +785,14 @@ function getHeightCm(){
 function applyUnitSettings(){
   // Update any inline unit labels across the whole page
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  // Always re-render home (km tracker + cals)
+  // Re-render all affected sections
   renderKmTracker();
   renderHomeCals();
-  // Re-render baseline card (workout tab weights)
   renderBaseline();
-  // Re-render active workout content if one is showing
   if(S.currentWorkout)renderWorkout(S.currentWorkout);
-  // Re-render fuel tab nutrition fields
   renderNutrition();
-  // Update settings pickers
-  updateUnitPickers();
+  // Update pickers last — after all renders settle — so buttons aren't wiped by a re-render above
+  setTimeout(updateUnitPickers,0);
 }
 function setWeightUnit(kg){
   S.useKg=kg;DB.set('useKg',kg);
