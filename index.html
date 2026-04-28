@@ -514,6 +514,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="theme-picker" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
         <div class="card">
+          <div class="card-title">Training Equipment</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tells the workout engine what equipment you have access to. Changes exercise selection immediately.</p>
+          <div id="equipment-picker" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="card">
           <div class="card-title">Units</div>
           <!-- Weight units -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
@@ -795,6 +800,15 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <option value="male">Male</option><option value="female">Female</option>
 </select></div>
 <div class="form-row"><label>Primary Events</label><div id="pm-events" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div></div>
+<div class="form-row"><label>Training Level</label>
+<div style="display:flex;gap:8px;margin-top:6px;">
+  <button type="button" id="pm-level-beginner" onclick="setPmLevel('beginner')" style="flex:1;padding:10px 6px;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--surface);color:var(--muted);">Beginner</button>
+  <button type="button" id="pm-level-intermediate" onclick="setPmLevel('intermediate')" style="flex:1;padding:10px 6px;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--surface);color:var(--muted);">Intermediate</button>
+  <button type="button" id="pm-level-advanced" onclick="setPmLevel('advanced')" style="flex:1;padding:10px 6px;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--surface);color:var(--muted);">Advanced</button>
+</div>
+<input type="hidden" id="pm-level-val" value="intermediate">
+<div style="font-size:11px;color:var(--muted);margin-top:6px;" id="pm-level-desc">Club swimmer training 3–5× per week.</div>
+</div>
 <div style="display:flex;gap:8px;margin-top:16px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveProfile(false)">Save</button>
   <button class="btn-ghost" style="flex:1" onclick="closeModal('profile-modal')">Cancel</button>
@@ -1004,6 +1018,7 @@ let S={
   meetRaces:DB.get('meetRaces',[]), // [{id,meetId,event,pool,seedTime,day,session}]
   meetRaceLog:DB.get('meetRaceLog',[]), // [{id,meetId,raceId,time,coachTags:[],coachNotes,ts}]
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
+  equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
 };
 
 // Units
@@ -1203,6 +1218,30 @@ function renderThemePicker(){
     </div>`;
   }).join('');
 }
+function renderEquipmentPicker(){
+  const el=document.getElementById('equipment-picker');if(!el)return;
+  const modes=[
+    {key:'bodyweight',label:'Bodyweight Only',desc:'No equipment — floor, bodyweight, gravity.',icon:'🏠'},
+    {key:'minimal',   label:'Minimal Kit',    desc:'Resistance bands, pull-up bar, maybe a kettlebell.',icon:'🎽'},
+    {key:'gym',       label:'Full Gym',        desc:'Barbells, cables, machines — full access.',icon:'🏋️'},
+  ];
+  el.innerHTML=modes.map(m=>{
+    const active=S.equipmentMode===m.key;
+    return`<div onclick="setEquipmentMode('${m.key}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(0,198,255,0.06)':'var(--surface)'};cursor:pointer;transition:all 0.15s;">
+      <span style="font-size:22px;">${m.icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">${m.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">${m.desc}</div>
+      </div>
+      ${active?`<div style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#000;font-size:11px;font-weight:900;">✓</span></div>`:''}
+    </div>`;
+  }).join('');
+}
+function setEquipmentMode(key){
+  S.equipmentMode=key;DB.set('equipmentMode',key);
+  renderEquipmentPicker();
+}
+
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
 // Rotation-aware pick — exercises used in the last 2 sessions get deprioritised
 function pickFresh(arr,n){
@@ -1246,6 +1285,20 @@ function getAgeKey(){
   if(age<=13)return'13';if(age===14)return'14';if(age===15)return'15';if(age===16)return'16';return'open';
 }
 function getGender(){return S.profile&&S.profile.gender?S.profile.gender:'male';}
+function setPmLevel(val){
+  const descs={beginner:'New to structured training. Sessions focus on movement quality.',intermediate:'Club swimmer training 3–5× per week.',advanced:'Competitive swimmer with structured S&C background.'};
+  ['beginner','intermediate','advanced'].forEach(l=>{
+    const btn=document.getElementById('pm-level-'+l);
+    if(!btn)return;
+    const active=l===val;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(0,198,255,0.12)':'var(--surface)';
+    btn.style.color=active?'var(--accent)':'var(--muted)';
+  });
+  const inp=document.getElementById('pm-level-val');if(inp)inp.value=val;
+  const desc=document.getElementById('pm-level-desc');if(desc)desc.textContent=descs[val]||'';
+}
+function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'intermediate';}
 function getStandard(ev,course){
   // Canada Trials: pick Senior (18+) or Junior (<18) based on comp age
   let std;
@@ -1298,7 +1351,9 @@ function saveProfile(fromOnboarding){
   } else {
     // Edit profile — preserve existing longTermGoals/preferredStandard if not editing them
     const longTermGoals=document.getElementById('pm-goals')?getPickedGoals('pm-goals'):(S.profile&&S.profile.longTermGoals||[]);
-    S.profile={...S.profile,name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals};
+    const lvlInp=document.getElementById('pm-level-val');
+    const trainingLevel=lvlInp?lvlInp.value:'intermediate';
+    S.profile={...S.profile,name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,trainingLevel};
   }
   DB.set('profile',S.profile);
   if(fromOnboarding){
@@ -1331,6 +1386,7 @@ function openProfileModal(){
   document.getElementById('pm-dob').value=S.profile.dob||'';
   document.getElementById('pm-gender').value=S.profile.gender||'male';
   initProfileEventPicker('pm-events',S.profile.primaryEvents||[]);
+  setPmLevel(S.profile.trainingLevel||'intermediate');
   openModal('profile-modal');
 }
 function setStandard(key){
@@ -1720,6 +1776,259 @@ function getEmphasis(){
   if(flyGap>freeGap+2)return'fly';if(freeGap>flyGap+2)return'free';return'balanced';
 }
 
+// ── Stroke-aware engine ──
+// Derive primary stroke + distance category from primaryEvents
+function getStrokeProfile(){
+  const events=(S.profile&&S.profile.primaryEvents)||[];
+  // Count strokes across all primary events
+  const strokeCount={free:0,back:0,breast:0,fly:0,im:0};
+  events.forEach(ev=>{
+    if(ev.includes('Free'))strokeCount.free++;
+    else if(ev.includes('Back'))strokeCount.back++;
+    else if(ev.includes('Breast'))strokeCount.breast++;
+    else if(ev.includes('Fly'))strokeCount.fly++;
+    else if(ev.includes('IM'))strokeCount.im++;
+  });
+  // Primary stroke = highest count; fallback to free
+  let primary='free';
+  let max=0;
+  Object.entries(strokeCount).forEach(([s,c])=>{if(c>max){max=c;primary=s;}});
+  // Secondary strokes (any others present)
+  const secondary=Object.entries(strokeCount).filter(([s,c])=>c>0&&s!==primary).map(([s])=>s);
+  // Distance category from shortest primary event (most specific)
+  const primaryEvs=events.filter(ev=>{
+    if(primary==='free')return ev.includes('Free');
+    if(primary==='back')return ev.includes('Back');
+    if(primary==='breast')return ev.includes('Breast');
+    if(primary==='fly')return ev.includes('Fly');
+    if(primary==='im')return ev.includes('IM');
+    return false;
+  });
+  const distances=primaryEvs.map(ev=>parseInt(ev)).filter(Boolean);
+  const minDist=distances.length?Math.min(...distances):100;
+  const distCat=minDist<=100?'sprint':minDist<=400?'mid':'distance';
+  return{stroke:primary,distCat,secondary,hasIM:strokeCount.im>0};
+}
+
+// Exercise equipment requirements: 'bw'=bodyweight, 'minimal'=bands/bar, 'gym'=barbell/cable/machine
+const EX_EQUIP={
+  'Back Squat':'gym','Romanian Deadlift':'gym','Bulgarian Split Squat':'gym',
+  'Hip Thrust':'gym','Goblet Squat':'minimal','Single-Leg RDL':'minimal',
+  'Step-Ups':'minimal','Nordic Ham Curls':'bw',
+  'Pull-Ups':'minimal','Seated Cable Row':'gym','Incline DB Press':'gym',
+  'Lat Pulldown':'gym','Single-Arm DB Row':'gym','Landmine Press':'gym',
+  'Tricep Pushdown':'gym','Face Pulls':'gym','Prone Y-T-W':'minimal',
+  'Hollow Body Pull':'minimal',
+  'Box Jumps':'minimal','Broad Jumps':'bw','Depth Jumps':'minimal',
+  'Bounding':'bw','Tuck Jumps':'bw','Med Ball Slam':'minimal',
+  'Med Ball Chest Pass':'minimal','Jump Squat':'bw','Lateral Bounds':'bw',
+  'Clap Push-Ups':'bw',
+  'Dead Bug':'bw','Hollow Body Hold':'bw','Pallof Press':'gym',
+  'Ab Wheel Rollout':'minimal','Hanging Leg Raise':'minimal',
+  'Plank':'bw','Side Plank':'bw',
+};
+const EQUIP_RANK={gym:3,minimal:2,bodyweight:1};
+function equipOk(exName){
+  const req=EX_EQUIP[exName]||'bw';
+  return EQUIP_RANK[S.equipmentMode||'gym']>=EQUIP_RANK[req];
+}
+
+// Stroke-specific filter profiles
+// priority: tags to favour | suppress: exact exercise names to exclude | mandatory: always include if in pool
+const STROKE_FILTERS={
+  free:{
+    sprint:{
+      lowerPriority:['explosive','plyos','hinge'],
+      lowerSuppress:[],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperMandatory:['Face Pulls'],
+      corePriority:[],
+    },
+    mid:{
+      lowerPriority:['hinge','single-leg','explosive'],
+      lowerSuppress:[],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperMandatory:['Face Pulls'],
+      corePriority:[],
+    },
+    distance:{
+      lowerPriority:['single-leg','hinge'],
+      lowerSuppress:['Depth Jumps','Box Jumps'],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperMandatory:['Face Pulls'],
+      corePriority:['anti-rotation'],
+    },
+  },
+  back:{
+    sprint:{
+      lowerPriority:['hinge','explosive'],
+      lowerSuppress:[],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperSuppress:['Incline DB Press','Landmine Press'], // heavy pressing = shoulder impingement risk
+      upperMandatory:['Face Pulls','Prone Y-T-W'],        // posterior shoulder health non-negotiable
+      corePriority:['rotational'],
+    },
+    mid:{
+      lowerPriority:['hinge','single-leg'],
+      lowerSuppress:[],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperSuppress:['Incline DB Press','Landmine Press'],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:['rotational'],
+    },
+    distance:{
+      lowerPriority:['single-leg','hinge'],
+      lowerSuppress:[],
+      lowerMandatory:[],
+      upperPriority:['pull'],
+      upperSuppress:['Incline DB Press','Landmine Press'],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:[],
+    },
+  },
+  breast:{
+    sprint:{
+      lowerPriority:['hinge','explosive'],
+      lowerSuppress:['Bulgarian Split Squat','Back Squat'], // heavy knee flexion under load = injury risk
+      lowerMandatory:['Hip Thrust','Nordic Ham Curls'],     // glute + hamstring non-negotiable for whip kick
+      upperPriority:['pull','push'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls'],
+      corePriority:['rotational'],
+    },
+    mid:{
+      lowerPriority:['hinge','single-leg'],
+      lowerSuppress:['Bulgarian Split Squat'],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls'],
+      corePriority:['rotational'],
+    },
+    distance:{
+      lowerPriority:['single-leg','hinge'],
+      lowerSuppress:['Bulgarian Split Squat'],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls'],
+      corePriority:[],
+    },
+  },
+  fly:{
+    sprint:{
+      lowerPriority:['hinge','explosive'],
+      lowerSuppress:[],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull','push'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls','Prone Y-T-W'], // posterior chain + shoulder health critical
+      corePriority:['rotational'],
+    },
+    mid:{
+      lowerPriority:['hinge','explosive'],
+      lowerSuppress:[],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull','push'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:['rotational'],
+    },
+    distance:{
+      lowerPriority:['hinge','single-leg'],
+      lowerSuppress:[],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:[],
+    },
+  },
+  im:{
+    sprint:{
+      lowerPriority:['hinge','explosive'],
+      lowerSuppress:['Bulgarian Split Squat'], // IM swimmers still carry breast leg risk
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull','push'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:['rotational'],
+    },
+    mid:{
+      lowerPriority:['hinge','explosive','single-leg'],
+      lowerSuppress:['Bulgarian Split Squat'],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      corePriority:['rotational'],
+    },
+    distance:{
+      lowerPriority:['hinge','single-leg'],
+      lowerSuppress:['Bulgarian Split Squat'],
+      lowerMandatory:['Hip Thrust'],
+      upperPriority:['pull'],
+      upperSuppress:[],
+      upperMandatory:['Face Pulls'],
+      corePriority:[],
+    },
+  },
+};
+
+// Exercise count by training level
+const LEVEL_COUNTS={beginner:{main:3,core:2},intermediate:{main:4,core:2},advanced:{main:5,core:3}};
+
+// Main filter function — replaces raw pickFresh() calls in generateWorkout
+function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTaper){
+  const level=trainingLevel||'intermediate';
+  const counts=LEVEL_COUNTS[level]||LEVEL_COUNTS.intermediate;
+  const mainCount=isTaper?Math.max(2,counts.main-1):counts.main;
+  const coreCount=isTaper?2:counts.core;
+
+  const sp=strokeProfile||{stroke:'free',distCat:'sprint',secondary:[]};
+  const filterKey=sp.stroke in STROKE_FILTERS?sp.stroke:'free';
+  const distKey=sp.distCat in STROKE_FILTERS[filterKey]?sp.distCat:'sprint';
+  const f=STROKE_FILTERS[filterKey][distKey];
+
+  // Equipment filter first
+  let available=pool.filter(e=>equipOk(e.name));
+
+  if(sectionType==='lower'){
+    const suppress=new Set(f.lowerSuppress||[]);
+    const mandatory=(f.lowerMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
+    const priorityTags=new Set(f.lowerPriority||[]);
+    const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
+    const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
+    const other=optional.filter(e=>!(e.tags||[]).some(t=>priorityTags.has(t)));
+    const pool2=[...pickFresh(priority,mainCount),...pickFresh(other,mainCount)];
+    const fills=pool2.filter(e=>!mandatory.find(m=>m.name===e.name));
+    const slots=Math.max(0,mainCount-mandatory.length);
+    return[...mandatory,...fills.slice(0,slots)].slice(0,mainCount);
+  }
+  if(sectionType==='upper'){
+    const suppress=new Set(f.upperSuppress||[]);
+    const mandatory=(f.upperMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
+    const priorityTags=new Set(f.upperPriority||[]);
+    const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
+    const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
+    const other=optional.filter(e=>!(e.tags||[]).some(t=>priorityTags.has(t)));
+    const pool2=[...pickFresh(priority,mainCount),...pickFresh(other,mainCount)];
+    const fills=pool2.filter(e=>!mandatory.find(m=>m.name===e.name));
+    const slots=Math.max(0,mainCount-mandatory.length);
+    return[...mandatory,...fills.slice(0,slots)].slice(0,mainCount);
+  }
+  if(sectionType==='core'){
+    return pickFresh(available,coreCount);
+  }
+  // Plyos / cardio / mobility — equipment filter + count
+  return pickFresh(available,mainCount);
+}
+
 // ── Weight log ──
 function getLastLog(name){const l=S.weightLog[name];return(l&&l.length)?l[l.length-1]:null;}
 function saveLog(name,sets){if(!S.weightLog[name])S.weightLog[name]=[];S.weightLog[name].push({date:new Date().toISOString(),sets});if(S.weightLog[name].length>20)S.weightLog[name]=S.weightLog[name].slice(-20);DB.set('weightLog',S.weightLog);}
@@ -1844,46 +2153,87 @@ function generateWorkout(forceType){
   const load=getLoadDesc(mult);
   const tp=isTaperWeek();
   const emp=getEmphasis();
+  const sp=getStrokeProfile();
+  const trainingLevel=getTrainingLevel();
+  const isTaper=tp.yes&&!forceType&&tp.meet.priority!=='C';
+  const counts=LEVEL_COUNTS[trainingLevel]||LEVEL_COUNTS.intermediate;
+
   // Schedule is source of truth — only use forceType for manual preview
   const scheduledType=getTodayDrylandType();
   const dayType=forceType||(phase.name==='Power'&&scheduledType!=='rest'?'power':scheduledType);
   const scheme=getScheme(phase.name,mult);
-  const dt=tp.yes&&!forceType&&tp.meet.priority!=='C';
+
+  // Double-swim day detection — reduce volume one notch
+  const todayKey=dKey(new Date());
+  const todaySch=S.daySchedule[todayKey]||{};
+  const todaySess=todaySch.sessions||[];
+  const isDoubleDay=todaySess.filter(s=>s.startsWith('swim')).length>=2;
+  const effectiveSets=isTaper||isDoubleDay?Math.max(2,scheme.sets-1):scheme.sets;
+
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
+
   if(dayType==='lower'){
-    const wEx=pickFresh(EX.lower.filter(e=>e.weighted),dt?2:3);
-    const nordic=EX.lower.find(e=>e.name==='Nordic Ham Curls');
-    const main=[...wEx,...(dt||!nordic?[]:[nordic])].slice(0,4).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}));
-    blocks.push({title:'🦵 Lower Body Strength',exercises:main});
-    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    const main=filterExercises(EX.lower,  'lower', sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:isTaper?2:counts.core===3?3:2}));
+    blocks.push({title:'🦵 Lower Body Strength',exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
+    blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='upper'){
-    // 1 mandatory shoulder health + 3 main lifts = 4 total
-    const mand=[EX.upper.find(e=>e.name==='Face Pulls')].filter(Boolean);
-    let rest;
-    if(emp==='fly'&&!dt){const pulls=EX.upper.filter(e=>['Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name));rest=pickFresh(pulls,3);}
-    else{rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),dt?2:3);}
-    blocks.push({title:'💪 Upper Body Strength',exercises:[...rest,...mand].map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    const main=filterExercises(EX.upper,  'upper', sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:isTaper?2:2}));
+    blocks.push({title:'💪 Upper Body Strength',exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
+    blocks.push({title:'🔩 Core Finisher',exercises:core});
   } else if(dayType==='power'){
-    blocks.push({title:'⚡ Plyometric Power',exercises:pickFresh(EX.plyos,dt?2:4).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    const plyos=filterExercises(EX.plyos, 'power', sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+      .map(e=>({...e,sets:2}));
+    blocks.push({title:'⚡ Plyometric Power',exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
+    blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,5).map(e=>({...e,sets:2}))});
+    const mob=EX.mobility.filter(e=>equipOk(e.name));
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(mob,5).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
-    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
-    blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
+    const cardio=EX.cardio.filter(e=>equipOk(e.name));
+    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(cardio,2).map(e=>({...e,sets:8}))});
+    const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='rest'){
-    // Rest day — return early with a recovery-only plan
     return{phase,dayType:'rest',mult,load,scheme,emp,taperNote:null,
       title:'Rest Day',subtitle:`Recovery · Wk ${S.programWeek} · Sleep ${S.sleep}h · R ${S.readiness}/5`,
       blocks:[{title:'😴 Scheduled Rest',exercises:[{name:'Active Recovery',note:'Light walk, stretch, or swim easy 20min. No dryland today.',sets:0,weighted:false}]}],
       readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isRest:true};
   }
   blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
+
   const labels={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'};
   const schedNote=forceType?'Manual preview':scheduledType!=='rest'?'From your schedule':'Day-of-week default';
-  return{phase,dayType,mult,load,scheme,emp,taperNote:tp.yes?`Dryland tapered — ${tp.meet.name} in ${tp.daysOut}d`:null,title:`${phase.label} — ${labels[dayType]||dayType}`,subtitle:`${load.label} · Wk ${S.programWeek} · Sleep ${S.sleep}h · R ${S.readiness}/5`,schedNote,blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString()};
+  const strokeLabel=sp.stroke.charAt(0).toUpperCase()+sp.stroke.slice(1);
+  const levelLabel={beginner:'Beginner',intermediate:'Intermediate',advanced:'Advanced'}[trainingLevel]||'';
+  return{phase,dayType,mult,load,scheme,emp,sp,trainingLevel,
+    taperNote:isTaper?`Dryland tapered — ${tp.meet.name} in ${tp.daysOut}d`:null,
+    doubleDayNote:isDoubleDay?'Double swim day — volume reduced':'',
+    title:`${phase.label} — ${labels[dayType]||dayType}`,
+    subtitle:`${load.label} · ${strokeLabel} · ${levelLabel} · Wk ${S.programWeek}`,
+    schedNote,blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString()};
+}
+
+// Small helper — generates a human-readable note explaining why this block is configured this way
+function strokeBlockNote(sp,blockType){
+  const stroke=sp.stroke;
+  const dist=sp.distCat;
+  const notes={
+    free:{lower:{sprint:'Explosive lower bias — hip thrust + hinge for start power.',mid:'Mixed hinge/single-leg — race-pace endurance base.',distance:'Single-leg focus — aerobic lower without CNS overdrive.'},upper:{sprint:'Pull dominant — lat strength drives your freestyle.',mid:'Pull + shoulder health balanced.',distance:'Pull endurance + shoulder longevity.'},power:{sprint:'Plyometric emphasis — speed off blocks and walls.',mid:'Mixed power/endurance plyos.',distance:'Controlled power — no CNS burnout.'}},
+    back:{lower:{sprint:'Hinge + explosive — dolphin kick and rotation power.',mid:'Hinge dominant — rotation and hip drive.',distance:'Single-leg stability for long-course rotation.'},upper:{sprint:'Lat/rhomboid priority — posterior shoulder strength. Pressing suppressed.',mid:'Pull + posterior shoulder. Heavy pressing excluded.',distance:'Posterior chain upper — shoulder health first.'},power:{sprint:'Explosive power + rotational core for backstroke rotation.',mid:'Moderate power.',distance:'Stability-focused power.'}},
+    breast:{lower:{sprint:'Hip thrust + hinge mandatory — whip kick power. Deep knee flexion suppressed.',mid:'Hip-dominant pattern. Knee health protected.',distance:'Hip endurance. Adductor load managed.'},upper:{sprint:'Balanced push/pull — breast pull + hand speed.',mid:'Pull dominant with shoulder health.',distance:'Pull endurance.'},power:{sprint:'Explosive hip pattern — matches breaststroke kick demand.',mid:'Hip power.',distance:'Moderate power.'}},
+    fly:{lower:{sprint:'Hip thrust mandatory — dolphin kick drives everything.',mid:'Posterior chain dominant.',distance:'Hip + single-leg endurance.'},upper:{sprint:'Push + pull balanced — butterfly demands both. Shoulder health mandatory.',mid:'Balanced with shoulder protection.',distance:'Pull endurance + shoulder longevity.'},power:{sprint:'Explosive posterior chain — directly transfers to dolphin kick.',mid:'Mixed power.',distance:'Controlled power.'}},
+    im:{lower:{sprint:'Hip thrust mandatory. Deep knee flexion suppressed — protects breast leg.',mid:'Balanced lower — serves all four strokes.',distance:'Single-leg + hip endurance.'},upper:{sprint:'Full upper — IM demands everything. Shoulder health mandatory.',mid:'Balanced push/pull.',distance:'Pull endurance with shoulder protection.'},power:{sprint:'Varied explosive — serves all four stroke transitions.',mid:'Balanced power.',distance:'Moderate power.'}},
+  };
+  return(notes[stroke]&&notes[stroke][blockType]&&notes[stroke][blockType][dist])||'';
 }
 
 // ── Goal Program ──
@@ -2110,49 +2460,61 @@ function generateGoalWorkout(forceType){
   const extraTypes=biases.map(b=>b.extra).filter(Boolean);
   const wantsPower=extraTypes.includes('power');
   const wantsMobility=extraTypes.includes('mobility');
+  const sp=getStrokeProfile();
+  const trainingLevel=getTrainingLevel();
+  const counts=LEVEL_COUNTS[trainingLevel]||LEVEL_COUNTS.intermediate;
+  const isTaper=(phaseName==='Taper'||phaseName==='Sharpen');
+  const effectiveSets=isTaper?Math.max(2,scheme.sets-1):scheme.sets;
+
+  const todayKey=dKey(new Date());
+  const todaySch=S.daySchedule[todayKey]||{};
+  const isDoubleDay=(todaySch.sessions||[]).filter(s=>s.startsWith('swim')).length>=2;
+
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
-    // 2 primary goal-focused + 2 supporting = 4 total
-    let primary=wantsPower?EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('plyos'))):[];
-    if(primary.length<2)primary=EX.lower.filter(e=>e.weighted&&e.tags&&e.tags.includes('hinge'));
-    const primaryPicked=pickFresh(primary,2);
-    const supporting=pickFresh(EX.lower.filter(e=>e.weighted&&!primaryPicked.includes(e)),2);
-    const main=[...primaryPicked,...supporting].slice(0,4).map(e=>({...e,sets:e.sets||scheme.sets}));
-    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main});
-    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    // Goal bias: if wantsPower, boost explosive priority; always goes through stroke filter
+    const lowerPool=wantsPower
+      ?[...EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('hinge'))),...EX.lower.filter(e=>!e.tags||(!e.tags.includes('explosive')&&!e.tags.includes('hinge')))]
+      :EX.lower;
+    const main=filterExercises(lowerPool,'lower',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
+    blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='upper'){
-    // 1 mandatory shoulder health + 3 goal-biased = 4 total
-    const mand=[EX.upper.find(e=>e.name==='Face Pulls')].filter(Boolean);
-    const wantsPull=biases.some(b=>b.upper&&b.upper.includes('pull'));
-    const wantsShoulder=biases.some(b=>b.upper&&b.upper.includes('shoulder'));
-    const pool=wantsPull?EX.upper.filter(e=>e.tags&&e.tags.includes('pull')&&e.name!=='Face Pulls'):
-               wantsShoulder?EX.upper.filter(e=>e.tags&&e.tags.includes('shoulder')&&e.name!=='Face Pulls'):
-               EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W');
-    const rest=pickFresh(pool,3);
-    blocks.push({title:'💪 Upper Body',exercises:[...rest,...mand].map(e=>({...e,sets:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    const upperPool=biases.some(b=>b.upper&&b.upper.includes('pull'))
+      ?[...EX.upper.filter(e=>e.tags&&e.tags.includes('pull')),...EX.upper.filter(e=>!e.tags||!e.tags.includes('pull'))]
+      :EX.upper;
+    const main=filterExercises(upperPool,'upper',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    blocks.push({title:'💪 Upper Body',exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
+    blocks.push({title:'🔩 Core Finisher',exercises:core});
   } else if(dayType==='power'){
-    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:pickFresh(EX.plyos,4).map(e=>({...e,sets:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
+    const plyos=filterExercises(EX.plyos,'power',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
+    const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
+    blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,5).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility.filter(e=>equipOk(e.name)),5).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
-    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
-    blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio.filter(e=>equipOk(e.name)),2).map(e=>({...e,sets:8}))});
+    blocks.push({title:'🔩 Core',exercises:filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}))});
   }
-  // Goal-specific finisher — 2 exercises max, only if not already a power/mobility day
+  // Goal-specific finisher — equipment-safe, stroke-suppressed
   if(wantsPower&&dayType!=='power'&&dayType!=='mobility'){
-    blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(EX.plyos,2).map(e=>({...e,sets:3}))});
+    const finPlyos=EX.plyos.filter(e=>equipOk(e.name));
+    blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(finPlyos,2).map(e=>({...e,sets:3}))});
   }
   if(wantsMobility&&dayType!=='mobility'){
     blocks.push({title:'🎯 Goal Finisher — Injury Prevention',exercises:pick(EX.mobility,2).map(e=>({...e,sets:2}))});
   }
   blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
   const meetNote=meet?`Target: ${meet.name} · ${weeks}w out`:'Goal Program';
-  return{phase,dayType,mult,load,scheme,emp:'balanced',taperNote:null,
+  const strokeLabel=sp.stroke.charAt(0).toUpperCase()+sp.stroke.slice(1);
+  return{phase,dayType,mult,load,scheme,emp:'balanced',sp,trainingLevel,taperNote:null,
+    doubleDayNote:isDoubleDay?'Double swim day — volume reduced':'',
     title:`${phase.label} — ${({lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'})[dayType]||dayType}`,
-    subtitle:`${load.label} · ${meetNote} · R ${S.readiness}/5`,
+    subtitle:`${load.label} · ${strokeLabel} · ${meetNote}`,
     schedNote:'From your schedule',goals,meetNote,
     blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isGoal:true};
 }
@@ -2176,8 +2538,10 @@ function renderWorkout(w){
   else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Adaptive focus: ${w.emp==='fly'?'Butterfly pull & power — closing gap to trials':'Freestyle speed — closing gap to trials'}</div>`;
   html+=`<div class="alert-banner" style="background:#0a1a2a;border:1px solid var(--accent);color:var(--accent);">📊 <strong>${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?' '+w.scheme.note:''}</div>`;
   if(w.schedNote)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:5px 8px;background:var(--surface);border-radius:6px;">📅 Session type: <b style="color:var(--text);">${w.schedNote}</b></div>`;
+  if(w.doubleDayNote)html+=`<div style="font-size:11px;color:var(--gold);margin-bottom:8px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);">⚡ ${w.doubleDayNote}</div>`;
   w.blocks.forEach((block,bi)=>{
     html+=`<div class="workout-block"><div class="block-header">${block.title}</div>`;
+    if(block.strokeNote)html+=`<div style="font-size:11px;color:var(--accent);margin-bottom:8px;padding:5px 8px;background:rgba(0,198,255,0.06);border-radius:6px;border-left:2px solid var(--accent);">🧬 ${block.strokeNote}</div>`;
     block.exercises.forEach((ex,ei)=>{html+=buildCard(ex,bi,ei,w.scheme);});
     html+=`</div>`;
   });
@@ -4745,7 +5109,7 @@ function showSection(name){
   if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();}
 }
 
 // INIT
