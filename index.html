@@ -1447,19 +1447,34 @@ function weeksToMeet(meet){
   const days=Math.round((md-now)/86400000);
   return Math.max(1,Math.ceil(days/7));
 }
-// Derive a phase name from weeks remaining
-function goalPhaseFromWeeks(weeks){
-  if(weeks>12)return'GPP';
-  if(weeks>8)return'Strength';
-  if(weeks>4)return'Power';
-  return'Taper';
+// Derive phase from position within the block, not just weeks remaining.
+// Always ends with a taper week. Scales to any block length.
+// e.g. 4 weeks: Stimulus → Strength → Sharpen → Taper
+//      8 weeks: Stimulus×2 → Strength×2 → Sharpen×2 → Power → Taper
+//     12 weeks: GPP×3 → Stimulus×2 → Strength×2 → Sharpen×2 → Power → Taper
+function goalPhaseFromPosition(totalWeeks, weeksRemaining){
+  // Week position within the block (1 = first week, totalWeeks = last week)
+  const weekNum = Math.max(1, totalWeeks - weeksRemaining + 1);
+  // Always: last week = Taper, second-to-last = Sharpen
+  if(weeksRemaining <= 1) return {name:'Taper',   color:'var(--accent)', desc:'Race prep — activation only, max sharpness'};
+  if(weeksRemaining <= 2) return {name:'Sharpen',  color:'var(--orange)', desc:'Reduce volume, keep intensity high'};
+  // Split remaining weeks into thirds: Stimulus → Strength → Power
+  const workWeeks = totalWeeks - 2; // weeks available before sharpen+taper
+  const third = Math.max(1, Math.floor(workWeeks / 3));
+  const weeksWorking = weeksRemaining - 2; // how many work weeks left
+  if(totalWeeks >= 10 && weekNum <= Math.floor(workWeeks / 3)){
+    return {name:'GPP', color:'var(--green)', desc:'Build aerobic base and movement quality'};
+  }
+  if(weeksWorking > third) return {name:'Stimulus',  color:'var(--green)',  desc:'Hit goal areas hard — build the quality'};
+  if(weeksWorking > 0)     return {name:'Strength',  color:'var(--red)',    desc:'Reinforce and load — push the adaptation'};
+  return {name:'Taper', color:'var(--accent)', desc:'Race prep — activation only, max sharpness'};
 }
 function activateGoalProgram(meetId,goals){
   const meet=S.meets.find(m=>String(m.id)===String(meetId));
   if(!meet)return;
   const weeks=weeksToMeet(meet);
-  const phase=goalPhaseFromWeeks(weeks);
-  S.goalProgram={meetId,goals,weeksToMeet:weeks,startDate:new Date().toISOString(),phase};
+  const phase=goalPhaseFromPosition(weeks,weeks).name;
+  S.goalProgram={meetId,goals,totalWeeks:weeks,weeksToMeet:weeks,startDate:new Date().toISOString(),phase};
   S.workoutMode='goal';
   DB.set('goalProgram',S.goalProgram);
   DB.set('workoutMode',S.workoutMode);
@@ -1535,19 +1550,29 @@ function renderWorkoutTab(){
     // Goal mode — active state
     const meet=S.meets.find(m=>String(m.id)===String(gp.meetId));
     const weeks=meet?weeksToMeet(meet):gp.weeksToMeet;
-    const phase=goalPhaseFromWeeks(weeks);
-    const phaseColors={GPP:'var(--green)',Strength:'var(--red)',Power:'var(--purple)',Taper:'var(--accent)'};
-    const phaseColor=phaseColors[phase]||'var(--accent)';
+    const totalW=gp.totalWeeks||gp.weeksToMeet||12;
+    const phaseObj=goalPhaseFromPosition(totalW,weeks);
+    const phaseColor=phaseObj.color;
     const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">🎯 ${g}</div>`).join('');
-    const totalW=gp.weeksToMeet||12;
     const pct=Math.min(100,Math.round(((totalW-weeks)/totalW)*100));
+    // Week-by-week mini timeline
+    const timelineBlocks=Array.from({length:totalW},(_, i)=>{
+      const wkRemaining=totalW-i;
+      const ph=goalPhaseFromPosition(totalW,wkRemaining);
+      const isCurrent=wkRemaining===weeks;
+      const isPast=wkRemaining>weeks;
+      const colors={GPP:'#00e676',Stimulus:'#00e676',Strength:'#ff5252',Sharpen:'#ff9800',Taper:'#00c6ff'};
+      const bg=isPast?'var(--border)':colors[ph.name]||'var(--border)';
+      return`<div title="Wk ${i+1}: ${ph.name}" style="flex:1;height:${isCurrent?'14px':'8px'};border-radius:3px;background:${bg};opacity:${isPast?0.3:1};margin-top:${isCurrent?'0':'3px'};transition:all 0.2s;"></div>`;
+    }).join('');
     modeHtml=`
       <p class="section-title">Goal Program Active</p>
       <div class="card" style="border:1px solid ${phaseColor};margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Current Phase</div>
-            <div style="font-size:20px;font-weight:800;color:${phaseColor};">${phase}</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">This Week</div>
+            <div style="font-size:20px;font-weight:800;color:${phaseColor};">${phaseObj.name}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${phaseObj.desc}</div>
           </div>
           <div style="text-align:right;">
             <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${meet?meet.name:'Target Meet'}</div>
@@ -1555,9 +1580,7 @@ function renderWorkoutTab(){
             <div style="font-size:10px;color:var(--muted);">to meet</div>
           </div>
         </div>
-        <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px;">
-          <div style="background:${phaseColor};height:100%;width:${pct}%;border-radius:4px;transition:width 0.5s;"></div>
-        </div>
+        <div style="display:flex;gap:3px;align-items:flex-end;margin-bottom:12px;">${timelineBlocks}</div>
         ${goalsDisplay}
       </div>
       <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
@@ -1590,13 +1613,17 @@ function generateGoalWorkout(forceType){
   const gp=S.goalProgram;
   const meet=gp?S.meets.find(m=>String(m.id)===String(gp.meetId)):null;
   const weeks=meet?weeksToMeet(meet):S.programWeek;
-  const phaseName=goalPhaseFromWeeks(weeks);
-  const phase={name:phaseName,label:{GPP:'General Prep',Strength:'Strength',Power:'Power',Taper:'Taper'}[phaseName],cls:{GPP:'phase-gpp',Strength:'phase-strength',Power:'phase-power',Taper:'phase-taper'}[phaseName]};
+  const totalW=gp?(gp.totalWeeks||gp.weeksToMeet||weeks):weeks;
+  const phaseObj=goalPhaseFromPosition(totalW,weeks);
+  const phaseName=phaseObj.name;
+  const phaseClsMap={GPP:'phase-gpp',Stimulus:'phase-gpp',Strength:'phase-strength',Sharpen:'phase-power',Taper:'phase-taper'};
+  const phase={name:phaseName,label:phaseName,cls:phaseClsMap[phaseName]||'phase-gpp'};
   const mult=getLoadMult();
   const load=getLoadDesc(mult);
-  const scheme=getScheme(phaseName,mult);
+  const scheme=getScheme(phaseName==='Stimulus'||phaseName==='GPP'?'GPP':phaseName==='Strength'?'Strength':phaseName==='Sharpen'?'Power':'Taper',mult);
   const scheduledType=getTodayDrylandType();
-  const dayType=forceType||(phaseName==='Power'&&scheduledType!=='rest'?'power':scheduledType);
+  // Sharpen/Taper = favour power day if not rest; Stimulus/Strength = follow schedule
+  const dayType=forceType||((phaseName==='Sharpen'||phaseName==='Taper')&&scheduledType!=='rest'?'power':scheduledType);
   if(dayType==='rest'){
     return{phase,dayType:'rest',mult,load,scheme,emp:'balanced',taperNote:null,
       title:'Rest Day',subtitle:`Recovery · Goal: ${meet?meet.name:'—'} · ${weeks}w out`,
