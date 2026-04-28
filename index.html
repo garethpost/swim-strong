@@ -340,22 +340,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
       </div>
 
-      <!-- SEASON TEMPLATE -->
-      <div class="card">
-        <div class="card-title">Season Template</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your weekly training pattern and season dates. The calendar fills automatically. Tap any day to override.</p>
-        <div class="form-grid-2">
-          <div class="form-row"><label>Season Start</label><input type="date" id="season-start-input"></div>
-          <div class="form-row"><label>Season End</label><input type="date" id="season-end-input"></div>
-        </div>
-        <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weekly Pattern</p>
-        <div id="template-grid" style="display:grid;gap:6px;"></div>
-        <div style="display:flex;gap:8px;margin-top:14px;">
-          <button class="btn btn-primary" style="flex:1;" onclick="applySeasonTemplate()">Apply to Season</button>
-          <button class="btn btn-secondary btn-sm" onclick="clearSeasonTemplate()">Clear All</button>
-        </div>
-      </div>
-
       <!-- POOL LOAD PHASE -->
       <div class="card">
         <div class="card-title">Pool Load Phase</div>
@@ -379,23 +363,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p class="section-sub">Nutrition for a competitive swimmer</p>
       <!-- Dynamic daily fuel — auto-updates from schedule -->
       <div id="fuel-today-card"></div>
-      <div class="card">
-        <div class="card-title">Update Body Stats <span id="update-due-badge"></span></div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="update-frequency-note">Enter your current measurements to keep calories accurate.</p>
-        <div id="athlete-profile-fields"></div>
-        <div class="form-grid-2">
-          <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
-          <div class="form-row"><label>Sex</label>
-            <select id="sex-select">
-              <option value="" disabled selected>Select</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories update daily based on your schedule. Re-enter height &amp; weight when prompted to keep the calculation sharp.</p>
-        <button class="btn btn-primary" onclick="calcNutrition()">Save &amp; Recalculate</button>
-      </div>
+      <div id="body-stats-card"><!-- rendered by renderNutrition() --></div>
     </div>
 
     <!-- MORE -->
@@ -430,6 +398,20 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <span id="more-program-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;">▼</span>
       </button>
       <div id="more-program-body">
+        <div class="card">
+          <div class="card-title">Season Template</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your weekly training pattern and season dates. The calendar fills automatically. Tap any day to override.</p>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Season Start</label><input type="date" id="season-start-input"></div>
+            <div class="form-row"><label>Season End</label><input type="date" id="season-end-input"></div>
+          </div>
+          <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weekly Pattern</p>
+          <div id="template-grid" style="display:grid;gap:6px;"></div>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn btn-primary" style="flex:1;" onclick="applySeasonTemplate()">Apply to Season</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearSeasonTemplate()">Clear All</button>
+          </div>
+        </div>
         <div class="card">
           <div class="card-title">Program Progress</div>
           <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
@@ -1537,6 +1519,15 @@ function getDailyCalFromSchedule(){
   const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
   // Get TODAY's sessions
   const today=new Date();today.setHours(0,0,0,0);
+  // Meet day — high carb, high calorie race fuel
+  if(isMeetDay(today)){
+    const cal=Math.round(bmr*2.2);
+    const protein=Math.round(wtKg*2.2);
+    const fat=Math.round(wtKg*0.9);
+    const carbs=Math.max(100,Math.round((cal-protein*4-fat*9)/4));
+    const waterL=(Math.round(wtKg*45+1000)/1000).toFixed(1);
+    return{cal,carbs,protein,fat,waterL,swimCount:2,dryCount:0,mult:2.2,isMeet:true};
+  }
   const key=dKey(today);
   const sch=S.daySchedule[key]||{};
   let sess=sch.sessions||[];
@@ -1566,7 +1557,7 @@ function getDailyCalFromSchedule(){
   const carbs=Math.max(50,Math.round((cal-protein*4-fat*9)/4));
   const waterMl=Math.round(wtKg*40+(swimCount+dryCount)*550);
   const waterL=(waterMl/1000).toFixed(1);
-  return{cal,carbs,protein,fat,waterL,swimCount,dryCount,mult};
+  return{cal,carbs,protein,fat,waterL,swimCount,dryCount,mult,isMeet:false};
 }
 function renderHomeCals(){
   const data=getDailyCalFromSchedule();
@@ -1733,6 +1724,8 @@ function getDayType(dow){return{1:'lower',2:'upper',3:'mobility',4:'lower',5:'up
 // Read today's dryland type from schedule — schedule is source of truth
 function getTodayDrylandType(){
   const today=new Date();today.setHours(0,0,0,0);
+  // Meet day takes priority — always
+  if(isMeetDay(today))return'meet';
   const key=dKey(today);
   const sch=S.daySchedule[key]||{};
   let sess=sch.sessions||[];
@@ -2891,9 +2884,14 @@ function renderHomeTodaySummary(){
   };
   const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
   const dryCount=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
-  const loadLabel=swimCount>=2?'Double':swimCount===1&&dryCount>=1?'Full Day':swimCount===1?'Swim':dryCount>=1?'Dryland':'Rest';
-  const loadColor=swimCount>=2?'var(--orange)':swimCount===1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
-  const rows=sessions.length===0
+  // Meet day overrides everything
+  const todayMeet=isMeetDay(today);
+  const activeMeetToday=S.meets.find(m=>{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;return today>=ms&&today<=me;});
+  const loadLabel=todayMeet?'Meet Day':swimCount>=2?'Double':swimCount===1&&dryCount>=1?'Full Day':swimCount===1?'Swim':dryCount>=1?'Dryland':'Rest';
+  const loadColor=todayMeet?'var(--gold)':swimCount>=2?'var(--orange)':swimCount===1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
+  const rows=todayMeet
+    ?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;"><span style="font-size:22px;">🏁</span><div><div style="font-size:13px;font-weight:700;color:var(--gold);">${activeMeetToday?activeMeetToday.name:'Meet Day'}</div><div style="font-size:11px;color:var(--muted);">Race day — check the Schedule tab for your warm-up protocol</div></div></div>`
+    :sessions.length===0
     ?`<div style="margin-top:8px;font-size:22px;">😴</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Rest day</div>`
     :sessions.map(id=>{
       const m=META[id]||{icon:'📌',label:id,color:'var(--muted)'};
@@ -3685,6 +3683,8 @@ function getWeeklyLoadFromSchedule(){
   return{swimSessions,drylandSessions,doubleDays,hasData:swimSessions>0||drylandSessions>0};
 }
 
+function expandBodyStats(){S._statsExpanded=true;renderNutrition();}
+function collapseBodyStats(){S._statsExpanded=false;renderNutrition();}
 function calcNutrition(){
   // Saves height/weight to bodyStats so getDailyCalFromSchedule() can use them
   // Does NOT output a separate plan card — Today's Fuel card handles all display
@@ -3708,7 +3708,10 @@ function calcNutrition(){
   ['height-cm-input','height-ft-input','height-in-input','weight-input'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
+  // Collapse stats form now that data is saved
+  S._statsExpanded=false;
   // Refresh today's fuel card and home calorie tile
+  renderNutrition();
   renderFuelTodayCard();
   renderHomeCals();
   // Show persistent save confirmation
@@ -3739,21 +3742,30 @@ function logHydration(delta){
   renderFuelTodayCard();
 }
 
-function renderMealComplianceCard(today,hasSwim,hasDry,isDouble){
+function renderMealComplianceCard(today,hasSwim,hasDry,isDouble,isMeet){
   // Auto-clear previous days (only keep today)
   const keys=Object.keys(S.mealCompliance);
   keys.forEach(k=>{if(k!==today){delete S.mealCompliance[k];}});
   const mc=S.mealCompliance[today]||{};
   // Build context-appropriate checkboxes
   let checks=[];
-  if(hasSwim){checks.push({id:'pre',icon:'🏊',label:'Pre-swim meal (2h before)',color:'var(--accent)'});}
-  if(isDouble){checks.push({id:'intra',icon:'⚡',label:'Intra-session fuel',color:'var(--gold)'});}
-  if(hasSwim||hasDry){checks.push({id:'post',icon:'💪',label:'Post-session protein hit',color:'var(--green)'});}
-  if(!hasSwim&&!hasDry){
+  if(isMeet){
     checks=[
-      {id:'protein',icon:'🥩',label:'Hit protein target',color:'var(--accent)'},
-      {id:'post',icon:'🌙',label:'Recovery fuel before bed',color:'var(--purple)'},
+      {id:'carb_load',icon:'🌅',label:'Pre-race carb load (3h before)',color:'var(--gold)'},
+      {id:'pre_race',icon:'☕',label:'Top-up snack (90min before)',color:'var(--accent)'},
+      {id:'post_race',icon:'🏁',label:'Post-race recovery fuel',color:'var(--green)'},
+      {id:'inter',icon:'🕐',label:'Inter-session meal (if 3h+ gap)',color:'var(--orange)'},
     ];
+  } else {
+    if(hasSwim){checks.push({id:'pre',icon:'🏊',label:'Pre-swim meal (2h before)',color:'var(--accent)'});}
+    if(isDouble){checks.push({id:'intra',icon:'⚡',label:'Intra-session fuel',color:'var(--gold)'});}
+    if(hasSwim||hasDry){checks.push({id:'post',icon:'💪',label:'Post-session protein hit',color:'var(--green)'});}
+    if(!hasSwim&&!hasDry){
+      checks=[
+        {id:'protein',icon:'🥩',label:'Hit protein target',color:'var(--accent)'},
+        {id:'post',icon:'🌙',label:'Recovery fuel before bed',color:'var(--purple)'},
+      ];
+    }
   }
   const done=checks.filter(c=>mc[c.id]).length;
   const total=checks.length;
@@ -3806,8 +3818,8 @@ function renderFuelTodayCard(){
   const isDouble=data.swimCount>=2||(data.swimCount>=1&&data.dryCount>=1);
   const hasSwim=data.swimCount>=1;
   const hasDry=data.dryCount>=1;
-  const dl=data.swimCount>=2?'Double Day':hasSwim&&hasDry?'Swim + Dryland':hasSwim?'Swim Day':hasDry?'Dryland Day':'Rest Day';
-  const dlColor=data.swimCount>=2?'var(--orange)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--muted)';
+  const dl=data.isMeet?'Meet Day':data.swimCount>=2?'Double Day':hasSwim&&hasDry?'Swim + Dryland':hasSwim?'Swim Day':hasDry?'Dryland Day':'Rest Day';
+  const dlColor=data.isMeet?'var(--gold)':data.swimCount>=2?'var(--orange)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--muted)';
 
   // Hydration target in 250ml cups
   const waterMl=parseFloat(data.waterL)*1000;
@@ -3818,7 +3830,16 @@ function renderFuelTodayCard(){
   // ── Meal timing cards ──
   // Build schedule-aware windows
   let mealRows=[];
-  if(hasSwim&&hasDry){
+  if(data.isMeet){
+    mealRows=[
+      {icon:'🌅',time:'Wake — 3hrs before warmup',label:'Race day carb load',detail:'Oats + banana + honey. 100g+ carbs. Easy to digest. No new foods. This is not the day to experiment.',color:'var(--gold)'},
+      {icon:'☕',time:'90min before warm-up',label:'Top-up snack',detail:'White toast + jam or rice cakes. Keep it simple. Light caffeine if used in training.',color:'var(--accent)'},
+      {icon:'⚡',time:'30min after warm-up',label:'Pre-race top-up',detail:'Sports drink or banana. 30–40g fast carbs. Sip water. No heavy food within 90min of race.',color:'var(--green)'},
+      {icon:'🏁',time:'After each race',label:'Recovery window',detail:'Fast carbs + protein within 30min. Chocolate milk, protein bar + fruit. Refuel before the next event.',color:'var(--accent)'},
+      {icon:'🕐',time:'Between sessions',label:'Inter-session fuel',detail:'If gap >3hrs: full meal — rice + chicken or pasta. Rehydrate. Legs up, stay relaxed.',color:'var(--orange)'},
+      {icon:'🌙',time:'Post-meet',label:'Recovery meal',detail:'High protein + carbs. Celebrate, eat well, sleep early. Repair starts tonight.',color:'var(--purple)'},
+    ];
+  } else if(hasSwim&&hasDry){
     mealRows=[
       {icon:'☀️',time:'Wake',label:'Morning fuel',detail:'Greek yogurt + banana + oats. Start the engine.',color:'var(--gold)'},
       {icon:'🏊',time:'2h before swim',label:'Pre-swim meal',detail:'Complex carbs + moderate protein. No heavy fat. Pasta, rice, toast + eggs.',color:'var(--accent)'},
@@ -3893,10 +3914,57 @@ function renderFuelTodayCard(){
     ${mealHtml}
   </div>
 
-  ${renderMealComplianceCard(today,hasSwim,hasDry,isDouble)}`;
+  ${renderMealComplianceCard(today,hasSwim,hasDry,isDouble,data.isMeet)}`;
 }
 function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
+  // Collapse body stats card if data is fresh — only show when needed
+  const statsCard=document.getElementById('body-stats-card');
+  const realAge=getRealAge()||16;
+  const updateDays=realAge<18?14:30;
+  const daysSince=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
+  const statsStale=daysSince>=updateDays;
+  const hasStats=!!S.bodyStats&&!!S.bodyStats.wtKg;
+  if(statsCard){
+    if(hasStats&&!statsStale&&!S._statsExpanded){
+      // Collapsed strip — show summary, Update button
+      const wtDisp=S.useKg?S.bodyStats.wtKg.toFixed(1)+'kg':(S.bodyStats.wtKg*2.205).toFixed(1)+'lbs';
+      const htDisp=S.useKg?S.bodyStats.ht+'cm':Math.floor(S.bodyStats.ht/2.54/12)+'\''+Math.round((S.bodyStats.ht/2.54)%12)+'"';
+      statsCard.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">📊</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);">${wtDisp} · ${htDisp}</div>
+            <div style="font-size:11px;color:var(--muted);">Updated ${daysSince===0?'today':daysSince+'d ago'} · Next update in ${updateDays-daysSince}d</div>
+          </div>
+        </div>
+        <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="expandBodyStats()">Update</button>
+      </div>`;
+      renderFuelTodayCard();
+      return;
+    }
+    // Full form — build it
+    statsCard.innerHTML=`<div class="card" id="body-stats-form-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div class="card-title" style="margin-bottom:0;">Body Stats ${statsStale&&hasStats?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">⚠️ Update due</span>':''}</div>
+        ${hasStats?`<button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="collapseBodyStats()">✕</button>`:''}
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:10px;" id="update-frequency-note">Enter your current measurements to keep calories accurate.</p>
+      <div id="athlete-profile-fields"></div>
+      <div class="form-grid-2">
+        <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
+        <div class="form-row"><label>Sex</label>
+          <select id="sex-select">
+            <option value="" disabled selected>Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories update daily based on your schedule.</p>
+      <button class="btn btn-primary" onclick="calcNutrition()">Save &amp; Recalculate</button>
+    </div>`;
+  }
   // Build inputs dynamically so iOS Safari cannot autofill them
   const pf=document.getElementById('athlete-profile-fields');
   if(pf){
@@ -3932,12 +4000,12 @@ function renderNutrition(){
     if(ageEl){const pa=getRealAge();if(pa)ageEl.value=pa;}
   },300);
   // Update frequency: under 18 = 14 days, 18+ = 30 days
-  const realAge=getRealAge()||16;
-  const updateDays=realAge<18?14:30;
+  const updateDays2=realAge<18?14:30;
   const freqNote=document.getElementById('update-frequency-note');
-  if(freqNote)freqNote.textContent=`Update every ${updateDays} days — ${realAge<18?'you\'re still growing, so weight & height shift fast':'monthly is enough at this stage'}.`;
+  if(freqNote)freqNote.textContent=`Update every ${updateDays2} days — ${realAge<18?'you\'re still growing, so weight & height shift fast':'monthly is enough at this stage'}.`;
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
-  document.getElementById('update-due-badge').innerHTML=days>=updateDays?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
+  const badge2=document.getElementById('update-due-badge');
+  if(badge2)badge2.innerHTML=days>=updateDays2?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
   // Render dynamic today card
   renderFuelTodayCard();
 }
@@ -4206,12 +4274,33 @@ function toggleTimer(){
 function renderBaseline(){
   const el=document.getElementById('baseline-card');if(!el)return;
   const weeks=weeksSinceRM();
-  const needsRetest=weeks!==null&&weeks>=4;
+  const needsRetest=weeks!==null&&weeks>=8;
   const hasAny=Object.keys(S.oneRM).length>0;
-  // Retest banner
+
+  // COLLAPSED STATE — baselines set and no retest needed
+  // Show a compact strip; swimmer doesn't need to see this every session
+  if(hasAny&&!needsRetest){
+    const phase=getPhase(S.programWeek);
+    const topLift=ONE_RM_LIFTS.find(l=>S.oneRM[l.key]);
+    const topPct=topLift?(lift=>lift?Math.round((lift.pcts[phase.name]||0.70)*100):70)(topLift):70;
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">🏋️</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);">Baselines set</div>
+          <div style="font-size:11px;color:var(--muted);">${weeks!==null?weeks+'wk ago':'—'} · Loading at ${topPct}% this phase</div>
+        </div>
+      </div>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="expandBaseline()">Retest</button>
+    </div>`;
+    return;
+  }
+
+  // RETEST banner
   let retestBanner='';
   if(needsRetest)retestBanner=`<div class="alert-banner alert-taper" style="margin-bottom:10px;">⏱ It's been ${weeks} weeks — time to retest your 1RM baselines for accurate targets.</div>`;
-  // Build rows for each lift
+
+  // Build input rows for each lift
   const rows=ONE_RM_LIFTS.map(lift=>{
     const existing=S.oneRM[lift.key];
     const dispRM=existing?`<span style="color:var(--accent);font-weight:700;">${dW(existing).toFixed(1)} ${uL()} 1RM</span>`:`<span style="color:var(--muted);">Not set</span>`;
@@ -4230,27 +4319,26 @@ function renderBaseline(){
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Enter a weight you've done for 1–12 reps. We'll calculate your 1RM.</div>
     </div>`;
   }).join('');
-  const subtitle=hasAny
-    ?`Set ${weeks!==null?weeks+'wk ago':'—'} · Based on Epley formula`
-    :'Enter any weight × reps you can do confidently — no need to max out.';
+
   const firstTimeIntro=!hasAny?`<div style="background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
     <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;">🎯 Week 1 — Set Your Strength Baselines</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.6;">The weight loading system is locked until you set these. You don't need to max out — just enter a weight and reps you've done in training. The app calculates your estimated 1RM using the Epley formula and uses it to prescribe the right weight for every session.</div>
   </div>`:'';
+
   el.innerHTML=`<div class="card" style="margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div class="card-title" style="margin-bottom:0;">Strength Baselines (1RM)</div>
-      ${hasAny?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="toggleBaselineExpand()">Edit</button>`:''}
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${subtitle}</div>
-    ${retestBanner}
-    ${firstTimeIntro}
-    ${hasAny?`<div id="baseline-summary">${buildBaselineSummary()}</div>`:''}
-    <div id="baseline-inputs" style="display:${hasAny?'none':'block'};">
-      ${rows}
-      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveBaseline()">Save Baselines →</button>
-    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Enter any weight × reps you can do confidently — no need to max out.</div>
+    ${retestBanner}${firstTimeIntro}
+    ${rows}
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="saveBaseline()">Save Baselines →</button>
   </div>`;
+}
+function expandBaseline(){
+  // Force full card to show for retest
+  S.oneRMDate=null;DB.set('oneRMDate',null);
+  renderBaseline();
 }
 function buildBaselineSummary(){
   const phase=getPhase(S.programWeek);
@@ -4958,20 +5046,36 @@ function renderMeetDayBanner(){
         }).join('')}
       </div></details>`;
 
-    // If finals and prelim was logged — show rest protocol
+    // If finals — show inter-session recovery protocol (always, not just when prelim logged)
     let restHtml='';
-    if(isFinals&&latestLog){
-      // Find prelim result
-      const prelimRace=races.find(r=>r.event===race.event&&r.session==='prelims');
+    if(isFinals){
+      const prelimRace=races.find(r=>r.event===race.event&&(r.session==='prelims'||r.session==='heats'));
       const prelimResult=prelimRace?S.meetRaceLog.find(l=>String(l.raceId)===String(prelimRace.id)):null;
-      // Estimate gap — default 3h if unknown
       const {protocol,coachFixes}=getRestProtocol(3,prelimResult?.time,prelimResult?race.seedTime:null,prelimResult?.coachTags||[]);
-      if(coachFixes.length){
-        restHtml=`<div style="margin-top:8px;padding:8px 10px;background:rgba(245,200,66,0.06);border-radius:8px;border-left:2px solid var(--gold);">
+      const protocolHtml=protocol.map(p=>`
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:18px;flex-shrink:0;">${p.icon}</span>
+          <div style="flex:1;">
+            <div style="font-size:9px;font-weight:800;color:var(--gold);letter-spacing:.5px;text-transform:uppercase;">${p.phase}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin:2px 0;">${p.title}</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">${p.detail}</div>
+          </div>
+        </div>`).join('');
+      const coachFixHtml=coachFixes.length?`
+        <div style="margin-top:8px;padding:8px 10px;background:rgba(245,200,66,0.06);border-radius:8px;border-left:2px solid var(--gold);">
           <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;">🎯 Fix for finals — ${coachFixes.length===1?'1 thing':'top priorities'}</div>
           ${coachFixes.slice(0,2).map(f=>`<div style="font-size:11px;color:var(--text);margin-bottom:4px;line-height:1.5;">→ ${f}</div>`).join('')}
-        </div>`;
-      }
+        </div>`:'';
+      restHtml=`<details style="margin-top:8px;">
+        <summary style="font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;">
+          <span>▶</span> Between sessions — what to do now
+        </summary>
+        <div style="margin-top:8px;padding:10px 12px;background:rgba(245,200,66,0.04);border-radius:10px;border:1px solid rgba(245,200,66,0.15);">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">This window is where finals are won or lost. Follow the protocol — don't improvise.</div>
+          ${protocolHtml}
+          ${coachFixHtml}
+        </div>
+      </details>`;
     }
 
     return`<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-top:2px solid ${sessionColor};">
@@ -5106,10 +5210,11 @@ function showSection(name){
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
-  if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
+  if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();}
+
 }
 
 // INIT
