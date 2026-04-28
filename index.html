@@ -167,7 +167,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="display:flex;align-items:center;gap:10px;">
       <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:0;object-fit:contain;flex-shrink:0;">
+        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:8px;object-fit:fill;flex-shrink:0;background:#0D1F3C;display:block;">
         <div><h1>SwimFitPro</h1><div class="sub" id="header-sub">Loading...</div></div>
       </div>
     </div>
@@ -380,6 +380,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <!-- Dynamic daily fuel — auto-updates from schedule -->
       <div id="fuel-today-card"></div>
       <div id="body-stats-card"><!-- rendered by renderNutrition() --></div>
+      <!-- Meal Tracker -->
+      <div id="meal-tracker-section"></div>
     </div>
 
     <!-- MORE -->
@@ -580,7 +582,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:480px;margin:0 auto;">
     <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
       <div style="margin-bottom:14px;">
-        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:0;object-fit:contain;">
+        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:fill;background:#0D1F3C;display:block;">
       </div>
       <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
       <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
@@ -644,6 +646,42 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div class="card-title">🚀 Long-Term Goals</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">What are you ultimately working towards? Pick up to 3. These shape how your training is prioritised.</p>
       <div id="ob-goals" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <!-- STEP 5: Training Level -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-title">💪 Training Level</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">This shapes how many exercises you get each session and how they're scaled.</p>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="ob-level-beginner" onclick="setObLevel('beginner')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🌱</div>New to dryland
+        </button>
+        <button type="button" id="ob-level-intermediate" onclick="setObLevel('intermediate')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--accent);background:rgba(26,188,191,0.1);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🏋️</div>Some experience
+        </button>
+        <button type="button" id="ob-level-advanced" onclick="setObLevel('advanced')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🔥</div>Trained athlete
+        </button>
+      </div>
+      <input type="hidden" id="ob-level-val" value="intermediate">
+    </div>
+
+    <!-- STEP 6: Equipment -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-title">🏗️ Equipment Access</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">What do you have available for dryland training?</p>
+      <div style="display:flex;gap:8px;">
+        <button type="button" id="ob-equip-bodyweight" onclick="setObEquip('bodyweight')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🤸</div>Bodyweight only
+        </button>
+        <button type="button" id="ob-equip-minimal" onclick="setObEquip('minimal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🏠</div>Bands + dumbbells
+        </button>
+        <button type="button" id="ob-equip-gym" onclick="setObEquip('gym')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--accent);background:rgba(26,188,191,0.1);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
+          <div style="font-size:20px;margin-bottom:4px;">🏋️</div>Full gym
+        </button>
+      </div>
+      <input type="hidden" id="ob-equip-val" value="gym">
     </div>
 
     <button class="btn btn-primary" onclick="saveProfile(true)" style="margin-top:4px;">Let's go →</button>
@@ -1294,6 +1332,26 @@ function setPmLevel(val){
   const inp=document.getElementById('pm-level-val');if(inp)inp.value=val;
   const desc=document.getElementById('pm-level-desc');if(desc)desc.textContent=descs[val]||'';
 }
+function setObLevel(val){
+  ['beginner','intermediate','advanced'].forEach(l=>{
+    const btn=document.getElementById('ob-level-'+l);
+    if(!btn)return;
+    const active=l===val;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(26,188,191,0.1)':'var(--surface)';
+  });
+  const inp=document.getElementById('ob-level-val');if(inp)inp.value=val;
+}
+function setObEquip(val){
+  ['bodyweight','minimal','gym'].forEach(k=>{
+    const btn=document.getElementById('ob-equip-'+k);
+    if(!btn)return;
+    const active=k===val;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(26,188,191,0.1)':'var(--surface)';
+  });
+  const inp=document.getElementById('ob-equip-val');if(inp)inp.value=val;
+}
 function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'intermediate';}
 function getStandard(ev,course){
   // Canada Trials: pick Senior (18+) or Junior (<18) based on comp age
@@ -1339,7 +1397,12 @@ function saveProfile(fromOnboarding){
     const longTermGoals=getPickedGoals('ob-goals');
     const unitsEl=document.getElementById('ob-units');
     const unitsPref=unitsEl?unitsEl.value:'metric';
-    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,unitsPref};
+    const lvlInpOb=document.getElementById('ob-level-val');
+    const trainingLevelOb=lvlInpOb?lvlInpOb.value:'intermediate';
+    const equipInpOb=document.getElementById('ob-equip-val');
+    const equipModeOb=equipInpOb?equipInpOb.value:'gym';
+    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,unitsPref,trainingLevel:trainingLevelOb};
+    S.equipmentMode=equipModeOb;DB.set('equipmentMode',equipModeOb);
     // Apply preferred standard and units immediately
     S.activeStandard=preferredStandard;DB.set('activeStandard',preferredStandard);
     S.useKg=unitsPref!=='imperial';DB.set('useKg',S.useKg);
@@ -2693,6 +2756,27 @@ function buildChart(hist,field){
 function scmStd(lcmStr){if(!lcmStr)return null;const s=tSec(lcmStr);if(s===Infinity)return null;return secDisp(s*0.975);}
 
 function renderTimesContent(){
+  // Global empty state — no times at all across any event
+  const hasAnyTime=Object.values(S.timeHistory||{}).some(arr=>arr&&arr.length>0);
+  if(!hasAnyTime){
+    const el=document.getElementById('times-content');
+    if(el)el.innerHTML=`<div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:56px;margin-bottom:16px;">🏁</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:8px;">No times yet</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;">Log your first PB and SwimFitPro will track your gap to your target standard, project your qualification date, and show your improvement rate.</div>
+      <button class="btn btn-primary" style="max-width:280px;margin:0 auto;" onclick="openAddTime('${esc(S.activeTStroke||'100 Free')}')">+ Log your first time</button>
+      <div style="margin-top:24px;background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--border);text-align:left;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;">What you'll unlock</div>
+        <div style="font-size:13px;color:var(--text);line-height:2;">
+          <div>📉 Gap to your target standard</div>
+          <div>📈 Improvement rate (seconds/month)</div>
+          <div>🎯 Qualification date projection</div>
+          <div>🏅 PB history and trend chart</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
   const ev=S.activeTStroke;
   const hist=(S.timeHistory[ev]||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
   const tgtLCM=getStandard(ev,'lcm');
@@ -2860,12 +2944,64 @@ function saveTimeEntry(){
   const lcm=document.getElementById('at-time-lcm').value.trim();
   const split=document.getElementById('at-split').value.trim();
   if(!date||((!scm||scm==='—')&&(!lcm||lcm==='—')))return alert('Enter at least one time (SCM or LCM) and a date.');
+  // Check if this is a new PB before saving
+  const prevBestLCM=getBest(ev,'lcm');
+  const prevBestSCM=getBest(ev,'scm');
   if(!S.timeHistory[ev])S.timeHistory[ev]=[];
   const entry={date,meet,scm:scm||'—',lcm:lcm||'—'};
   if(split)entry.split=split;
   S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  DB.set('timeHistory',S.timeHistory);closeModal('add-time-modal');S.activeTStroke=ev;renderStrokeTabs();renderTimesContent();
+  DB.set('timeHistory',S.timeHistory);
+  closeModal('add-time-modal');S.activeTStroke=ev;renderStrokeTabs();renderTimesContent();
+  // Detect new PB and show share card
+  const newBestLCM=getBest(ev,'lcm');
+  const newBestSCM=getBest(ev,'scm');
+  const isNewPbLCM=lcm&&lcm!=='—'&&newBestLCM&&newBestLCM.lcm===lcm&&(!prevBestLCM||prevBestLCM.lcm==='—'||tSec(lcm)<tSec(prevBestLCM.lcm));
+  const isNewPbSCM=scm&&scm!=='—'&&newBestSCM&&newBestSCM.scm===scm&&(!prevBestSCM||prevBestSCM.scm==='—'||tSec(scm)<tSec(prevBestSCM.scm));
+  if(isNewPbLCM||isNewPbSCM){
+    const pbTime=isNewPbLCM?lcm:scm;
+    const pbCourse=isNewPbLCM?'LCM':'SCM';
+    showPBCard(ev,pbTime,pbCourse,meet);
+  }
+}
+function showPBCard(ev,time,course,meet){
+  const name=(S.profile&&S.profile.name)||'Athlete';
+  const std=getStandard(ev,course.toLowerCase());
+  const gap=std&&tSec(time)?gapSec(time,std):null;
+  const gapStr=gap===null?'':(gap<=0?'✓ QUALIFIED':'Gap to standard: +'+gap.toFixed(2)+'s');
+  const modal=document.createElement('div');
+  modal.id='pb-share-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML=`
+    <div style="max-width:360px;width:100%;">
+      <div id="pb-card-shareable" style="background:linear-gradient(135deg,#0D1F3C,#112240);border-radius:20px;padding:28px 24px;border:1px solid var(--accent);text-align:center;">
+        <img src="/icons/icon-513.jpeg" style="width:48px;height:48px;border-radius:10px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">New Personal Best</div>
+        <div style="font-size:32px;font-weight:900;color:#FFFFFF;margin-bottom:4px;">${time}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;">${ev} · ${course}</div>
+        ${meet&&meet!=='—'?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">${meet}</div>`:'<div style="margin-bottom:12px;"></div>'}
+        ${gapStr?`<div style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:${gap<=0?'rgba(0,230,118,0.15)':'rgba(26,188,191,0.15)'};color:${gap<=0?'var(--green)':'var(--accent)'};border:1px solid ${gap<=0?'var(--green)':'var(--accent)'};margin-bottom:16px;">${gapStr}</div>`:'<div style="margin-bottom:16px;"></div>'}
+        <div style="font-size:11px;color:var(--muted);letter-spacing:0.08em;">SwimFitPro · Dryland · Fuel · Race Prep</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button onclick="sharePBCard()" style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--accent);color:#0D1F3C;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);">Share</button>
+        <button onclick="document.getElementById('pb-share-modal').remove()" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;font-family:var(--font);">Done</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+async function sharePBCard(){
+  const card=document.getElementById('pb-card-shareable');
+  if(!card)return;
+  // Use Web Share API if available, otherwise prompt screenshot
+  if(navigator.share){
+    try{
+      await navigator.share({title:'New PB on SwimFitPro',text:card.innerText,url:'https://swimfitpro.netlify.app'});
+    }catch(e){}
+  } else {
+    alert('Take a screenshot of this card to share your PB!');
+  }
 }
 function delTime(ev,idx){if(!confirm('Delete this entry?'))return;S.timeHistory[ev].splice(idx,1);DB.set('timeHistory',S.timeHistory);renderTimesContent();}
 
@@ -3812,6 +3948,161 @@ function toggleMealCheck(dateKey,field){
   S.mealCompliance[dateKey][field]=!S.mealCompliance[dateKey][field];
   DB.set('mealCompliance',S.mealCompliance);
   renderFuelTodayCard();
+}
+
+// ── Meal Tracker ──
+const SWIMMER_FOODS=[
+  // Breakfast
+  {id:'oats',name:'Oats (100g dry)',cal:370,carbs:60,protein:13,fat:7,cat:'Breakfast'},
+  {id:'banana',name:'Banana (medium)',cal:105,carbs:27,protein:1,fat:0,cat:'Breakfast'},
+  {id:'eggs_2',name:'Eggs ×2 (scrambled)',cal:180,carbs:2,protein:14,fat:12,cat:'Breakfast'},
+  {id:'greek_yogurt',name:'Greek yogurt (200g)',cal:130,carbs:8,protein:20,fat:2,cat:'Breakfast'},
+  {id:'toast_wb',name:'Wholegrain toast ×2',cal:180,carbs:32,protein:7,fat:2,cat:'Breakfast'},
+  {id:'milk_300',name:'Milk 300ml',cal:150,carbs:14,protein:10,fat:5,cat:'Breakfast'},
+  // Pre-training
+  {id:'rice_cake_pb',name:'Rice cakes + peanut butter',cal:200,carbs:28,protein:6,fat:8,cat:'Pre-training'},
+  {id:'energy_bar',name:'Energy bar (50g)',cal:200,carbs:35,protein:6,fat:5,cat:'Pre-training'},
+  {id:'apple',name:'Apple',cal:80,carbs:21,protein:0,fat:0,cat:'Pre-training'},
+  {id:'banana_pb',name:'Banana + peanut butter',cal:235,carbs:30,protein:5,fat:10,cat:'Pre-training'},
+  {id:'sports_drink',name:'Sports drink 500ml',cal:140,carbs:35,protein:0,fat:0,cat:'Pre-training'},
+  // Post-training
+  {id:'protein_shake',name:'Protein shake (30g whey)',cal:150,carbs:5,protein:25,fat:3,cat:'Post-training'},
+  {id:'choc_milk',name:'Chocolate milk 400ml',cal:250,carbs:40,protein:14,fat:4,cat:'Post-training'},
+  {id:'chicken_rice',name:'Chicken breast + rice (300g)',cal:480,carbs:55,protein:45,fat:5,cat:'Post-training'},
+  {id:'tuna_wrap',name:'Tuna wrap',cal:380,carbs:40,protein:30,fat:8,cat:'Post-training'},
+  {id:'recovery_bar',name:'Recovery bar',cal:220,carbs:30,protein:20,fat:4,cat:'Post-training'},
+  // Lunch / Dinner
+  {id:'salmon_veg',name:'Salmon + veg + rice',cal:550,carbs:45,protein:42,fat:14,cat:'Lunch/Dinner'},
+  {id:'pasta_bolognese',name:'Pasta bolognese (350g)',cal:580,carbs:70,protein:32,fat:12,cat:'Lunch/Dinner'},
+  {id:'chicken_pasta',name:'Chicken pasta (350g)',cal:520,carbs:65,protein:38,fat:8,cat:'Lunch/Dinner'},
+  {id:'stir_fry',name:'Beef stir fry + noodles',cal:560,carbs:58,protein:35,fat:14,cat:'Lunch/Dinner'},
+  {id:'sweet_potato_chicken',name:'Sweet potato + chicken',cal:480,carbs:52,protein:40,fat:8,cat:'Lunch/Dinner'},
+  {id:'rice_beans',name:'Rice + black beans + salsa',cal:440,carbs:80,protein:18,fat:4,cat:'Lunch/Dinner'},
+  // Snacks
+  {id:'almonds',name:'Almonds (30g)',cal:170,carbs:6,protein:6,fat:15,cat:'Snacks'},
+  {id:'cottage_cheese',name:'Cottage cheese (150g)',cal:130,carbs:5,protein:18,fat:4,cat:'Snacks'},
+  {id:'hummus_veg',name:'Hummus + veggies',cal:150,carbs:16,protein:5,fat:7,cat:'Snacks'},
+  {id:'fruit_mix',name:'Mixed fruit (200g)',cal:120,carbs:28,protein:1,fat:0,cat:'Snacks'},
+  {id:'protein_ball',name:'Protein ball ×2',cal:180,carbs:20,protein:10,fat:6,cat:'Snacks'},
+  // Race day
+  {id:'bagel_honey',name:'Bagel + honey',cal:310,carbs:65,protein:9,fat:1,cat:'Race day'},
+  {id:'white_rice_banana',name:'White rice + banana',cal:330,carbs:72,protein:5,fat:1,cat:'Race day'},
+  {id:'gel',name:'Energy gel',cal:100,carbs:25,protein:0,fat:0,cat:'Race day'},
+];
+
+S.mealLog=S.mealLog||DB.get('mealLog',{});
+
+function getMealLogKey(){return dKey(new Date());}
+function getTodayMeals(){return S.mealLog[getMealLogKey()]||[];}
+function addMealEntry(foodId,qty){
+  const food=SWIMMER_FOODS.find(f=>f.id===foodId);if(!food)return;
+  const key=getMealLogKey();
+  if(!S.mealLog[key])S.mealLog[key]=[];
+  S.mealLog[key].push({foodId,qty:qty||1,ts:Date.now()});
+  DB.set('mealLog',S.mealLog);
+  renderMealTracker();
+}
+function removeMealEntry(idx){
+  const key=getMealLogKey();
+  if(!S.mealLog[key])return;
+  S.mealLog[key].splice(idx,1);
+  DB.set('mealLog',S.mealLog);
+  renderMealTracker();
+}
+
+function renderMealTracker(){
+  const el=document.getElementById('meal-tracker-section');if(!el)return;
+  const meals=getTodayMeals();
+  const targets=getDailyCalFromSchedule();
+  // Sum today's logged macros
+  let logCal=0,logCarbs=0,logProtein=0,logFat=0;
+  meals.forEach(m=>{
+    const food=SWIMMER_FOODS.find(f=>f.id===m.foodId);
+    if(!food)return;
+    const q=m.qty||1;
+    logCal+=food.cal*q;logCarbs+=food.carbs*q;logProtein+=food.protein*q;logFat+=food.fat*q;
+  });
+  const pct=(v,t)=>t?Math.min(100,Math.round(v/t*100)):0;
+  const col=(p)=>p>=90?'var(--green)':p>=60?'var(--accent)':'var(--orange)';
+
+  // Search state
+  const q=(S._mealSearch||'').toLowerCase();
+  const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
+  const filtered=q?SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q)):SWIMMER_FOODS;
+
+  let html=`<div class="card" style="margin-bottom:12px;">
+    <div class="card-title">Today's Meals</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
+      ${[['Calories',Math.round(logCal),targets.cal,'kcal'],['Carbs',Math.round(logCarbs),targets.carbs,'g'],['Protein',Math.round(logProtein),targets.protein,'g'],['Fat',Math.round(logFat),targets.fat,'g']].map(([lbl,val,tgt,unit])=>`
+      <div style="background:var(--surface);border-radius:10px;padding:10px 6px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;">${lbl}</div>
+        <div style="font-size:16px;font-weight:800;color:${col(pct(val,tgt))};">${val}</div>
+        <div style="font-size:10px;color:var(--muted);">/ ${tgt}${unit}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;"><div style="height:100%;width:${pct(val,tgt)}%;background:${col(pct(val,tgt))};border-radius:2px;transition:width 0.3s;"></div></div>
+      </div>`).join('')}
+    </div>`;
+
+  // Logged meals list
+  if(meals.length){
+    html+=`<div style="margin-bottom:12px;">`;
+    meals.forEach((m,i)=>{
+      const food=SWIMMER_FOODS.find(f=>f.id===m.foodId);if(!food)return;
+      const q=m.qty||1;
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;">${food.name}${q>1?` ×${q}`:''}</div>
+          <div style="font-size:11px;color:var(--muted);">${Math.round(food.cal*q)} kcal · ${Math.round(food.carbs*q)}g C · ${Math.round(food.protein*q)}g P</div>
+        </div>
+        <button onclick="removeMealEntry(${i})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;">×</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  } else {
+    html+=`<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:13px;">No meals logged yet today</div>`;
+  }
+
+  // Add food section
+  html+=`<div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Add food</div>
+    <input type="text" id="meal-search-input" placeholder="Search foods..." value="${S._mealSearch||''}"
+      oninput="S._mealSearch=this.value;renderMealTracker()"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);margin-bottom:10px;">`;
+
+  if(q){
+    // Show search results
+    if(filtered.length){
+      html+=`<div style="max-height:280px;overflow-y:auto;">`;
+      filtered.forEach(food=>{
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${food.name}</div>
+            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P · ${food.fat}g F</div>
+          </div>
+          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
+        </div>`;
+      });
+      html+=`</div>`;
+    } else {
+      html+=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No matches — try a different search</div>`;
+    }
+  } else {
+    // Show by category
+    cats.forEach(cat=>{
+      const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">${cat}</div>`;
+      catFoods.forEach(food=>{
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${food.name}</div>
+            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P</div>
+          </div>
+          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
+        </div>`;
+      });
+    });
+  }
+  html+=`</div></div>`;
+  el.innerHTML=html;
 }
 
 function renderFuelTodayCard(){
@@ -5226,7 +5517,7 @@ function showSection(name){
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
-  if(name==='fuel')renderNutrition();
+  if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();}
 
 }
