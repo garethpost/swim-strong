@@ -804,8 +804,16 @@ function setDistUnit(km){
   applyUnitSettings();
 }
 function updateUnitPickers(){
-  ['wt-kg','wt-lbs'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active',id==='wt-kg'?S.useKg:!S.useKg);});
-  ['dist-km','dist-mi'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active',id==='dist-km'?S.useKm:!S.useKm);});
+  function stylePicker(el,active){
+    if(!el)return;
+    el.style.background=active?'var(--accent)':'var(--surface)';
+    el.style.color=active?'#000':'var(--muted)';
+    el.style.fontWeight=active?'800':'700';
+  }
+  stylePicker(document.getElementById('wt-kg'), S.useKg);
+  stylePicker(document.getElementById('wt-lbs'),!S.useKg);
+  stylePicker(document.getElementById('dist-km'), S.useKm);
+  stylePicker(document.getElementById('dist-mi'),!S.useKm);
 }
 document.getElementById('unit-btn').style.display='none';
 
