@@ -281,7 +281,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
     <!-- SCHEDULE -->
     <div id="section-schedule" class="section">
-      <p class="section-title">Schedule</p>
+      <!-- Meet Day banner — auto-shown when today is a meet day -->
+      <div id="meet-day-banner" style="display:none;margin-bottom:14px;"></div>
+      <p class="section-title" id="sched-section-title">Schedule</p>
       <p class="section-sub" id="sched-month-label">—</p>
       <!-- Pool check-in shortcut — shown on swim days -->
       <div id="schedule-pool-shortcut" style="display:none;margin-bottom:12px;"></div>
@@ -694,6 +696,63 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <button class="btn-ghost" style="width:100%;" onclick="closeModal('pool-checkin-modal')">Skip</button>
 </div></div>
 
+<!-- ── Meet Race Entry Modal ── -->
+<div class="modal-overlay" id="meet-race-modal"><div class="modal"><div class="modal-handle"></div>
+<h3 style="font-size:18px;font-weight:800;margin-bottom:4px;">Add Race</h3>
+<p id="meet-race-modal-meet" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
+<div class="form-row"><label>Event</label>
+  <select id="mr-event" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+    <option>50 Free</option><option>100 Free</option><option>200 Free</option><option>400 Free</option><option>800 Free</option><option>1500 Free</option>
+    <option>50 Back</option><option>100 Back</option><option>200 Back</option>
+    <option>50 Breast</option><option>100 Breast</option><option>200 Breast</option>
+    <option>50 Fly</option><option>100 Fly</option><option>200 Fly</option>
+    <option>100 IM</option><option>200 IM</option><option>400 IM</option>
+  </select>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+  <div class="form-row"><label>Pool</label>
+    <select id="mr-pool" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+      <option value="lcm">LCM (50m)</option><option value="scm">SCM (25m)</option>
+    </select>
+  </div>
+  <div class="form-row"><label>Session</label>
+    <select id="mr-session" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+      <option value="prelims">Prelims / Heats</option><option value="finals">Finals</option><option value="only">Single Session</option>
+    </select>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+  <div class="form-row"><label>Seed Time</label>
+    <input id="mr-seed" type="text" placeholder="e.g. 1:02.45" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+  </div>
+  <div class="form-row"><label>Meet Day</label>
+    <select id="mr-day" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+      <option value="1">Day 1</option><option value="2">Day 2</option><option value="3">Day 3</option><option value="4">Day 4</option>
+    </select>
+  </div>
+</div>
+<button class="btn btn-primary" onclick="saveMeetRace()" style="margin-bottom:8px;">Add Race ✓</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-race-modal')">Cancel</button>
+</div></div>
+
+<!-- ── Race Result Logger Modal ── -->
+<div class="modal-overlay" id="meet-log-modal"><div class="modal"><div class="modal-handle"></div>
+<h3 style="font-size:18px;font-weight:800;margin-bottom:2px;" id="meet-log-title">Log Race Result</h3>
+<p id="meet-log-sub" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
+<div class="form-row"><label>Your Time</label>
+  <input id="ml-time" type="text" placeholder="e.g. 1:01.83" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:22px;font-weight:700;padding:10px 12px;font-family:var(--font);text-align:center;">
+</div>
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Coach Feedback — tap all that apply</div>
+  <div id="ml-tags" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+</div>
+<div class="form-row"><label>Coach Notes (optional)</label>
+  <textarea id="ml-notes" rows="2" placeholder="What did the coach say?" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);resize:none;"></textarea>
+</div>
+<button class="btn btn-primary" onclick="saveMeetRaceResult()" style="margin-bottom:8px;">Save Result ✓</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-log-modal')">Cancel</button>
+</div></div>
+
 <div class="modal-overlay" id="session-summary-modal"><div class="modal"><div class="modal-handle"></div>
 <div style="text-align:center;margin-bottom:16px;">
   <div style="font-size:40px;margin-bottom:6px;">✅</div>
@@ -942,6 +1001,9 @@ let S={
   mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
   mealCompliance:DB.get('mealCompliance',{}), // {YYYY-MM-DD:{pre:bool,intra:bool,post:bool}}
   appTheme:DB.get('appTheme','original'),
+  meetRaces:DB.get('meetRaces',[]), // [{id,meetId,event,pool,seedTime,day,session}]
+  meetRaceLog:DB.get('meetRaceLog',[]), // [{id,meetId,raceId,time,coachTags:[],coachNotes,ts}]
+  activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
 };
 
 // Units
@@ -3616,6 +3678,8 @@ function exportData(){
     seasonKmTarget:S.seasonKmTarget,
     mobilityLog:S.mobilityLog,
     mealCompliance:S.mealCompliance,
+    meetRaces:S.meetRaces,
+    meetRaceLog:S.meetRaceLog,
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -3659,6 +3723,8 @@ function importData(event){
       if(data.seasonKmTarget)DB.set('seasonKmTarget',data.seasonKmTarget);
       if(data.mobilityLog)DB.set('mobilityLog',data.mobilityLog);
       if(data.mealCompliance)DB.set('mealCompliance',data.mealCompliance);
+      if(data.meetRaces)DB.set('meetRaces',data.meetRaces);
+      if(data.meetRaceLog)DB.set('meetRaceLog',data.meetRaceLog);
       alert('✅ Backup restored! Reloading app...');
       location.reload();
     }catch(err){
@@ -4121,6 +4187,348 @@ function renderCheckinChart(){
   if(statsEl)statsEl.innerHTML=`Avg <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--green)">${avgRead}/5 readiness</b> over ${hist.length} days &nbsp;·&nbsp; Best day: ${fmt(best.date)}`;
 }
 
+// ══════════════════════════════════════════════
+// ── MEET DAY ENGINE ──
+// ══════════════════════════════════════════════
+
+const COACH_TAGS=[
+  {id:'start',label:'Start reaction'},
+  {id:'turn',label:'Turn / push-off'},
+  {id:'stroke',label:'Stroke rate'},
+  {id:'finish',label:'Finish'},
+  {id:'pacing',label:'Pacing'},
+  {id:'underwaters',label:'Underwaters'},
+  {id:'breathing',label:'Breathing pattern'},
+  {id:'head_pos',label:'Head position'},
+  {id:'kick',label:'Kick'},
+  {id:'great',label:'Strong swim'},
+];
+
+// Warm-up sets by event type and session
+function getWarmupProtocol(event,session,pool){
+  const isSprint=event.startsWith('50')||event.startsWith('100');
+  const isMid=event.startsWith('200');
+  const isDist=event.startsWith('400')||event.startsWith('800')||event.startsWith('1500');
+  const isIM=event.includes('IM');
+  const poolLen=pool==='lcm'?50:25;
+  const u=poolLen==='lcm'?'m':'m'; // always metres
+
+  if(session==='prelims'||session==='only'){
+    if(isSprint){
+      return[
+        {label:'Easy swim — loosen up',detail:`${poolLen*8} ${u} easy choice of stroke. No pressure, just move.`,time:'20 min before'},
+        {label:'Build swims',detail:`4 × ${poolLen} — each one faster. Last one at 90% effort. 20s rest.`,time:'15 min before'},
+        {label:'Kick set',detail:`4 × ${poolLen} kick on back — moderate effort. Stay long and relaxed.`,time:'12 min before'},
+        {label:'Race-pace bursts',detail:`3 × ${poolLen} at full race pace. Full recovery between each. This is not a race — you are waking the CNS up.`,time:'10 min before'},
+        {label:'Dive practice',detail:`2 starts off the blocks — focus on reaction and entry angle only.`,time:'8 min before'},
+        {label:'Get out — race prep',detail:`Dry off, change, stay warm. Shake out legs and arms. Mental rehearsal of your race plan.`,time:'6 min before'},
+      ];
+    }
+    if(isMid){
+      return[
+        {label:'Easy swim',detail:`${poolLen*10} ${u} easy freestyle or choice. Settle breathing.`,time:'25 min before'},
+        {label:'Pull set',detail:`${poolLen*6} ${u} pull with buoy — focus on high elbow catch and long stroke.`,time:'18 min before'},
+        {label:'Kick set',detail:`4 × ${poolLen} kick — build effort each length.`,time:'14 min before'},
+        {label:'Descend set',detail:`4 × ${poolLen*2} descending — start at 70%, finish at 95%. Full rest.`,time:'11 min before'},
+        {label:'Race-pace strokes',detail:`2 × ${poolLen} at your goal race pace. One full minute rest between.`,time:'7 min before'},
+        {label:'Get out — race prep',detail:`Warm clothes on. Visualise your first 50, your turn, your back half. Know your split targets.`,time:'5 min before'},
+      ];
+    }
+    if(isDist){
+      return[
+        {label:'Easy aerobic swim',detail:`${poolLen*16} ${u} easy. No urgency. Build body temperature.`,time:'35 min before'},
+        {label:'Pull set',detail:`${poolLen*8} ${u} pull — breathe every 3, high catch, controlled.`,time:'24 min before'},
+        {label:'Pace work',detail:`4 × ${poolLen*2} at your goal race pace per 100. Exactly. 30s rest.`,time:'17 min before'},
+        {label:'Race-pace burst',detail:`1 × ${poolLen*2} at slightly faster than race pace. One effort. Done.`,time:'10 min before'},
+        {label:'Get out — race prep',detail:`Hydrate now — 250ml water. Mental run-through of your pacing plan. Know your 100 splits cold.`,time:'7 min before'},
+      ];
+    }
+    if(isIM){
+      return[
+        {label:'Easy swim',detail:`${poolLen*8} ${u} easy. Choice of stroke.`,time:'25 min before'},
+        {label:'IM drill set',detail:`${poolLen*8} ${u} IM — 2 lengths each stroke, focus on transitions.`,time:'18 min before'},
+        {label:'Kick set',detail:`4 × ${poolLen} kick — one each stroke in IM order.`,time:'13 min before'},
+        {label:'Race-pace IM',detail:`2 × ${poolLen*2} IM at race pace. Focus on your weakest stroke transition.`,time:'9 min before'},
+        {label:'Get out — race prep',detail:`Know your order: Fly / Back / Breast / Free. Visualise each stroke transition.`,time:'6 min before'},
+      ];
+    }
+  }
+
+  // Finals warm-up — shorter, sharper, activated
+  return[
+    {label:'Activation swim',detail:`${poolLen*4} ${u} easy — body is already primed from prelims. Just wake it up.`,time:'18 min before'},
+    {label:'Race-pace strokes',detail:`${isSprint?3:2} × ${poolLen} at race pace or faster. Full recovery. CNS activation only.`,time:'13 min before'},
+    {label:'One quality effort',detail:`1 × ${isSprint?poolLen:poolLen*2} at 95%+ effort. This is your signal to your body that it is time.`,time:'9 min before'},
+    {label:'Get out — finals mode',detail:`Less warm-up is more for finals. Trust the prelim swim. Fix one thing your coach identified.`,time:'6 min before'},
+  ];
+}
+
+// Rest protocol between prelims and finals based on gap
+function getRestProtocol(gapHours,prelimResult,seedTime,coachTags){
+  const tSec=t=>{ if(!t)return Infinity; const p=t.split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);};
+  const delta=prelimResult&&seedTime?tSec(prelimResult)-tSec(seedTime):0;
+  const qualified=delta!==0;
+  const issues=coachTags||[];
+
+  let protocol=[];
+
+  if(gapHours<2){
+    protocol=[
+      {icon:'🥤',phase:'0–20 min after prelims',title:'Immediate recovery',detail:'Fast carbs + electrolytes now. Sports drink, banana, energy bar. Do not skip this — you have no time.'},
+      {icon:'🛁',phase:'20–40 min',title:'Contrast therapy if available',detail:'Cold then warm if pool allows. Otherwise stay off your feet. Compression on legs.'},
+      {icon:'🧠',phase:'40–60 min',title:'Mental reset',detail:'Review your prelim race. One thing to fix. Just one. Do not overthink.'},
+      {icon:'🏊',phase:'60–90 min',title:'Short activation',detail:'10 minutes light swimming only. Loosen up — do not tire out.'},
+      {icon:'🔥',phase:'90 min – finals',title:'Build to finals',detail:'Follow your finals warm-up protocol above. You are ready.'},
+    ];
+  } else if(gapHours<4){
+    protocol=[
+      {icon:'🥤',phase:'0–30 min after prelims',title:'Recovery nutrition',detail:'Mixed meal: carbs + protein. Rice, chicken, pasta, or similar. Chocolate milk if nothing else.'},
+      {icon:'😴',phase:'30–90 min',title:'Rest',detail:'Horizontal. Legs elevated. Sleep if you can — even 20 minutes of rest is restorative.'},
+      {icon:'🍽️',phase:'90–120 min',title:'Top-up fuel',detail:'Light snack: banana, toast, yogurt. No heavy digestion before finals.'},
+      {icon:'💧',phase:'Throughout',title:'Hydration',detail:'Sip 150–200ml every 20 minutes. Do not chug before racing.'},
+      {icon:'🏊',phase:'60 min before finals',title:'Begin finals prep',detail:'Follow the finals warm-up protocol above.'},
+    ];
+  } else {
+    protocol=[
+      {icon:'🥤',phase:'0–30 min after prelims',title:'Full recovery meal',detail:'Proper meal with carbs and protein. This gap gives you time to digest fully before finals.'},
+      {icon:'😴',phase:'1–3 hours',title:'Extended rest',detail:'Sleep. Seriously. A 90-minute nap between sessions is proven to improve evening performance by 3–5%.'},
+      {icon:'🍽️',phase:'2 hours before finals',title:'Pre-finals meal',detail:'Moderate carbs, low fat, light protein. Rice, pasta, toast + eggs. Nothing unfamiliar.'},
+      {icon:'💧',phase:'Throughout',title:'Hydration',detail:'Stay ahead of thirst. 2% dehydration = slower swims.'},
+      {icon:'🏊',phase:'60 min before finals',title:'Begin finals prep',detail:'Follow the finals warm-up protocol above. You have time — do not rush it.'},
+    ];
+  }
+
+  const coachFixes=issues.filter(t=>t!=='great').map(t=>{
+    const fixes={
+      start:'Focus on your reaction time and entry angle. Drive forward, not up.',
+      turn:'Attack the wall — plant both feet, explosive push. Streamline tight.',
+      stroke:'Count your stroke rate in the first 25. Match your training cadence.',
+      finish:'Do not breathe in the last 5m. Head down, hit the wall.',
+      pacing:'Go out at exactly race pace — not fast, not conservative. Trust your splits.',
+      underwaters:'Extend your breakout by 2 more kicks on every turn.',
+      breathing:'Bilateral in training, race-side in your race. Stick to your pattern.',
+      head_pos:'Eyes down — chin in. Lifting your head costs you speed.',
+      kick:'Keep kick continuous through turns and in the final 25.',
+    };
+    return fixes[t]||null;
+  }).filter(Boolean);
+
+  return{protocol,coachFixes,delta,qualified};
+}
+
+// ── Meet Day Banner ──
+function renderMeetDayBanner(){
+  const el=document.getElementById('meet-day-banner');
+  const titleEl=document.getElementById('sched-section-title');
+  if(!el)return;
+  const today=new Date();today.setHours(0,0,0,0);
+  const todayKey=dKey(today);
+
+  // Find active meet today
+  const activeMeet=S.meets.find(m=>{
+    try{
+      const ms=localDate(m.date);
+      const me=m.endDate?localDate(m.endDate):ms;
+      return today>=ms&&today<=me;
+    }catch(e){return false;}
+  });
+
+  if(!activeMeet){
+    el.style.display='none';
+    if(titleEl)titleEl.textContent='Schedule';
+    return;
+  }
+
+  // We are at a meet today
+  if(titleEl)titleEl.innerHTML=`Schedule <span style="font-size:13px;font-weight:600;color:var(--gold);">🏁 Meet Day</span>`;
+  S.activeMeetId=activeMeet.id;
+
+  // Which day of the meet is it?
+  const ms=localDate(activeMeet.date);
+  const meetDay=Math.floor((today-ms)/86400000)+1;
+
+  // Races for this meet
+  const races=S.meetRaces.filter(r=>String(r.meetId)===String(activeMeet.id));
+  const todayRaces=races.filter(r=>String(r.day)===String(meetDay));
+  const profile=S.profile||{};
+  const primaryEvents=(profile.primaryEvents||[]);
+
+  // Sort races: prelims first, finals second
+  todayRaces.sort((a,b)=>a.session==='finals'?1:b.session==='finals'?-1:0);
+
+  const raceCards=todayRaces.map(race=>{
+    const log=S.meetRaceLog.filter(l=>String(l.raceId)===String(race.id));
+    const latestLog=log.length?log[log.length-1]:null;
+    const isFinals=race.session==='finals';
+    const prelimLog=isFinals?S.meetRaceLog.find(l=>String(l.raceId)===String(race.id)&&l.session==='prelims'):null;
+    const sessionColor=isFinals?'var(--gold)':'var(--accent)';
+    const sessionLabel=race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session';
+
+    // Result display
+    let resultHtml='';
+    if(latestLog){
+      const tSec=t=>{if(!t)return Infinity;const p=t.split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);};
+      const delta=race.seedTime?tSec(latestLog.time)-tSec(race.seedTime):null;
+      const deltaStr=delta!==null?(delta<0?`<span style="color:var(--green);">${delta.toFixed(2)}s PB territory</span>`:`<span style="color:var(--orange);">+${delta.toFixed(2)}s vs seed</span>`):'';
+      resultHtml=`<div style="margin-top:8px;padding:8px 10px;background:rgba(0,230,118,0.06);border-radius:8px;border-left:2px solid var(--green);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Result logged</div>
+        <div style="font-size:18px;font-weight:800;color:var(--green);">${latestLog.time}</div>
+        <div style="font-size:11px;margin-top:2px;">${deltaStr}</div>
+        ${latestLog.coachTags&&latestLog.coachTags.length?`<div style="font-size:10px;color:var(--muted);margin-top:3px;">Coach: ${latestLog.coachTags.map(t=>COACH_TAGS.find(ct=>ct.id===t)?.label||t).join(' · ')}</div>`:''}
+      </div>`;
+    }
+
+    const warmup=getWarmupProtocol(race.event,race.session,race.pool||'lcm');
+    const warmupHtml=`<details style="margin-top:8px;"><summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol</summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        ${warmup.map(s=>`<div style="padding:8px 10px;background:var(--surface);border-radius:8px;border-left:2px solid ${sessionColor};">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);">${s.label}</div>
+            <div style="font-size:10px;color:var(--muted);">${s.time}</div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;">${s.detail}</div>
+        </div>`).join('')}
+      </div></details>`;
+
+    // If finals and prelim was logged — show rest protocol
+    let restHtml='';
+    if(isFinals&&latestLog){
+      // Find prelim result
+      const prelimRace=races.find(r=>r.event===race.event&&r.session==='prelims');
+      const prelimResult=prelimRace?S.meetRaceLog.find(l=>String(l.raceId)===String(prelimRace.id)):null;
+      // Estimate gap — default 3h if unknown
+      const {protocol,coachFixes}=getRestProtocol(3,prelimResult?.time,prelimResult?race.seedTime:null,prelimResult?.coachTags||[]);
+      if(coachFixes.length){
+        restHtml=`<div style="margin-top:8px;padding:8px 10px;background:rgba(245,200,66,0.06);border-radius:8px;border-left:2px solid var(--gold);">
+          <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;">🎯 Fix for finals — ${coachFixes.length===1?'1 thing':'top priorities'}</div>
+          ${coachFixes.slice(0,2).map(f=>`<div style="font-size:11px;color:var(--text);margin-bottom:4px;line-height:1.5;">→ ${f}</div>`).join('')}
+        </div>`;
+      }
+    }
+
+    return`<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-top:2px solid ${sessionColor};">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div>
+          <span style="font-size:15px;font-weight:800;color:var(--text);">${race.event}</span>
+          <span style="font-size:10px;color:${sessionColor};font-weight:700;margin-left:6px;text-transform:uppercase;">${sessionLabel} · ${race.pool?.toUpperCase()||'LCM'}</span>
+        </div>
+        ${race.seedTime?`<span style="font-size:11px;color:var(--muted);">Seed: ${race.seedTime}</span>`:''}
+      </div>
+      ${resultHtml||`<button onclick="openRaceLog(${race.id})" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px dashed ${sessionColor};background:transparent;color:${sessionColor};font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Log result</button>`}
+      ${restHtml}
+      ${warmupHtml}
+    </div>`;
+  }).join('');
+
+  const noRacesHtml=!todayRaces.length?`<div style="padding:12px;background:var(--surface);border-radius:10px;font-size:12px;color:var(--muted);text-align:center;">No races entered for Day ${meetDay} yet.<br><button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Add races</button></div>`:'';
+
+  el.style.display='block';
+  el.innerHTML=`<div style="background:linear-gradient(135deg,rgba(245,200,66,0.08),rgba(0,198,255,0.04));border:1px solid var(--gold);border-radius:14px;padding:14px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold);">🏁 ${activeMeet.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Meet Day ${meetDay} · ${activeMeet.priority||'A'}-Meet</div>
+      </div>
+      <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:7px 12px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
+    </div>
+    ${raceCards||noRacesHtml}
+    <div style="margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">📋 Meet Day Nutrition</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+        <b style="color:var(--text);">Wake:</b> High-carb breakfast 2–3h before first warm-up. Oats, banana, toast + honey. No heavy protein.<br>
+        <b style="color:var(--text);">Between races:</b> Fast carbs every 45–60 min. Sports drink, banana, energy gels, dates.<br>
+        <b style="color:var(--text);">Hydration:</b> 150–200ml every 20 min all day. Do not wait until thirsty.<br>
+        <b style="color:var(--text);">Avoid:</b> High fat, high fibre, anything unfamiliar. Not the day to experiment.
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Meet Race Entry ──
+let _meetRaceEntryId=null,_meetRaceEntryDay=1;
+function openMeetRaceEntry(meetId,day){
+  _meetRaceEntryId=meetId;
+  _meetRaceEntryDay=day||1;
+  const meet=S.meets.find(m=>String(m.id)===String(meetId));
+  document.getElementById('meet-race-modal-meet').textContent=meet?meet.name:'';
+  document.getElementById('mr-day').value=String(day||1);
+  document.getElementById('mr-seed').value='';
+  openModal('meet-race-modal');
+}
+function saveMeetRace(){
+  const event=document.getElementById('mr-event').value;
+  const pool=document.getElementById('mr-pool').value;
+  const session=document.getElementById('mr-session').value;
+  const seedTime=document.getElementById('mr-seed').value.trim();
+  const day=parseInt(document.getElementById('mr-day').value)||1;
+  if(!event)return;
+  const race={id:Date.now(),meetId:_meetRaceEntryId,event,pool,session,seedTime,day};
+  S.meetRaces.push(race);
+  DB.set('meetRaces',S.meetRaces);
+  closeModal('meet-race-modal');
+  renderMeetDayBanner();
+}
+
+// ── Race Result Logger ──
+let _logRaceId=null;
+let _selectedTags=[];
+function openRaceLog(raceId){
+  _logRaceId=raceId;
+  _selectedTags=[];
+  const race=S.meetRaces.find(r=>String(r.id)===String(raceId));
+  if(!race)return;
+  document.getElementById('meet-log-title').textContent=`Log: ${race.event}`;
+  document.getElementById('meet-log-sub').textContent=`${race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session'} · Seed: ${race.seedTime||'—'}`;
+  document.getElementById('ml-time').value='';
+  document.getElementById('ml-notes').value='';
+  // Render tags
+  document.getElementById('ml-tags').innerHTML=COACH_TAGS.map(t=>`
+    <button id="cftag-${t.id}" onclick="toggleCoachTag('${t.id}')" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">${t.label}</button>
+  `).join('');
+  openModal('meet-log-modal');
+}
+function toggleCoachTag(id){
+  const btn=document.getElementById(`cftag-${id}`);
+  if(_selectedTags.includes(id)){
+    _selectedTags=_selectedTags.filter(t=>t!==id);
+    if(btn){btn.style.background='var(--surface)';btn.style.color='var(--muted)';btn.style.borderColor='var(--border)';}
+  } else {
+    _selectedTags.push(id);
+    if(btn){btn.style.background='rgba(0,198,255,0.15)';btn.style.color='var(--accent)';btn.style.borderColor='var(--accent)';}
+  }
+}
+function saveMeetRaceResult(){
+  const time=document.getElementById('ml-time').value.trim();
+  const notes=document.getElementById('ml-notes').value.trim();
+  if(!time)return alert('Enter your race time.');
+  const race=S.meetRaces.find(r=>String(r.id)===String(_logRaceId));
+  const entry={
+    id:Date.now(),
+    meetId:race?race.meetId:null,
+    raceId:_logRaceId,
+    time,
+    coachTags:[..._selectedTags],
+    coachNotes:notes||null,
+    session:race?race.session:null,
+    ts:new Date().toISOString(),
+  };
+  S.meetRaceLog.push(entry);
+  DB.set('meetRaceLog',S.meetRaceLog);
+  // Auto-sync to Times tab if it's a valid time format
+  if(race&&time){
+    const ev=race.event;
+    const pool=race.pool||'lcm';
+    if(!S.timeHistory[ev])S.timeHistory[ev]=[];
+    const timeEntry={date:dKey(new Date()),meet:S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet'};
+    if(pool==='scm')timeEntry.scm=time; else timeEntry.lcm=time;
+    if(pool==='scm')timeEntry.lcm='—'; else timeEntry.scm='—';
+    S.timeHistory[ev].push(timeEntry);
+    DB.set('timeHistory',S.timeHistory);
+  }
+  closeModal('meet-log-modal');
+  renderMeetDayBanner();
+}
+
 // ── Section routing ──
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -4130,7 +4538,7 @@ function showSection(name){
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
-  if(name==='schedule'){renderCalendar();renderSchedulePoolShortcut();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
+  if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();}
