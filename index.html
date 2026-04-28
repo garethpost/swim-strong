@@ -783,16 +783,18 @@ function getHeightCm(){
   }
 }
 function applyUnitSettings(){
-  // Update any inline unit labels
+  // Update any inline unit labels across the whole page
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  // Rebuild fuel tab if open
-  if(document.getElementById('athlete-profile-fields'))renderNutrition();
-  // Re-render baseline card
-  if(document.getElementById('baseline-card'))renderBaseline();
-  // Update distance tracker + home cals
+  // Always re-render home (km tracker + cals)
   renderKmTracker();
   renderHomeCals();
-  // Update settings pickers to reflect current state
+  // Re-render baseline card (workout tab weights)
+  renderBaseline();
+  // Re-render active workout content if one is showing
+  if(S.currentWorkout)renderWorkout(S.currentWorkout);
+  // Re-render fuel tab nutrition fields
+  renderNutrition();
+  // Update settings pickers
   updateUnitPickers();
 }
 function setWeightUnit(kg){
