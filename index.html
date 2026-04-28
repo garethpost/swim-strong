@@ -11,14 +11,14 @@
   const svgIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="44" fill="#0D1F3C"/><path d="M72 88 C72 70 82 60 96 58 C110 56 120 66 120 82 C120 94 114 102 104 106 C94 110 80 106 74 98 Z" fill="#FFFFFF"/><path d="M78 88 C80 84 86 82 92 84 C98 86 102 92 100 96 C98 100 92 102 87 100 C82 98 78 94 78 88 Z" fill="#1a3a6c"/><path d="M86 88 C87 85 90 84 93 85 C96 86 97 89 96 92 C95 95 92 96 89 95 C86 94 85 91 86 88 Z" fill="#0a2a5a"/><path d="M40 112 C48 98 62 90 76 88 C80 87 84 88 86 92 C88 96 84 102 80 106 C72 114 68 124 74 132 C80 140 94 138 102 130 C108 124 110 116 108 110" fill="#FFFFFF"/><path d="M78 82 C82 68 96 54 118 50 C132 47 148 52 156 64 C160 70 158 78 150 80 C140 82 126 76 114 74 C100 72 88 74 80 80" fill="#FFFFFF"/><path d="M22 138 C38 126 56 136 72 128 C88 120 100 130 116 124 C132 118 148 126 166 118 C170 116 174 120 170 124 C154 132 138 124 122 130 C106 136 90 126 74 132 C58 138 42 130 26 140 Z" fill="#1ABCBF"/><path d="M18 152 C36 142 56 150 76 144 C96 138 114 146 134 140 C150 135 164 142 178 136 L178 148 C164 154 150 147 134 152 C114 158 96 150 76 156 C56 162 36 154 18 164 Z" fill="#0E9BAA" opacity="0.7"/><rect x="120" y="120" width="11" height="24" rx="2.5" fill="#1ABCBF"/><rect x="135" y="108" width="11" height="36" rx="2.5" fill="#1ABCBF"/><rect x="150" y="94" width="11" height="50" rx="2.5" fill="#1ABCBF"/><path d="M112 134 C122 122 138 106 166 78" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round"/><path d="M166 78 L156 80 M166 78 L164 88" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const blob=new Blob([svgIcon],{type:'image/svg+xml'});
   const url=URL.createObjectURL(blob);
-  const manifest={name:'SwimFitPro',short_name:'SwimFitPro',start_url:'/',display:'standalone',background_color:'#0D1F3C',theme_color:'#0D1F3C',description:'Dryland strength, fuel and race prep for competitive swimmers',icons:[{src:'/icons/icon-512.jpg',sizes:'512x512',type:'image/jpeg'},{src:'/icons/icon-512.jpg',sizes:'192x192',type:'image/jpeg'}]};
+  const manifest={name:'SwimFitPro',short_name:'SwimFitPro',start_url:'/',display:'standalone',background_color:'#0D1F3C',theme_color:'#0D1F3C',description:'Dryland strength, fuel and race prep for competitive swimmers',icons:[{src:'/icons/icon-512.jpeg',sizes:'512x512',type:'image/jpeg'},{src:'/icons/icon-512.jpeg',sizes:'192x192',type:'image/jpeg'}]};
   const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   const mUrl=URL.createObjectURL(mBlob);
   const link=document.createElement('link');
   link.rel='manifest';link.href=mUrl;
   document.head.appendChild(link);
   const touch=document.createElement('link');
-  touch.rel='apple-touch-icon';touch.href='/icons/icon-512.jpg';
+  touch.rel='apple-touch-icon';touch.href='/icons/icon-512.jpeg';
   document.head.appendChild(touch);
 })();
 </script>
@@ -170,7 +170,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="display:flex;align-items:center;gap:10px;">
       <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img src="/icons/icon-512.jpg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:7px;object-fit:cover;flex-shrink:0;">
+        <img src="/icons/icon-512.jpeg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:7px;object-fit:cover;flex-shrink:0;">
         <div><h1>SwimFitPro</h1><div class="sub" id="header-sub">Loading...</div></div>
       </div>
     </div>
@@ -583,7 +583,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:480px;margin:0 auto;">
     <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
       <div style="margin-bottom:14px;">
-        <img src="/icons/icon-512.jpg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:cover;">
+        <img src="/icons/icon-512.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:cover;">
       </div>
       <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
       <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
