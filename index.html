@@ -793,10 +793,14 @@ function applyUnitSettings(){
 }
 function setWeightUnit(kg){
   S.useKg=kg;DB.set('useKg',kg);
+  // Apply picker style immediately — before any other re-render can interfere
+  updateUnitPickers();
   applyUnitSettings();
 }
 function setDistUnit(km){
   S.useKm=km;DB.set('useKm',km);
+  // Apply picker style immediately — before any other re-render can interfere
+  updateUnitPickers();
   applyUnitSettings();
 }
 function updateUnitPickers(){
@@ -914,6 +918,7 @@ function saveProfile(fromOnboarding){
     // Apply preferred standard and units immediately
     S.activeStandard=preferredStandard;DB.set('activeStandard',preferredStandard);
     S.useKg=unitsPref!=='imperial';DB.set('useKg',S.useKg);
+    S.useKm=unitsPref!=='imperial';DB.set('useKm',S.useKm);
   } else {
     // Edit profile — preserve existing longTermGoals/preferredStandard if not editing them
     const longTermGoals=document.getElementById('pm-goals')?getPickedGoals('pm-goals'):(S.profile&&S.profile.longTermGoals||[]);
@@ -1035,7 +1040,7 @@ function renderKmTracker(){
       const last=log[log.length-1];
       const d=new Date(last.date);
       const dStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
-      const lastDisp=useKm?last.km.toFixed(1)+'km':(last.km*0.621371).toFixed(1)+'mi';
+      const lastDisp=S.useKm?last.km.toFixed(1)+'km':(last.km*0.621371).toFixed(1)+'mi';
       lbl.textContent=`Last: ${lastDisp} on ${dStr}`;
     } else {
       lbl.textContent='tap + to log today\'s distance';

@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwimFitPro — App Audit Report</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --border: #1e3258;
+    --accent: #00c6ff;
+    --green: #00e676;
+    --orange: #ff9800;
+    --red: #ff5252;
+    --gold: #ffd700;
+    --purple: #c084fc;
+    --muted: #5f7a9a;
+    --text: #e8f0fe;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+  .header {
+    background: linear-gradient(135deg, #0a0e1a 0%, #111827 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 24px 32px;
+    text-align: center;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .header .date {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  .verdict {
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .verdict-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .verdict-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .verdict p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .score-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .score-pill {
+    flex: 1;
+    min-width: 130px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: center;
+  }
+  .score-pill .num {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .score-pill .label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .section {
+    margin-bottom: 36px;
+  }
+  .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-heading .icon {
+    font-size: 20px;
+  }
+  .section-heading h2 {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .section-heading .tag {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tag-strong { background: rgba(0,230,118,0.15); color: var(--green); }
+  .tag-gap { background: rgba(255,152,0,0.15); color: var(--orange); }
+  .tag-fix { background: rgba(255,82,82,0.15); color: var(--red); }
+  .tag-info { background: rgba(0,198,255,0.15); color: var(--accent); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 6px;
+  }
+  .card p:last-child { margin-bottom: 0; }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+  .check { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+  .warn { color: var(--orange); font-weight: 700; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
+  .badge-green { background: rgba(0,230,118,0.15); color: var(--green); }
+  .badge-red { background: rgba(255,82,82,0.15); color: var(--red); }
+  .badge-orange { background: rgba(255,152,0,0.15); color: var(--orange); }
+  .badge-blue { background: rgba(0,198,255,0.15); color: var(--accent); }
+  .item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row .item-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .item-row strong { color: var(--text); }
+  .priority-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .priority-table th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .priority-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid rgba(30,50,88,0.5);
+    color: var(--text);
+    vertical-align: top;
+  }
+  .priority-table tr:last-child td { border-bottom: none; }
+  .priority-table td:nth-child(2) { color: var(--muted); font-size: 12px; }
+  .pri-1 { color: var(--red); font-weight: 800; }
+  .pri-2 { color: var(--orange); font-weight: 800; }
+  .pri-3 { color: var(--gold); font-weight: 800; }
+  .pri-4 { color: var(--muted); font-weight: 800; }
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .comp-table th {
+    text-align: center;
+    padding: 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table th:first-child { text-align: left; }
+  .comp-table td {
+    padding: 9px 8px;
+    text-align: center;
+    border-bottom: 1px solid rgba(30,50,88,0.4);
+    color: var(--muted);
+  }
+  .comp-table td:first-child { text-align: left; color: var(--text); font-weight: 600; }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .cell-yes { color: var(--green); font-weight: 700; }
+  .cell-no { color: var(--red); }
+  .cell-partial { color: var(--orange); }
+  .cell-sfp { color: var(--accent); font-weight: 800; }
+  .highlight-box {
+    background: rgba(0,198,255,0.06);
+    border: 1px solid rgba(0,198,255,0.2);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .highlight-box strong { color: var(--text); }
+  .bug-card {
+    background: rgba(255,82,82,0.06);
+    border: 1px solid rgba(255,82,82,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .bug-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+  .bug-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+  }
+  .toc-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .toc ol { padding-left: 18px; }
+  .toc li { font-size: 13px; color: var(--accent); padding: 3px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .roadmap-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .roadmap-row:last-child { border-bottom: none; }
+  .roadmap-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .rn-red { background: rgba(255,82,82,0.2); color: var(--red); }
+  .rn-orange { background: rgba(255,152,0,0.2); color: var(--orange); }
+  .rn-gold { background: rgba(255,215,0,0.2); color: var(--gold); }
+  .rn-muted { background: rgba(95,122,154,0.2); color: var(--muted); }
+  .roadmap-content strong { font-size: 13px; color: var(--text); display: block; margin-bottom: 3px; }
+  .roadmap-content span { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SwimFitPro — App Audit</h1>
+  <p>Benchmarked against MySwimPro, SwimTopia, TrainingPeaks & Athlete Dashboard</p>
+  <div class="date">April 27, 2026 · Confidential</div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#verdict">Overall Verdict</a></li>
+      <li><a href="#whats-working">What's Built & Working Well</a></li>
+      <li><a href="#bugs">Active Bugs</a></li>
+      <li><a href="#benchmark">Competitive Benchmark</a></li>
+      <li><a href="#gaps">Critical Gaps</a></li>
+      <li><a href="#redundant">Redundant / Weak Sections</a></li>
+      <li><a href="#flow">App Flow Assessment</a></li>
+      <li><a href="#roadmap">Priority Fix List</a></li>
+    </ol>
+  </div>
+
+  <!-- VERDICT -->
+  <div class="verdict" id="verdict">
+    <div class="verdict-label">Overall Verdict</div>
+    <div class="verdict-title">Solid foundation. Real gaps in the three pillars that matter.</div>
+    <p>SwimFitPro is a well-engineered single-file PWA with genuinely smart features — position-based periodization, adaptive loading from readiness/sleep, tempo notation, progressive 1RM tracking, and age-specific Canadian standards. That is more than most swimmer tools do. But the app was designed for <em>dryland</em> and the other two stated pillars — time standards progression and nutrition — are underbuilt relative to what elite swimmers actually need. The fuel tab is a calorie estimator, not a nutrition tool. The times tab has no in-progress season arc or target-date projection. And there are two active bugs (unit picker, km tracker unit bug) that undermine trust in the data. Fix the bugs first, then build out the gaps in order.</p>
+    <div class="score-row">
+      <div class="score-pill">
+        <div class="num" style="color:var(--green);">7.5</div>
+        <div class="label">Dryland /10</div>
+      </div>
+      <div class="score-pill">
+        <div class="num" style="color:var(--orange);">5.5</div>
+        <div class="label">Times /10</div>
+      </div>
+      <div class="score-pill">
+        <div class="num" style="color:var(--red);">3.5</div>
+        <div class="label">Nutrition /10</div>
+      </div>
+      <div class="score-pill">
+        <div class="num" style="color:var(--accent);">6.0</div>
+        <div class="label">Overall /10</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT'S WORKING -->
+  <div class="section" id="whats-working">
+    <div class="section-heading">
+      <span class="icon">✅</span>
+      <h2>What's Built &amp; Working Well</h2>
+      <span class="tag tag-strong">Strengths</span>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Position-Based Periodization</div>
+        <p>The <code>goalPhaseFromPosition()</code> logic is genuinely good. It correctly scales any block length into GPP → Stimulus → Strength → Sharpen → Taper, rather than collapsing short blocks into a premature taper. Most apps don't do this at all — they just count down weeks and do nothing with the data.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Age-Specific Canadian Standards</div>
+        <p>Four-tier standards hierarchy (Prov Champ → Prov Trials → Canada Open → Canada Trials), Swimming Canada's Dec 31 competition age rule correctly implemented, Junior vs Senior Trials auto-selection based on comp age. The standards data is accurate and up to date.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Adaptive Load from Readiness</div>
+        <p>Sleep + readiness sliders feeding directly into set/volume adjustments is the right call. It mirrors what elite athletes do manually. The 7-day average tracking with a debounced save adds genuine longitudinal value.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">1RM Progressive Loading</div>
+        <p>Phase-aware percentage targets (GPP 65% → Strength 85%), Epley formula for estimation, per-exercise history log, and automatic weight progression suggestion when all reps are hit. This is the core of a proper strength program for a swimmer.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Rotation-Aware Exercise Selection</div>
+        <p><code>pickFresh()</code> deprioritising exercises used in the last 2 sessions prevents repetitive boredom and overuse patterns. Small detail, meaningful for long-term adherence.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Tempo Notation</div>
+        <p>Every weighted exercise has a tempo code (e.g. 3-1-1-0) with an interactive explainer modal. Most general fitness apps don't touch this. For a swimmer whose strength purpose is very specific — start power, kick force, pull strength — tempo is non-negotiable and it's here.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Goal Program Architecture</div>
+        <p>The separation of long-term aspirational goals from coach-assigned training focus is conceptually correct and rare. The <code>TRAINING_FOCUS</code> map driving exercise bias is practical and extensible. The meet-to-phase timeline visualisation is clean.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Schedule &amp; Taper Logic</div>
+        <p>Season template + per-day overrides + automatic dryland taper when inside a meet window. The schedule is the source of truth for workout type — not just a calendar. Priority-A meets trigger a heavier taper than B-meets. These are the right design decisions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE BUGS -->
+  <div class="section" id="bugs">
+    <div class="section-heading">
+      <span class="icon">🐛</span>
+      <h2>Active Bugs</h2>
+      <span class="tag tag-fix">Fix First</span>
+    </div>
+
+    <div class="bug-card">
+      <div class="bug-title">🔴 Unit Picker Visual Toggle Not Reflecting in App</div>
+      <div class="bug-desc">
+        The kg/lbs and km/mi buttons in the More tab visually update when tapped (inline style is being applied correctly via <code>stylePicker()</code>), but the unit change doesn't reflect in other tabs without switching away and back. Root cause: <code>applyUnitSettings()</code> calls <code>renderKmTracker()</code>, <code>renderHomeCals()</code>, and <code>renderBaseline()</code> — but none of these update the <em>currently visible</em> tab if the user is sitting on More. More critically, there is still a bug in <code>renderKmTracker()</code>: line 1038 reads <code>useKm</code> (no <code>S.</code> prefix) which will fail silently. Fix: change <code>useKm</code> to <code>S.useKm</code> on that line. After that, the unit label in the km tracker will update correctly when the More tab is active.
+      </div>
+    </div>
+
+    <div class="bug-card">
+      <div class="bug-title">🔴 km Tracker Uses Wrong Variable Reference</div>
+      <div class="bug-desc">
+        Line ~1038: <code>const lastDisp=useKm?last.km...</code> — <code>useKm</code> is not in scope. Should be <code>S.useKm</code>. This silently breaks the last-entry label display in imperial mode and is likely contributing to the perceived unit toggle failure.
+      </div>
+    </div>
+
+    <div class="bug-card">
+      <div class="bug-title">🟠 Onboarding Units Dropdown Sets useKg But Not useKm</div>
+      <div class="bug-desc">
+        In <code>saveProfile()</code> during onboarding, <code>S.useKg</code> is set from the metric/imperial preference but <code>S.useKm</code> is never set — it stays at the default <code>true</code> regardless of what the athlete chose. A swimmer who selects Imperial at setup will get lbs in the gym but km in the distance tracker, which is inconsistent. Fix: add <code>S.useKm = unitsPref !== 'imperial'; DB.set('useKm', S.useKm);</code> alongside the existing useKg line.
+      </div>
+    </div>
+
+    <div class="bug-card">
+      <div class="bug-title">🟡 Timer Notifications Require One-Time Permission Setup</div>
+      <div class="bug-desc">
+        Not exactly a bug, but the notification permission request is silent on first run — there's no UI prompt explaining why the app is asking or confirming that it's a one-time ask. Swimmers get a random browser permission dialog with no context. Add a short inline explanation in the timer card before the first permission request fires.
+      </div>
+    </div>
+  </div>
+
+  <!-- BENCHMARK -->
+  <div class="section" id="benchmark">
+    <div class="section-heading">
+      <span class="icon">📊</span>
+      <h2>Competitive Benchmark</h2>
+      <span class="tag tag-info">Context</span>
+    </div>
+
+    <div class="highlight-box">
+      <strong>Comparison apps:</strong> MySwimPro (AI swim training + dryland), SwimTopia (team/meet management), TrainingPeaks (elite periodization), final.ly (British swimming intelligence app). SwimFitPro is the only one targeting the specific intersection of Canadian standards tracking + dryland periodization + nutrition for a competitive club-to-elite pathway swimmer.
+    </div>
+
+    <div class="card">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>SwimFitPro</th>
+            <th>MySwimPro</th>
+            <th>TrainingPeaks</th>
+            <th>SwimTopia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Dryland workout generation</td>
+            <td class="cell-sfp">✓ Adaptive</td>
+            <td class="cell-partial">Basic</td>
+            <td class="cell-yes">Manual plans</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Position-based periodization</td>
+            <td class="cell-sfp">✓ Built-in</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">✓ Manual</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>National time standards</td>
+            <td class="cell-sfp">✓ Canada 4-tier</td>
+            <td class="cell-partial">USA only</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-partial">Basic</td>
+          </tr>
+          <tr>
+            <td>Age-group standard rules</td>
+            <td class="cell-sfp">✓ Dec 31 rule</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-partial">Partial</td>
+          </tr>
+          <tr>
+            <td>1RM tracking &amp; % loading</td>
+            <td class="cell-sfp">✓</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">✓</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Tempo notation on exercises</td>
+            <td class="cell-sfp">✓</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-partial">Rare</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Sleep/readiness adaptive load</td>
+            <td class="cell-sfp">✓</td>
+            <td class="cell-partial">HRV only</td>
+            <td class="cell-yes">✓ TSS/ATL</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Nutrition (detailed)</td>
+            <td class="cell-no">Estimator only</td>
+            <td class="cell-partial">Basic</td>
+            <td class="cell-partial">Integration</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Pool session tracking</td>
+            <td class="cell-no">Schedule only</td>
+            <td class="cell-yes">✓ Full</td>
+            <td class="cell-yes">✓ Full</td>
+            <td class="cell-yes">✓ Full</td>
+          </tr>
+          <tr>
+            <td>Drill / technique library</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">✓ 150+ videos</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Video analysis</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">✓</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Coach communication</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">✓</td>
+            <td class="cell-yes">✓</td>
+          </tr>
+          <tr>
+            <td>Wearable integration</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-yes">Apple Watch</td>
+            <td class="cell-yes">Garmin/Polar</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>PWA / offline-capable</td>
+            <td class="cell-sfp">✓</td>
+            <td class="cell-no">✗</td>
+            <td class="cell-partial">Partial</td>
+            <td class="cell-no">✗</td>
+          </tr>
+          <tr>
+            <td>Free / no subscription</td>
+            <td class="cell-sfp">✓</td>
+            <td class="cell-no">$19.99/mo</td>
+            <td class="cell-no">$19.99/mo</td>
+            <td class="cell-no">Team fee</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box">
+      <strong>The verdict on competition:</strong> SwimFitPro is already ahead of every app on Canadian standards accuracy and dryland periodization intelligence. It's behind on anything pool-side (that's a design choice — and probably the right one, since coaches own pool sessions). The gap that matters most is nutrition depth, because that's the one pillar where you're behind and the athlete's performance directly depends on it.
+    </div>
+  </div>
+
+  <!-- GAPS -->
+  <div class="section" id="gaps">
+    <div class="section-heading">
+      <span class="icon">🚧</span>
+      <h2>Critical Gaps</h2>
+      <span class="tag tag-gap">Missing</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">1. Fuel Tab is a Calculator, Not a Tool</div>
+      <p>The calorie estimate is correct and the macro split (2.4g protein/kg for a swimmer) is appropriate. But that's where it stops. There is no food log, no meal timing framework, no swim-specific guidance on pre/intra/post-training nutrition. A swimmer at this level is eating 4,000–5,000 calories/day across 5–7 eating occasions. Knowing the target number is step one. Step two — what to actually eat and when — is completely absent.</p>
+      <p><strong>What's needed (minimum viable):</strong> Pre-training meal window (2–3h before, carb-heavy), intra-training guidance (if double sessions, 30–60g fast carbs between), post-training window (30–45min, protein + carb combined). These are not complex — they're fixed rules for competitive swimmers that can be displayed as a daily checklist or timeline.</p>
+      <p><strong>What's needed (next level):</strong> A simple food log — not a full MyFitnessPal clone, but logging meals as pre/intra/post categories with macro ballpark estimates. Even 5 food entries per occasion would give meaningful feedback.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. Times Tab Has No Trajectory or Goal-Date Logic</div>
+      <p>The LCM Analysis card calculates improvement rate and projects months to standard. That's good. But there's no connection between that projection and the actual meet calendar. The app knows when the target meet is. It knows the current gap to standard. It knows the historical improvement rate. It should be saying: <em>"At your current rate of 0.12s/month, you'll hit the AB Provincials standard with 3 weeks to spare. You need to find 0.05s more per month to also qualify for Trials."</em> That's actionable. Right now the numbers are shown but the conclusion is never drawn.</p>
+      <p><strong>What's also missing:</strong> No split-time entry. Competitive swimmers track 50m splits, not just final times. A 100 Free swimmer cares deeply whether their back-half split is dying. No relay splits. No splits from practice (timed swims). This is a complete picture problem — the data model only stores a final time per meet.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. No Pool-Side Session Log</div>
+      <p>The schedule tab shows what the swimmer is supposed to do in the pool. There's no place to record what actually happened — yardage, sets, efforts, how a timed swim went, how they felt in the water. This means the app has no feedback loop between pool performance and the dryland program. A swimmer who has a terrible practice doesn't have a way to log that and have it influence tomorrow's dryland load (beyond the readiness slider, which is a blunt instrument).</p>
+      <p>This doesn't need to be a full swim log. Even a post-practice check-in: "How was the pool session? / Timed effort today? / Yardage approx." — that data is useful and it's completely absent.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. No Hydration Tracking in the Fuel Tab</div>
+      <p>The daily water target is calculated correctly (weight × 40ml + 550ml per session). It's shown in the Fuel tab. But there's no way to log actual intake. Dehydration at 2% of bodyweight drops swim performance by 1–2% — for a swimmer trying to drop 0.3s, that's meaningful. This is a simple tally — "cups logged today" would be sufficient.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5. No Stretch / Mobility Progress Tracking</div>
+      <p>The mobility exercises are excellent and correctly sequenced (shoulder sleeper stretch, lat stretch, ankle mobility, hip flexors — all directly tied to swimming mechanics). But there's no way to track progression on mobility. Did the hip flexor lunge improve? Is the ankle mobility drill getting easier? Without logging, it's just a checklist. Mobility is where many swimmers drop the ball, and accountability matters. Even a simple "sessions completed this week" counter would help.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">6. No Athlete Body Composition Trend</div>
+      <p>The app has a <code>bodyStats</code> object and a lastStatsUpdate timestamp. But there's no visible weight/body composition trend chart in the app. If a swimmer is logging their weight (implied by the presence of <code>bodyStats</code>), they should be able to see the trend over time — particularly in the context of race weight vs. training weight. This data exists but isn't surfaced.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">7. No RPE (Rate of Perceived Exertion) Logging on Workouts</div>
+      <p>Each exercise has a set/rep/weight log. But there's no post-session RPE or session load score. In elite training, session RPE (session exertion × duration = training load in arbitrary units) is the most practical load monitoring tool. Without it, the only load data is readiness going in — there's no measure of how hard the session actually was. One number (1–10 RPE at session end, automatically multiplied by approximate session duration) would close this loop and allow proper TSS-equivalent tracking over time.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">8. No Baseline Strength Testing Protocol</div>
+      <p>The 1RM system is solid, but there's no structured baseline test built into the app. A swimmer starting fresh has no 1RM data, so the percentage loading system sits idle until they manually enter estimates. A guided "Set Your Baselines" flow — built as part of onboarding or as a first-week protocol — would unlock the loading system immediately and give the data needed to make the program work from day one.</p>
+    </div>
+  </div>
+
+  <!-- REDUNDANT -->
+  <div class="section" id="redundant">
+    <div class="section-heading">
+      <span class="icon">✂️</span>
+      <h2>Redundant or Weak Sections</h2>
+      <span class="tag tag-gap">Tighten</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">The "Preview Any Workout" Button Is Redundant in Goal Mode</div>
+      <p>In goal program active state, the "Preview any workout type" button appears alongside "Generate Goal Workout." If the athlete is in goal mode, the preview modal forces a workout type that bypasses all the goal biasing — so they get a standard workout. This is confusing. The preview button should either be removed from goal mode entirely, or relabelled "Override today's type" with a clear warning that it bypasses goal biasing.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Season km Tracker Is Disconnected from Everything</div>
+      <p>The km tracker accumulates total pool distance manually entered by the athlete. But this number doesn't connect to calorie calculations (which use session count, not distance), isn't tied to standards progression, and doesn't appear in the Times tab analysis. It's floating data. Either integrate it — feed it into the nutrition calculation, show it against a season target, or tie it to a milestone progression — or remove it. Right now it's a number that exists without meaning.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Program Week / Cycle Counter Is Semi-Hidden and Confusing</div>
+      <p>The 16-week cycle counter auto-advances every 3 logged workouts. This is a simple approximation and it works — but the athlete can't see the logic, can't manually adjust it, and can't reset it if their season doesn't align to 16-week blocks. A small "Week X of 16 — adjust" control in the More tab would make the system feel intentional rather than opaque.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Long-Term Goals Are Set But Do Nothing</div>
+      <p>The <code>LONG_TERM_GOALS</code> array (Make the Olympic team, Earn a US scholarship, etc.) is displayed in the profile and selected during onboarding. But per the design decision made during build, they don't actually influence any part of the workout or standards system. That's fine as a temporary state — but a user who picks "Earn a US scholarship" and then sees a generic workout with no reference to their goal will wonder why they were asked. Either wire it up minimally (show a motivational note in the workout header based on their goal) or remove it from the profile display so it doesn't look like a broken feature.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Fuel Tab Height Entry Inconsistency</div>
+      <p>In metric mode: height is entered as cm. In imperial mode: as ft + inches. The conversion math is in <code>ftInToCm()</code> and it works, but the UI rebuilds the height row on unit switch (handled in <code>renderNutrition()</code>), and <code>applyUnitSettings()</code> has had this function removed from it, meaning a unit switch while the Fuel tab is open doesn't update the height field layout. Minor but worth noting as part of the unit toggle cleanup.</p>
+    </div>
+  </div>
+
+  <!-- FLOW -->
+  <div class="section" id="flow">
+    <div class="section-heading">
+      <span class="icon">🔀</span>
+      <h2>App Flow Assessment</h2>
+      <span class="tag tag-info">UX</span>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">✅ What flows well</div>
+        <div class="item-row"><span class="item-icon">✓</span><span>Onboarding is clean and purpose-driven — name, events, standard, goals. Gets the athlete to the app immediately.</span></div>
+        <div class="item-row"><span class="item-icon">✓</span><span>Home tab is a proper daily dashboard — greeting, phase info, schedule summary, next meet countdown, readiness check-in all visible without scrolling far.</span></div>
+        <div class="item-row"><span class="item-icon">✓</span><span>Workout generation is one tap. The phase badge, load alert, and schedule source note give context without being verbose.</span></div>
+        <div class="item-row"><span class="item-icon">✓</span><span>Times tab is the strongest content tab — event selector, PB display, gap pills, progress bar, chart, analysis card. Good structure.</span></div>
+        <div class="item-row"><span class="item-icon">✓</span><span>Modal architecture (exercise info, tempo, schedule editor) keeps the main flow clean.</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚠️ What doesn't flow well</div>
+        <div class="item-row"><span class="item-icon">⚠</span><span>The Fuel tab is the weakest page in the app. You fill in body stats, see numbers, and then... nothing to do. No daily actions, no logging, no feedback loop. It's a dead end.</span></div>
+        <div class="item-row"><span class="item-icon">⚠</span><span>The More tab is a dumping ground — settings, profile, backup, logo upload, danger zone, season setup all live there. It needs grouping. The settings card (units) is buried at the bottom after all the profile and logo content.</span></div>
+        <div class="item-row"><span class="item-icon">⚠</span><span>The Schedule tab requires understanding of the season template concept before it makes sense. A new user lands there and sees an empty calendar with no affordance for what to do first.</span></div>
+        <div class="item-row"><span class="item-icon">⚠</span><span>Goal program → standard mode toggle uses the same tab, which means two distinct modes are collapsed into one Workout section with a small toggle at the top. A first-time user might not notice the toggle exists.</span></div>
+        <div class="item-row"><span class="item-icon">⚠</span><span>No success/completion state after finishing a workout beyond a confirm dialog and route to Home. A brief summary of what was completed (sets, estimated load, phase note) would feel like a reward.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div class="section" id="roadmap">
+    <div class="section-heading">
+      <span class="icon">🗺️</span>
+      <h2>Priority Fix List</h2>
+      <span class="tag tag-fix">Ordered</span>
+    </div>
+
+    <div class="card">
+      <table class="priority-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th style="width:200px;">Item</th>
+            <th>Why It Matters</th>
+            <th style="width:80px;">Effort</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pri-1">P1</span></td>
+            <td><strong>Fix S.useKm reference in renderKmTracker()</strong></td>
+            <td>Active bug causing silent failure on unit label in km tracker. One-line fix.</td>
+            <td><span class="badge badge-green">5min</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-1">P1</span></td>
+            <td><strong>Fix useKm not set during onboarding</strong></td>
+            <td>Imperial athletes get lbs in gym, km in tracker. Inconsistent from setup. One-line fix in saveProfile().</td>
+            <td><span class="badge badge-green">5min</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-1">P1</span></td>
+            <td><strong>Unit picker — verify applyUnitSettings() re-renders correctly</strong></td>
+            <td>Trust in the settings tab is broken. Users can't tell if their preference saved. Fix and test on the More tab without switching away.</td>
+            <td><span class="badge badge-orange">30min</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-2">P2</span></td>
+            <td><strong>Times Tab — connect gap projection to meet calendar</strong></td>
+            <td>The app has all three inputs (gap, rate, meet date). Not drawing the conclusion wastes the best data in the app.</td>
+            <td><span class="badge badge-orange">2h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-2">P2</span></td>
+            <td><strong>Fuel Tab — add meal timing framework</strong></td>
+            <td>Pre/intra/post-training windows are fixed rules for competitive swimmers. Replace the static output with a daily meal timing guide that updates based on today's schedule.</td>
+            <td><span class="badge badge-orange">3h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-2">P2</span></td>
+            <td><strong>Add session RPE at workout completion</strong></td>
+            <td>One number (1–10) after session close gives training load data over time. Currently there's no post-session data at all.</td>
+            <td><span class="badge badge-orange">1h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-2">P2</span></td>
+            <td><strong>Post-workout summary screen</strong></td>
+            <td>Replace the confirm() dialog with a brief summary card — sets completed, load descriptor, phase note, RPE prompt. Makes logging feel like a reward, not a box tick.</td>
+            <td><span class="badge badge-orange">2h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-3">P3</span></td>
+            <td><strong>Guided baseline strength testing flow</strong></td>
+            <td>1RM percentage loading sits idle until athletes enter test data. A structured "Week 1: Find Your Baselines" protocol unlocks the whole loading system immediately.</td>
+            <td><span class="badge badge-red">4h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-3">P3</span></td>
+            <td><strong>Hydration logging in Fuel tab</strong></td>
+            <td>Target is calculated, logging is absent. A simple cup/bottle tally would be enough. Dehydration directly costs race time.</td>
+            <td><span class="badge badge-orange">1h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-3">P3</span></td>
+            <td><strong>Pool session check-in (simple)</strong></td>
+            <td>Post-practice quick log: how it felt, any timed swims, distance. Creates a feedback loop between pool and dryland that currently doesn't exist.</td>
+            <td><span class="badge badge-red">4h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-3">P3</span></td>
+            <td><strong>More tab reorganisation</strong></td>
+            <td>Group into: Profile | Program Settings | App Settings | Data. Units should be in Program or App Settings, not buried after logo upload.</td>
+            <td><span class="badge badge-orange">2h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-3">P3</span></td>
+            <td><strong>Long-term goals — wire up or remove from display</strong></td>
+            <td>Currently orphaned UI. Minimum: show motivational label in workout header based on selected goals. Otherwise cut from profile display.</td>
+            <td><span class="badge badge-green">1h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-4">P4</span></td>
+            <td><strong>km tracker — connect to season target and nutrition</strong></td>
+            <td>Manual distance logging should inform calorie scaling and appear as a progress bar against a season distance goal.</td>
+            <td><span class="badge badge-red">3h</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-4">P4</span></td>
+            <td><strong>Program week/cycle manual override</strong></td>
+            <td>Small control in More tab. Athletes whose season doesn't map to 16-week cycles will hit this issue.</td>
+            <td><span class="badge badge-green">45min</span></td>
+          </tr>
+          <tr>
+            <td><span class="pri-4">P4</span></td>
+            <td><strong>Split time entry in Times tab</strong></td>
+            <td>Optional 50m split field per time entry. Not complex to add but meaningfully expands the data usefulness for any freestyle or backstroke swimmer.</td>
+            <td><span class="badge badge-orange">2h</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box" style="margin-top:20px;">
+      <strong>The honest summary:</strong> fix the two one-line bugs this week, they're embarrassing and easy. Then do the Times tab projection and Fuel tab meal timing — those are the two features that would most change the daily experience. Everything else is additive. The dryland engine is already competitive. The app's credibility gap is in the areas where athletes spend the most daily energy outside the gym: eating and knowing exactly how far they are from their standard.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
