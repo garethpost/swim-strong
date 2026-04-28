@@ -4204,63 +4204,256 @@ const COACH_TAGS=[
   {id:'great',label:'Strong swim'},
 ];
 
-// Warm-up sets by event type and session
+// ── Meet Intelligence Engine ──
+// Analyses all past race logs to build a swimmer profile for a given event
+function getMeetIntelligence(event){
+  const tSec=t=>{if(!t||t==='—')return null;const p=String(t).split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);};
+
+  // Get all logged results for this event across all meets
+  const eventRaces=S.meetRaces.filter(r=>r.event===event);
+  const eventLogs=S.meetRaceLog.filter(l=>{
+    const race=eventRaces.find(r=>String(r.id)===String(l.raceId));
+    return !!race;
+  }).map(l=>{
+    const race=eventRaces.find(r=>String(r.id)===String(l.raceId));
+    const seedSec=tSec(race?.seedTime);
+    const resultSec=tSec(l.time);
+    const delta=(seedSec&&resultSec)?resultSec-seedSec:null;
+    return{...l,race,seedSec,resultSec,delta};
+  }).filter(l=>l.resultSec);
+
+  if(!eventLogs.length)return null;
+
+  // ── Tag frequency analysis ──
+  const tagCounts={};
+  eventLogs.forEach(l=>(l.coachTags||[]).forEach(t=>{tagCounts[t]=(tagCounts[t]||0)+1;}));
+  const totalRaces=eventLogs.length;
+  // Tags that appear in >40% of races are "persistent issues"
+  const persistentIssues=Object.entries(tagCounts)
+    .filter(([,c])=>c/totalRaces>=0.4)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([tag,count])=>({tag,count,pct:Math.round(count/totalRaces*100)}));
+
+  // Tags that appear in >50% of races — "strengths" if tagged as 'great'
+  const isStrong=tagCounts['great']&&tagCounts['great']/totalRaces>=0.5;
+
+  // ── Performance trend ──
+  const deltas=eventLogs.filter(l=>l.delta!==null).map(l=>l.delta);
+  const avgDelta=deltas.length?deltas.reduce((a,b)=>a+b,0)/deltas.length:null;
+  const improving=deltas.length>=2&&deltas[deltas.length-1]<deltas[0];
+  const pbCount=deltas.filter(d=>d<0).length;
+  const underCount=deltas.filter(d=>d>1).length;
+
+  // ── Identify rough meets ──
+  // Group logs by meet — if >50% of a meet's results were slow, flag as rough meet
+  const meetGroups={};
+  eventLogs.forEach(l=>{
+    const mid=String(l.meetId);
+    if(!meetGroups[mid])meetGroups[mid]=[];
+    meetGroups[mid].push(l);
+  });
+  const roughMeets=Object.values(meetGroups).filter(logs=>{
+    const slowCount=logs.filter(l=>l.delta!==null&&l.delta>1).length;
+    return logs.length>=1&&slowCount/logs.length>=0.5;
+  }).length;
+  const lastMeetLogs=Object.values(meetGroups).pop()||[];
+  const lastMeetWasRough=lastMeetLogs.length>0&&lastMeetLogs.filter(l=>l.delta!==null&&l.delta>1).length/lastMeetLogs.length>=0.5;
+
+  // ── Best performance signature ──
+  const bestLog=eventLogs.filter(l=>l.delta!==null).sort((a,b)=>a.delta-b.delta)[0];
+  const bestTags=bestLog?(bestLog.coachTags||[]):[];
+
+  // ── Warm-up adjustments ──
+  const adjustments=[];
+
+  // Pacing issues → add split-aware cue and pace-builder set
+  if(tagCounts['pacing']&&tagCounts['pacing']/totalRaces>=0.4){
+    adjustments.push({
+      type:'pacing',
+      severity:tagCounts['pacing']/totalRaces,
+      warmupNote:'Pace-builder set added — you have a consistent pacing pattern to address.',
+      extraSet:{label:'Split-pace set',detail:`3 × 50 at exact goal split pace. Count your strokes per length — match your training number. This is not a race.`,time:'Integrated into warm-up'},
+      focusCue:'Know your 25m split before you race. Go out at that exact pace — not faster.',
+    });
+  }
+
+  // Turn issues → add turn-specific work
+  if(tagCounts['turn']&&tagCounts['turn']/totalRaces>=0.4){
+    adjustments.push({
+      type:'turn',
+      severity:tagCounts['turn']/totalRaces,
+      warmupNote:'Turn drills added — recurring feedback across your meets.',
+      extraSet:{label:'Turn activation',detail:`6 turns at race effort — flip, plant, explode. Focus on foot placement and streamline tightness. Do these in your warm-up, not right before the race.`,time:'Early in warm-up'},
+      focusCue:'Attack every wall. Your turn is a free speed opportunity — treat it that way.',
+    });
+  }
+
+  // Start issues → add block work
+  if(tagCounts['start']&&tagCounts['start']/totalRaces>=0.4){
+    adjustments.push({
+      type:'start',
+      severity:tagCounts['start']/totalRaces,
+      warmupNote:'Extra block starts added to warm-up.',
+      extraSet:{label:'Start practice',detail:`4 block starts — focus on reaction only, not speed. Load the block, breathe out, react to the beep. Entry angle flat.`,time:'After main warm-up'},
+      focusCue:'Reaction time is the only thing you control on the start. Breathe out before the set. Stay relaxed on the block.',
+    });
+  }
+
+  // Underwaters → add underwater work
+  if(tagCounts['underwaters']&&tagCounts['underwaters']/totalRaces>=0.4){
+    adjustments.push({
+      type:'underwaters',
+      severity:tagCounts['underwaters']/totalRaces,
+      warmupNote:'Underwater kick sets added — this is a recurring weakness.',
+      extraSet:{label:'Underwater practice',detail:`4 × 25 — max underwater distance off each wall. Count your kicks. Beat your last number by 1.`,time:'Kick set phase'},
+      focusCue:`Extend 2 more kicks off every wall today. Underwaters are the fastest part of any race.`,
+    });
+  }
+
+  // Last meet was rough → add extra activation and mental reset cue
+  if(lastMeetWasRough){
+    adjustments.push({
+      type:'rough_meet_recovery',
+      severity:1,
+      warmupNote:'Your last meet was below expectations — warm-up has extra CNS activation to get you fully primed.',
+      extraSet:{label:'High-intensity activation burst',detail:`2 × 25 ALL OUT — full sprint, full rest. Not a race, just a wake-up call to your nervous system. This resets the body after a slow meet.`,time:'Final phase before race'},
+      focusCue:`Forget the last meet. Your body is ready — one bad meet does not define your fitness. Focus only on the first 25m today.`,
+    });
+  }
+
+  // Consistently strong → reinforce the pattern
+  if(isStrong&&pbCount>=2){
+    adjustments.push({
+      type:'reinforce_strength',
+      severity:0,
+      warmupNote:`You've hit PBs in ${pbCount} of ${totalRaces} logged races — keep the pattern.`,
+      focusCue:`Your warm-up has been working. Trust it. Don't change anything today that you haven't done before.`,
+    });
+  }
+
+  return{
+    totalRaces,persistentIssues,avgDelta,improving,pbCount,underCount,
+    roughMeets,lastMeetWasRough,bestTags,adjustments,isStrong,
+    tagCounts,
+  };
+}
+
+// Generate a plain-English swimmer profile summary
+function getMeetInsightSummary(event){
+  const intel=getMeetIntelligence(event);
+  if(!intel||intel.totalRaces<2)return null;
+  const lines=[];
+  if(intel.avgDelta!==null){
+    const avg=intel.avgDelta.toFixed(2);
+    if(intel.avgDelta<-0.5)lines.push(`📈 Averaging ${Math.abs(avg)}s faster than seed across ${intel.totalRaces} races — you're racing into form.`);
+    else if(intel.avgDelta>1.5)lines.push(`⚠️ Averaging ${avg}s slower than seed — there's a consistent performance gap to close.`);
+    else lines.push(`✓ Racing close to seed time — consistent performer.`);
+  }
+  if(intel.persistentIssues.length){
+    const top=intel.persistentIssues.slice(0,2).map(i=>{
+      const label=COACH_TAGS.find(t=>t.id===i.tag)?.label||i.tag;
+      return`${label} (${i.pct}% of races)`;
+    });
+    lines.push(`🔧 Recurring feedback: ${top.join(' · ')}`);
+  }
+  if(intel.lastMeetWasRough)lines.push(`⚡ Last meet was below target — extra activation built into this warm-up.`);
+  if(intel.pbCount>=2)lines.push(`🔥 Hit PBs in ${intel.pbCount} of ${intel.totalRaces} logged races.`);
+  return lines;
+}
+
+// Warm-up sets by event type and session — intel-adaptive
 function getWarmupProtocol(event,session,pool){
   const isSprint=event.startsWith('50')||event.startsWith('100');
   const isMid=event.startsWith('200');
   const isDist=event.startsWith('400')||event.startsWith('800')||event.startsWith('1500');
   const isIM=event.includes('IM');
   const poolLen=pool==='lcm'?50:25;
-  const u=poolLen==='lcm'?'m':'m'; // always metres
+
+  // Pull intelligence for this event
+  const intel=getMeetIntelligence(event);
+  const adjustments=intel?intel.adjustments:[];
+  const lastMeetRough=intel?intel.lastMeetWasRough:false;
+
+  // Helper to inject extra sets from adjustments
+  const extraSets=adjustments.filter(a=>a.extraSet).map(a=>({
+    ...a.extraSet,
+    adapted:true,
+    adapterNote:a.warmupNote,
+  }));
+
+  // Focus cues to append to the get-out step
+  const focusCues=adjustments.filter(a=>a.focusCue).map(a=>a.focusCue);
+  const focusCueText=focusCues.length?` — Today: ${focusCues[0]}`:'';
+
+  // Intel badge for the warm-up header
+  const intelNote=intel&&intel.totalRaces>=2?(
+    lastMeetRough?'⚡ Adapted for last meet performance':'✓ Personalised from your race history'
+  ):null;
+
+  let base=[];
 
   if(session==='prelims'||session==='only'){
     if(isSprint){
-      return[
-        {label:'Easy swim — loosen up',detail:`${poolLen*8} ${u} easy choice of stroke. No pressure, just move.`,time:'20 min before'},
+      base=[
+        {label:'Easy swim — loosen up',detail:`${poolLen*8}m easy choice of stroke. No pressure, just move.`,time:'20 min before'},
         {label:'Build swims',detail:`4 × ${poolLen} — each one faster. Last one at 90% effort. 20s rest.`,time:'15 min before'},
         {label:'Kick set',detail:`4 × ${poolLen} kick on back — moderate effort. Stay long and relaxed.`,time:'12 min before'},
-        {label:'Race-pace bursts',detail:`3 × ${poolLen} at full race pace. Full recovery between each. This is not a race — you are waking the CNS up.`,time:'10 min before'},
-        {label:'Dive practice',detail:`2 starts off the blocks — focus on reaction and entry angle only.`,time:'8 min before'},
-        {label:'Get out — race prep',detail:`Dry off, change, stay warm. Shake out legs and arms. Mental rehearsal of your race plan.`,time:'6 min before'},
+        ...extraSets,
+        {label:'Race-pace bursts',detail:`${lastMeetRough?4:3} × ${poolLen} at full race pace. Full recovery between each.${lastMeetRough?' Extra rep added — your CNS needs a stronger wake-up call today.':''}`,time:'10 min before'},
+        {label:'Dive practice',detail:`${adjustments.find(a=>a.type==='start')?4:2} starts off the blocks — focus on reaction and entry angle only.`,time:'8 min before'},
+        {label:'Get out — race prep',detail:`Dry off, change, stay warm. Shake out legs and arms.${focusCueText}`,time:'6 min before'},
       ];
-    }
-    if(isMid){
-      return[
-        {label:'Easy swim',detail:`${poolLen*10} ${u} easy freestyle or choice. Settle breathing.`,time:'25 min before'},
-        {label:'Pull set',detail:`${poolLen*6} ${u} pull with buoy — focus on high elbow catch and long stroke.`,time:'18 min before'},
+    } else if(isMid){
+      base=[
+        {label:'Easy swim',detail:`${poolLen*10}m easy freestyle or choice. Settle breathing.`,time:'25 min before'},
+        {label:'Pull set',detail:`${poolLen*6}m pull with buoy — focus on high elbow catch and long stroke.`,time:'18 min before'},
         {label:'Kick set',detail:`4 × ${poolLen} kick — build effort each length.`,time:'14 min before'},
+        ...extraSets,
         {label:'Descend set',detail:`4 × ${poolLen*2} descending — start at 70%, finish at 95%. Full rest.`,time:'11 min before'},
         {label:'Race-pace strokes',detail:`2 × ${poolLen} at your goal race pace. One full minute rest between.`,time:'7 min before'},
-        {label:'Get out — race prep',detail:`Warm clothes on. Visualise your first 50, your turn, your back half. Know your split targets.`,time:'5 min before'},
+        {label:'Get out — race prep',detail:`Warm clothes on. Visualise your first 50, your turn, your back half.${focusCueText}`,time:'5 min before'},
       ];
-    }
-    if(isDist){
-      return[
-        {label:'Easy aerobic swim',detail:`${poolLen*16} ${u} easy. No urgency. Build body temperature.`,time:'35 min before'},
-        {label:'Pull set',detail:`${poolLen*8} ${u} pull — breathe every 3, high catch, controlled.`,time:'24 min before'},
+    } else if(isDist){
+      base=[
+        {label:'Easy aerobic swim',detail:`${poolLen*16}m easy. No urgency. Build body temperature.`,time:'35 min before'},
+        {label:'Pull set',detail:`${poolLen*8}m pull — breathe every 3, high catch, controlled.`,time:'24 min before'},
+        ...extraSets,
         {label:'Pace work',detail:`4 × ${poolLen*2} at your goal race pace per 100. Exactly. 30s rest.`,time:'17 min before'},
         {label:'Race-pace burst',detail:`1 × ${poolLen*2} at slightly faster than race pace. One effort. Done.`,time:'10 min before'},
-        {label:'Get out — race prep',detail:`Hydrate now — 250ml water. Mental run-through of your pacing plan. Know your 100 splits cold.`,time:'7 min before'},
+        {label:'Get out — race prep',detail:`Hydrate now — 250ml water. Mental run-through of your pacing plan. Know your 100 splits cold.${focusCueText}`,time:'7 min before'},
       ];
-    }
-    if(isIM){
-      return[
-        {label:'Easy swim',detail:`${poolLen*8} ${u} easy. Choice of stroke.`,time:'25 min before'},
-        {label:'IM drill set',detail:`${poolLen*8} ${u} IM — 2 lengths each stroke, focus on transitions.`,time:'18 min before'},
+    } else if(isIM){
+      base=[
+        {label:'Easy swim',detail:`${poolLen*8}m easy. Choice of stroke.`,time:'25 min before'},
+        {label:'IM drill set',detail:`${poolLen*8}m IM — 2 lengths each stroke, focus on transitions.`,time:'18 min before'},
         {label:'Kick set',detail:`4 × ${poolLen} kick — one each stroke in IM order.`,time:'13 min before'},
+        ...extraSets,
         {label:'Race-pace IM',detail:`2 × ${poolLen*2} IM at race pace. Focus on your weakest stroke transition.`,time:'9 min before'},
-        {label:'Get out — race prep',detail:`Know your order: Fly / Back / Breast / Free. Visualise each stroke transition.`,time:'6 min before'},
+        {label:'Get out — race prep',detail:`Know your order: Fly / Back / Breast / Free. Visualise each stroke transition.${focusCueText}`,time:'6 min before'},
+      ];
+    } else {
+      base=[
+        {label:'Easy swim',detail:`${poolLen*8}m easy.`,time:'20 min before'},
+        ...extraSets,
+        {label:'Build set',detail:`4 × ${poolLen} building effort.`,time:'12 min before'},
+        {label:'Get out — race prep',detail:`Stay warm.${focusCueText}`,time:'6 min before'},
       ];
     }
+  } else {
+    // Finals warm-up — shorter, sharper
+    const roughExtra=lastMeetRough?[{label:'Rough meet reset',detail:`2 × ${poolLen} ALL OUT before your race-pace work. Pure CNS activation. One bad meet does not define your fitness.`,time:'15 min before',adapted:true,adapterNote:'Added: last meet was below target.'}]:[];
+    base=[
+      {label:'Activation swim',detail:`${poolLen*4}m easy — body is already primed from prelims. Just wake it up.`,time:'18 min before'},
+      ...roughExtra,
+      {label:'Race-pace strokes',detail:`${isSprint?3:2} × ${poolLen} at race pace or faster. Full recovery. CNS activation only.`,time:'13 min before'},
+      {label:'One quality effort',detail:`1 × ${isSprint?poolLen:poolLen*2} at 95%+ effort. Signal to your body that it is time.`,time:'9 min before'},
+      {label:'Get out — finals mode',detail:`Trust the prelim swim. Fix one thing.${focusCueText}`,time:'6 min before'},
+    ];
   }
 
-  // Finals warm-up — shorter, sharper, activated
-  return[
-    {label:'Activation swim',detail:`${poolLen*4} ${u} easy — body is already primed from prelims. Just wake it up.`,time:'18 min before'},
-    {label:'Race-pace strokes',detail:`${isSprint?3:2} × ${poolLen} at race pace or faster. Full recovery. CNS activation only.`,time:'13 min before'},
-    {label:'One quality effort',detail:`1 × ${isSprint?poolLen:poolLen*2} at 95%+ effort. This is your signal to your body that it is time.`,time:'9 min before'},
-    {label:'Get out — finals mode',detail:`Less warm-up is more for finals. Trust the prelim swim. Fix one thing your coach identified.`,time:'6 min before'},
-  ];
+  // Attach intel note to first set if we have history
+  if(intelNote&&base.length)base[0].intelNote=intelNote;
+  return base;
 }
 
 // Rest protocol between prelims and finals based on gap
@@ -4379,15 +4572,26 @@ function renderMeetDayBanner(){
     }
 
     const warmup=getWarmupProtocol(race.event,race.session,race.pool||'lcm');
-    const warmupHtml=`<details style="margin-top:8px;"><summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol</summary>
+    const hasIntel=warmup.some(s=>s.intelNote||s.adapted);
+    const intelBadge=hasIntel?`<span style="font-size:9px;font-weight:800;letter-spacing:.5px;background:linear-gradient(90deg,var(--accent),#7b61ff);color:#fff;padding:2px 7px;border-radius:20px;margin-left:6px;">AI ADAPTED</span>`:'';
+    const warmupHtml=`<details style="margin-top:8px;"><summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol${intelBadge}</summary>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
-        ${warmup.map(s=>`<div style="padding:8px 10px;background:var(--surface);border-radius:8px;border-left:2px solid ${sessionColor};">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text);">${s.label}</div>
-            <div style="font-size:10px;color:var(--muted);">${s.time}</div>
-          </div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.5;">${s.detail}</div>
-        </div>`).join('')}
+        ${warmup.map((s,i)=>{
+          const borderColor=s.adapted?'var(--accent)':sessionColor;
+          const bg=s.adapted?'rgba(0,198,255,0.06)':'var(--surface)';
+          const adaptedTag=s.adapted?`<span style="font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.4px;background:rgba(0,198,255,0.12);padding:1px 6px;border-radius:10px;margin-left:6px;">ADAPTED FOR YOU</span>`:'';
+          const intelNote=s.intelNote?`<div style="font-size:10px;color:var(--accent);margin-top:5px;padding:5px 8px;background:rgba(0,198,255,0.08);border-radius:6px;line-height:1.5;">🧠 ${s.intelNote}</div>`:'';
+          const adapterNote=s.adapterNote?`<div style="font-size:10px;color:var(--accent);margin-top:4px;font-style:italic;opacity:.85;">↳ ${s.adapterNote}</div>`:'';
+          const focusCue=s.focusCueText?`<div style="margin-top:6px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);font-size:10px;color:var(--gold);line-height:1.5;">🎯 ${s.focusCueText}</div>`:'';
+          return`<div style="padding:8px 10px;background:${bg};border-radius:8px;border-left:2px solid ${borderColor};">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><span style="font-size:11px;font-weight:700;color:var(--text);">${s.label}</span>${adaptedTag}</div>
+              <div style="font-size:10px;color:var(--muted);white-space:nowrap;margin-left:8px;">${s.time}</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">${s.detail}</div>
+            ${intelNote}${adapterNote}${focusCue}
+          </div>`;
+        }).join('')}
       </div></details>`;
 
     // If finals and prelim was logged — show rest protocol
