@@ -191,6 +191,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
               <button onclick="adjustKm(-1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:22px;font-weight:700;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
             </div>
           </div>
+          <!-- Season target progress -->
+          <div style="margin-top:10px;">
+            <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;">
+              <div id="km-season-bar" style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);" id="km-season-label">—</div>
+          </div>
           <div id="km-input-row" style="display:none;margin-top:10px;gap:8px;align-items:center;">
             <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
             <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
@@ -236,6 +243,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div class="card-title" style="margin-bottom:0;">Rest Timer</div>
             <div id="notif-status" style="font-size:10px;color:var(--muted);"></div>
+          </div>
+          <div id="notif-explain" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-radius:8px;padding:9px 11px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.5;">
+            🔔 <strong style="color:var(--text);">Enable background alerts</strong> so the timer can ping you when rest is up — even if your phone screen is off.<br>
+            <button onclick="requestNotifPermission()" style="margin-top:6px;padding:5px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-size:12px;font-weight:700;cursor:pointer;">Enable Notifications</button>
           </div>
           <div class="timer-display" id="timer-display">1:30</div>
           <div class="timer-controls">
@@ -358,25 +369,30 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Calories update daily based on your schedule. Re-enter height &amp; weight when prompted to keep the calculation sharp.</p>
         <button class="btn btn-primary" onclick="calcNutrition()">Save &amp; Recalculate</button>
       </div>
-      <div class="card">
-        <div class="card-title">Meal Timing</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.9;">
-          <p>🕐 <b style="color:var(--text)">Pre-swim 2h</b> — Complex carbs + moderate protein. No heavy fat.</p>
-          <p>⚡ <b style="color:var(--text)">Post-swim 30min</b> — Fast carbs + protein. Non-negotiable window.</p>
-          <p>🏋️ <b style="color:var(--text)">Pre-dryland 1h</b> — Light carbs only. Empty stomach kills power output.</p>
-          <p>💪 <b style="color:var(--text)">Post-dryland 45min</b> — 40g+ protein + carbs to refuel glycogen.</p>
-          <p>🌙 <b style="color:var(--text)">Before bed</b> — Casein protein. Cottage cheese, Greek yogurt.</p>
-        </div>
-      </div>
     </div>
 
     <!-- MORE -->
     <div id="section-more" class="section">
       <p class="section-title">More</p>
+
+      <!-- ── PROFILE ── -->
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:4px 2px 6px;">Profile</div>
       <div class="card">
-        <div class="card-title">Session History</div>
-        <div id="history-list"><div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div></div>
+        <div class="card-title">Athlete Profile</div>
+        <div id="profile-display" style="margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
+          <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
+        </div>
+        <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
+        <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
+          <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
+        </div>
       </div>
+
+      <!-- ── PROGRAM ── -->
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:12px 2px 6px;">Program</div>
       <div class="card">
         <div class="card-title">Program Progress</div>
         <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
@@ -399,20 +415,35 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div class="card">
-        <div class="card-title">Athlete Profile</div>
-        <div id="profile-display" style="margin-bottom:12px;"></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
-          <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
+        <div class="card-title">Season Distance Target</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your season volume goal. The home km tracker will show progress against this target.</p>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <input type="number" id="km-target-input" min="50" max="2000" step="50" placeholder="500"
+            style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-family:var(--font);"
+            value="" oninput="updateKmTarget()">
+          <div style="font-size:14px;font-weight:700;color:var(--muted);" id="km-target-unit-label">km</div>
         </div>
-        <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
-        <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
-          <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
-        </div>
+        <div style="font-size:11px;color:var(--muted);" id="km-target-status"></div>
       </div>
       <div class="card">
-        <div class="card-title">Settings</div>
+        <div class="card-title">Session History</div>
+        <div id="history-list"><div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Check-In History</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">30-day sleep &amp; readiness trend. Use this to spot patterns before they hit your performance.</p>
+        <div id="checkin-chart" style="width:100%;height:120px;position:relative;"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--accent);border-radius:2px;"></div>Sleep (h)</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--green);border-radius:2px;"></div>Readiness (/5)</div>
+        </div>
+        <div id="checkin-history-stats" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;"></div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:12px 2px 6px;">Settings</div>
+      <div class="card">
+        <div class="card-title">Units</div>
         <!-- Weight units -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
           <div>
@@ -428,7 +459,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
           <div>
             <div style="font-size:14px;font-weight:600;">Distance</div>
-            <div style="font-size:12px;color:var(--muted);">Season km tracker</div>
+            <div style="font-size:12px;color:var(--muted);">Season tracker</div>
           </div>
           <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
             <button id="dist-km" onclick="setDistUnit(true)" style="padding:7px 16px;font-size:13px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;">km</button>
@@ -436,16 +467,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">Check-In History</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">30-day sleep &amp; readiness trend. Use this to spot patterns before they hit your performance.</p>
-        <div id="checkin-chart" style="width:100%;height:120px;position:relative;"></div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;">
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--accent);border-radius:2px;"></div>Sleep (h)</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><div style="width:10px;height:3px;background:var(--green);border-radius:2px;"></div>Readiness (/5)</div>
-        </div>
-        <div id="checkin-history-stats" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;"></div>
-      </div>
+
+      <!-- ── DATA ── -->
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:12px 2px 6px;">Data</div>
       <div class="card">
         <div class="card-title">Backup & Restore</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export all your data — times, workouts, weight logs, schedule — as a backup file. If you ever clear Safari or get a new phone, restore it in one tap.</p>
@@ -544,6 +568,21 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 
 <!-- MODALS -->
+<div class="modal-overlay" id="session-summary-modal"><div class="modal"><div class="modal-handle"></div>
+<div style="text-align:center;margin-bottom:16px;">
+  <div style="font-size:40px;margin-bottom:6px;">✅</div>
+  <h3 style="font-size:19px;font-weight:800;margin-bottom:4px;">Session Complete</h3>
+  <div id="ss-subtitle" style="font-size:12px;color:var(--muted);"></div>
+</div>
+<div id="ss-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;"></div>
+<div style="margin-bottom:16px;">
+  <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">How hard was that? (Session RPE)</div>
+  <div style="display:flex;gap:4px;" id="rpe-btns"></div>
+  <div id="rpe-desc" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center;min-height:16px;"></div>
+</div>
+<button class="btn btn-primary" onclick="confirmSession()">Log Session →</button>
+<button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-summary-modal')">Keep editing</button>
+</div></div>
 <div class="modal-overlay" id="ex-modal"><div class="modal"><div class="modal-handle"></div><h3 id="ex-modal-title" style="font-size:17px;margin-bottom:8px;"></h3><p id="ex-modal-desc" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;"></p><p id="ex-modal-cue" style="font-size:13px;color:var(--accent);"></p><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('ex-modal')">Close</button></div></div></div>
 <div class="modal-overlay" id="picker-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')">Cancel</button></div></div></div>
 <div class="modal-overlay" id="day-modal"><div class="modal"><div class="modal-handle"></div>
@@ -575,7 +614,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <button class="btn btn-primary" style="flex:1" onclick="saveProfile(false)">Save</button>
   <button class="btn-ghost" style="flex:1" onclick="closeModal('profile-modal')">Cancel</button>
 </div></div></div>
-<div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add PB Entry</h3><div class="form-row"><label>Event</label><select id="at-event"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-grid-2"><div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div><div class="form-row"><label>Course</label><select id="at-course"><option value="scm">SCM (25m pool)</option><option value="lcm">LCM (50m pool)</option></select></div></div><div class="form-row"><label>Time (mm:ss.00 or ss.00)</label><input type="text" id="at-time" placeholder="24.50"></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save PB</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
+<div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:12px;">Add PB Entry</h3><div class="form-row"><label>Event</label><select id="at-event" onchange="updateSplitField()"></select></div><div class="form-row"><label>Meet Name</label><input type="text" id="at-meet" placeholder="AB Provincials"></div><div class="form-grid-2"><div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div><div class="form-row"><label>Course</label><select id="at-course"><option value="scm">SCM (25m pool)</option><option value="lcm">LCM (50m pool)</option></select></div></div><div class="form-row"><label>Time (mm:ss.00 or ss.00)</label><input type="text" id="at-time" placeholder="24.50"></div><div id="at-split-row" style="display:none;" class="form-row"><label id="at-split-label">50m Split (optional)</label><input type="text" id="at-split" placeholder="e.g. 27.40" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div><div style="display:flex;gap:8px;margin-top:4px;"><button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save PB</button><button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button></div></div></div>
 <script>
 const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
@@ -753,6 +792,9 @@ let S={
   editSel:{},
   activeTStroke:'50 Free',
   timerSecs:90,timerRunning:false,timerInterval:null,
+  hydrationLog:DB.get('hydrationLog',{}), // {YYYY-MM-DD: count}
+  seasonKmTarget:DB.get('seasonKmTarget',500), // km target for the season
+  sessionRPELog:DB.get('sessionRPELog',[]), // [{date,rpe,load}]
 };
 
 // Units
@@ -1046,6 +1088,14 @@ function renderKmTracker(){
       lbl.textContent='tap + to log today\'s distance';
     }
   }
+  // Season target progress bar
+  const targetKm=S.seasonKmTarget||500;
+  const targetDisp=S.useKm?targetKm:(targetKm*0.621371).toFixed(0);
+  const pct=Math.min(100,(total/targetKm)*100);
+  const pbEl=document.getElementById('km-season-bar');
+  const pbLbl=document.getElementById('km-season-label');
+  if(pbEl)pbEl.style.width=pct.toFixed(1)+'%';
+  if(pbLbl)pbLbl.textContent=`${disp} / ${targetDisp} ${unit} (${pct.toFixed(0)}% of season target)`;
   // Hide input row initially
   const ir=document.getElementById('km-input-row');
   if(ir)ir.style.display='none';
@@ -1665,7 +1715,7 @@ function renderWorkoutTab(){
         ${goalsDisplay}
       </div>
       <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Preview any workout type</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Override today's type</button>
       <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
   }
   el.innerHTML=toggleHtml+modeHtml;
@@ -1774,6 +1824,11 @@ function forceWorkout(t){closeModal('picker-modal');S.currentWorkout=S.workoutMo
 function renderWorkout(w){
   const subEl=document.getElementById('workout-subtitle');if(subEl)subEl.textContent=w.subtitle;
   let html=`<span class="phase-badge ${w.phase.cls}">${w.phase.name} Phase</span>`;
+  // Long-term goal motivational tag
+  const ltGoals=S.profile&&S.profile.longTermGoals&&S.profile.longTermGoals.length?S.profile.longTermGoals:[];
+  const GOAL_TAGS={'Make the Olympic team':'🏅 Olympic pathway','Earn a US college scholarship':'🎓 Scholarship track','Represent Canada internationally':'🍁 Team Canada pathway','Qualify for Canadian Trials':'🍁 Trials track','Qualify for Canadian Nationals':'🇨🇦 Nationals track','Make Team Alberta':'🏊 Team Alberta track','Make Provincial Championships':'🏅 Provincials track'};
+  const goalTag=ltGoals.map(g=>GOAL_TAGS[g]).filter(Boolean)[0];
+  if(goalTag)html+=`<div style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.35);color:#f5c842;margin-left:6px;vertical-align:middle;">${goalTag}</div>`;
   if(w.taperNote)html+=`<div class="alert-banner alert-taper">⚡ ${w.taperNote}</div>`;
   if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Goal Program: ${w.goals.slice(0,2).join(' · ')}</div>`;
   else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Adaptive focus: ${w.emp==='fly'?'Butterfly pull & power — closing gap to trials':'Freestyle speed — closing gap to trials'}</div>`;
@@ -1788,9 +1843,13 @@ function renderWorkout(w){
   document.getElementById('workout-actions').style.display='block';
 }
 
+const RPE_DESC=['','😴 Very Easy — barely moved','😌 Easy — warm-up level','🙂 Moderate — comfortable effort','💪 Somewhat Hard — working','😤 Hard — pushing through','😤 Hard+','😰 Very Hard — major effort','😰 Very Hard+','💀 Near Max — close to limit','🔥 Max Effort — left nothing'];
+let _pendingRPE=5;
+
 function finishWorkout(){
   if(!S.currentWorkout)return;
   const w=S.currentWorkout;
+  // Save weighted set logs immediately
   w.blocks.forEach((block,bi)=>{
     block.exercises.forEach((ex,ei)=>{
       if(!ex.weighted)return;
@@ -1803,21 +1862,66 @@ function finishWorkout(){
       if(sets.some(s=>s.weight>0||s.reps))saveLog(ex.name,sets);
     });
   });
-  const total=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
-  if(!confirm(`Log session? ${Object.keys(completedSets).length} sets completed.`))return;
-  S.history.push({...w,date:new Date().toISOString()});DB.set('history',S.history);
+  // Build summary modal
+  const setsCompleted=Object.keys(completedSets).length;
+  const totalSets=w.blocks.reduce((a,b)=>a+b.exercises.reduce((x,e)=>{const ns=e.sets||w.scheme.sets;return x+ns;},0),0);
+  const exCount=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
+  document.getElementById('ss-subtitle').textContent=`${w.phase.name} · ${w.load?.label||'—'} · ${w.title}`;
+  document.getElementById('ss-stats').innerHTML=`
+    <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:22px;font-weight:800;color:var(--green);">${setsCompleted}</div>
+      <div style="font-size:10px;color:var(--muted);">Sets Done</div>
+    </div>
+    <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:22px;font-weight:800;color:var(--accent);">${exCount}</div>
+      <div style="font-size:10px;color:var(--muted);">Exercises</div>
+    </div>
+    <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:22px;font-weight:800;color:var(--purple);">${Math.round((setsCompleted/Math.max(1,totalSets))*100)}%</div>
+      <div style="font-size:10px;color:var(--muted);">Complete</div>
+    </div>`;
+  // RPE buttons
+  _pendingRPE=6;
+  document.getElementById('rpe-btns').innerHTML=Array.from({length:10},(_,i)=>i+1).map(n=>`
+    <button onclick="setRPE(${n})" id="rpe-${n}" style="flex:1;padding:8px 0;border-radius:8px;border:2px solid ${n===_pendingRPE?'var(--accent)':'var(--border)'};background:${n===_pendingRPE?'rgba(0,198,255,0.15)':'var(--surface)'};color:${n===_pendingRPE?'var(--accent)':'var(--muted)'};font-size:13px;font-weight:800;cursor:pointer;">${n}</button>`).join('');
+  document.getElementById('rpe-desc').textContent=RPE_DESC[_pendingRPE]||'';
+  openModal('session-summary-modal');
+}
+function setRPE(n){
+  _pendingRPE=n;
+  document.querySelectorAll('#rpe-btns button').forEach((btn,i)=>{
+    const active=(i+1)===n;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(0,198,255,0.15)':'var(--surface)';
+    btn.style.color=active?'var(--accent)':'var(--muted)';
+  });
+  document.getElementById('rpe-desc').textContent=RPE_DESC[n]||'';
+}
+function confirmSession(){
+  closeModal('session-summary-modal');
+  const w=S.currentWorkout;
+  const rpe=_pendingRPE;
+  // Estimate session duration from block count (~8min per exercise average)
+  const exCount=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
+  const durationMin=Math.round(exCount*8);
+  const load=rpe*durationMin; // arbitrary training load units (like session RPE × duration)
+  // Save RPE to session RPE log
+  S.sessionRPELog.push({date:new Date().toISOString(),rpe,load,phase:w.phase.name,title:w.title});
+  if(S.sessionRPELog.length>60)S.sessionRPELog=S.sessionRPELog.slice(-60);
+  DB.set('sessionRPELog',S.sessionRPELog);
+  // Save session to history (with rpe)
+  S.history.push({...w,date:new Date().toISOString(),rpe});DB.set('history',S.history);
   if(S.history.length%3===0){
     S.programWeek++;
     if(S.programWeek>16){
       S.programWeek=1;
       S.programCycle=(S.programCycle||1)+1;
       DB.set('programCycle',S.programCycle);
-      alert(`🏆 Cycle ${S.programCycle-1} complete! Starting Cycle ${S.programCycle} — the program is now harder.`);
     }
     DB.set('programWeek',S.programWeek);
   }
   S.currentWorkout=null;completedSets={};
-  document.getElementById('workout-content').innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Session logged.</p></div>';
+  document.getElementById('workout-content').innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Session logged. Rest up.</p></div>';
   document.getElementById('workout-actions').style.display='none';
   showSection('home');renderHome();
 }
@@ -1938,9 +2042,10 @@ function renderTimesContent(){
     const tgt=isLcm?tgtLCM:tgtSCM;
     const g=tgt&&time?gapSec(time,tgt):null;
     const gPill=tgt?`<span class="gap-pill ${gapClass(g)}" style="font-size:9px;margin-left:4px;">${gapLabel(g,tgt)}</span>`:'';
+    const splitStr=e.split?`<div style="font-size:10px;color:var(--muted);margin-top:1px;">${SPLIT_EVENTS[ev]||'Split'}: ${e.split}</div>`:'';
     return`<div class="time-entry-row">
       <div class="time-entry-date">${d}</div>
-      <div class="time-entry-meet" style="flex:1;">${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}</div>
+      <div class="time-entry-meet" style="flex:1;"><div>${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}</div>${splitStr}</div>
       <div style="font-size:10px;font-weight:700;color:${col};min-width:30px;text-align:center;">${course}</div>
       <div style="font-size:14px;font-weight:800;color:${col};min-width:50px;text-align:right;">${time}</div>
       <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;" onclick="delTime('${esc(ev)}',${hist.length-1-ri})">✕</button>
@@ -1952,20 +2057,78 @@ function renderTimesContent(){
     const iL=tSec(first.lcm)-tSec(last2.lcm);
     const mo=Math.max(1,Math.round((new Date(last2.date)-new Date(first.date))/2592000000));
     const rate=iL/mo;
+    // ── Race Projection — connect gap to meet calendar ──
+    const today=new Date();today.setHours(0,0,0,0);
+    const upcomingMeets=S.meets.filter(m=>{try{return localDate(m.date)>=today;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date));
+    const targetMeet=upcomingMeets[0];
+    let projHtml='';
+    if(gapLCM!==null&&gapLCM<=0){
+      projHtml=`<div style="background:rgba(0,230,118,0.1);border:1px solid var(--green);border-radius:10px;padding:12px 14px;margin-top:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px;">✓ Standard Already Met!</div>
+        <div style="font-size:12px;color:var(--muted);">You have already qualified for ${stdLabel}. Consider stepping up to the next standard.</div>
+      </div>`;
+    } else if(gapLCM!==null&&gapLCM>0&&rate>0&&targetMeet){
+      const monthsNeeded=gapLCM/rate;
+      const meetDate=localDate(targetMeet.date);
+      const monthsToMeet=Math.max(0,(meetDate-today)/2592000000);
+      const projectedGap=gapLCM-(rate*monthsToMeet);
+      const onTrack=projectedGap<=0;
+      const needPerMonth=onTrack?0:projectedGap/Math.max(0.5,monthsToMeet);
+      let verdict,verdictColor,verdictBg;
+      if(onTrack){
+        const cushionSec=Math.abs(projectedGap);
+        verdict=`On track ✓ — projected to qualify with <b style="color:var(--green)">${cushionSec.toFixed(2)}s to spare</b> at ${targetMeet.name}`;
+        verdictColor='var(--green)';verdictBg='rgba(0,230,118,0.08)';
+      } else if(needPerMonth<0.1){
+        verdict=`Very close — need <b style="color:var(--orange)">${(needPerMonth*100).toFixed(1)}ms more/month</b> to qualify by ${targetMeet.name}`;
+        verdictColor='var(--orange)';verdictBg='rgba(255,152,0,0.08)';
+      } else {
+        verdict=`Need to find <b style="color:var(--red)">${needPerMonth.toFixed(2)}s more/month</b> to qualify by ${targetMeet.name}`;
+        verdictColor='var(--red)';verdictBg='rgba(255,82,82,0.08)';
+      }
+      projHtml=`<div style="background:${verdictBg};border:1px solid ${verdictColor};border-radius:10px;padding:12px 14px;margin-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:${verdictColor};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Race Projection → ${targetMeet.name}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">${verdict}</div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted);">Gap now</div>
+            <div style="font-size:16px;font-weight:800;color:var(--red);">+${gapLCM.toFixed(2)}s</div>
+          </div>
+          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:var(--muted);">At meet (projected)</div>
+            <div style="font-size:16px;font-weight:800;color:${onTrack?'var(--green)':'var(--orange)'};">${onTrack?'-':'+'+(Math.abs(projectedGap).toFixed(2)+'s')}</div>
+          </div>
+        </div>
+      </div>`;
+    } else if(gapLCM!==null&&gapLCM>0&&rate>0){
+      const moNeeded=Math.ceil(gapLCM/rate);
+      projHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:10px;">
+        <div style="font-size:12px;color:var(--muted);">🎯 At current rate: ${stdLabel} in ~<b style="color:var(--gold);">${moNeeded} month${moNeeded!==1?'s':''}</b>. Add a target meet in Schedule to see race projection.</div>
+      </div>`;
+    }
     html+=`<div class="card"><div class="card-title">LCM Analysis</div><div style="font-size:13px;color:var(--muted);line-height:1.9;">
-      ${iL>0?`<p>📉 Dropped <b style="color:var(--green)">${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} · ${rate.toFixed(2)}s/mo</p>`:'<p>📊 Add more entries to see improvement rate.</p>'}
-      ${gapLCM&&gapLCM>0&&rate>0?`<p>🎯 ${stdLabel} cut in ~<b style="color:var(--gold)">${Math.ceil(gapLCM/rate)} months</b> at this rate</p>`:''}
-      ${gapLCM!==null&&gapLCM<=0?`<p style="color:var(--green);">✓ Already qualified for ${stdLabel}!</p>`:''}
-    </div></div>`;
+      ${iL>0?`<p>📉 Dropped <b style="color:var(--green)">${iL.toFixed(2)}s</b> over ${mo} month${mo!==1?'s':''} · <b style="color:var(--accent);">${rate.toFixed(2)}s/mo</b></p>`:'<p>📊 Add more entries to see improvement rate.</p>'}
+    </div>${projHtml}</div>`;
   }
   document.getElementById('times-content').innerHTML=html;
 }
 
+// Events that have meaningful splits (not 50s)
+const SPLIT_EVENTS={'100 Free':'50m split','200 Free':'100m split','400 Free':'200m split','100 Back':'50m split','200 Back':'100m split','100 Breast':'50m split','200 Breast':'100m split','100 Fly':'50m split','200 Fly':'100m split','200 IM':'100m split (first 2 strokes)','400 IM':'200m split'};
+function updateSplitField(){
+  const ev=document.getElementById('at-event').value;
+  const sr=document.getElementById('at-split-row');
+  const sl=document.getElementById('at-split-label');
+  if(SPLIT_EVENTS[ev]){sr.style.display='block';sl.textContent=SPLIT_EVENTS[ev]+' (optional)';}
+  else{sr.style.display='none';}
+}
 function openAddTime(ev){
   document.getElementById('at-event').innerHTML=ALL_EVENTS.map(e=>`<option value="${e}"${e===ev?' selected':''}>${e}</option>`).join('');
   document.getElementById('at-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('at-time').value='';document.getElementById('at-meet').value='';
   document.getElementById('at-course').value='lcm';
+  document.getElementById('at-split').value='';
+  updateSplitField();
   openModal('add-time-modal');
 }
 function saveTimeEntry(){
@@ -1974,10 +2137,12 @@ function saveTimeEntry(){
   const date=document.getElementById('at-date').value;
   const course=document.getElementById('at-course').value;
   const time=document.getElementById('at-time').value.trim();
+  const split=document.getElementById('at-split').value.trim();
   if(!date||!time)return alert('Enter a time and date.');
   if(!S.timeHistory[ev])S.timeHistory[ev]=[];
   const entry={date,meet,scm:'—',lcm:'—'};
   entry[course]=time;
+  if(split)entry.split=split;
   S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
   DB.set('timeHistory',S.timeHistory);closeModal('add-time-modal');S.activeTStroke=ev;renderStrokeTabs();renderTimesContent();
@@ -2690,9 +2855,21 @@ function makeInput(id,type,placeholder,extra){
   document.head.appendChild(style);
   return inp;
 }
+// ── Hydration tracking ──
+function logHydration(delta){
+  const today=dKey(new Date());
+  if(!S.hydrationLog[today])S.hydrationLog[today]=0;
+  S.hydrationLog[today]=Math.max(0,S.hydrationLog[today]+delta);
+  DB.set('hydrationLog',S.hydrationLog);
+  renderFuelTodayCard();
+}
+
 function renderFuelTodayCard(){
   const el=document.getElementById('fuel-today-card');if(!el)return;
   const data=getDailyCalFromSchedule();
+  const today=dKey(new Date());
+  const hydCount=S.hydrationLog[today]||0;
+
   if(!data){
     el.innerHTML=`<div class="card" style="text-align:center;padding:20px 16px;">
       <div style="font-size:28px;margin-bottom:6px;">🍽️</div>
@@ -2701,9 +2878,64 @@ function renderFuelTodayCard(){
     </div>`;
     return;
   }
-  const dl=data.swimCount>=2?'Double Day':data.swimCount>=1&&data.dryCount>=1?'Swim + Dryland':data.swimCount>=1?'Swim Day':data.dryCount>=1?'Dryland Day':'Rest Day';
-  const dlColor=data.swimCount>=2?'var(--orange)':data.swimCount>=1&&data.dryCount>=1?'var(--green)':data.swimCount>=1?'var(--accent)':data.dryCount>=1?'var(--purple)':'var(--muted)';
-  el.innerHTML=`<div class="card">
+
+  const isDouble=data.swimCount>=2||(data.swimCount>=1&&data.dryCount>=1);
+  const hasSwim=data.swimCount>=1;
+  const hasDry=data.dryCount>=1;
+  const dl=data.swimCount>=2?'Double Day':hasSwim&&hasDry?'Swim + Dryland':hasSwim?'Swim Day':hasDry?'Dryland Day':'Rest Day';
+  const dlColor=data.swimCount>=2?'var(--orange)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--muted)';
+
+  // Hydration target in 250ml cups
+  const waterMl=parseFloat(data.waterL)*1000;
+  const targetCups=Math.round(waterMl/250);
+  const hydPct=Math.min(100,Math.round((hydCount/Math.max(1,targetCups))*100));
+  const hydColor=hydPct>=100?'var(--green)':hydPct>=60?'var(--accent)':'var(--orange)';
+
+  // ── Meal timing cards ──
+  // Build schedule-aware windows
+  let mealRows=[];
+  if(hasSwim&&hasDry){
+    mealRows=[
+      {icon:'☀️',time:'Wake',label:'Morning fuel',detail:'Greek yogurt + banana + oats. Start the engine.',color:'var(--gold)'},
+      {icon:'🏊',time:'2h before swim',label:'Pre-swim meal',detail:'Complex carbs + moderate protein. No heavy fat. Pasta, rice, toast + eggs.',color:'var(--accent)'},
+      {icon:'⚡',time:'30min after swim',label:'Post-swim window',detail:'Fast carbs + protein. Non-negotiable. Chocolate milk, PB banana, protein shake + fruit.',color:'var(--green)'},
+      {icon:'🏋️',time:'1h before dryland',label:'Pre-dryland snack',detail:'Light carbs only. Banana or rice cake. Empty stomach kills power output.',color:'var(--orange)'},
+      {icon:'💪',time:'45min after dryland',label:'Post-dryland — critical',detail:'40g+ protein + carbs. Refuel glycogen. Chicken rice bowl, cottage cheese + berries, protein shake.',color:'var(--purple)'},
+      {icon:'🌙',time:'Before bed',label:'Recovery fuel',detail:'Casein protein. Cottage cheese, Greek yogurt. Overnight muscle synthesis.',color:'var(--muted)'},
+    ];
+  } else if(hasSwim){
+    mealRows=[
+      {icon:'🏊',time:'2h before swim',label:'Pre-swim meal',detail:'Complex carbs + moderate protein. No heavy fat. Pasta, rice, toast + eggs.',color:'var(--accent)'},
+      {icon:'⚡',time:'30min after swim',label:'Post-swim window',detail:'Fast carbs + protein. Non-negotiable. Chocolate milk, PB banana, protein shake + fruit.',color:'var(--green)'},
+      {icon:'🍽️',time:'Main meal',label:'Lunch / dinner',detail:'Protein + complex carbs + veg. Chicken, salmon, or eggs + rice or potato.',color:'var(--text)'},
+      {icon:'🌙',time:'Before bed',label:'Recovery fuel',detail:'Casein protein. Cottage cheese, Greek yogurt.',color:'var(--muted)'},
+    ];
+    if(isDouble)mealRows.splice(2,0,{icon:'⚡',time:'Between sessions',label:'Intra-session fuel',detail:'30–60g fast carbs. Banana, sports drink, energy bar. Double sessions need this bridge.',color:'var(--gold)'});
+  } else if(hasDry){
+    mealRows=[
+      {icon:'🏋️',time:'1h before dryland',label:'Pre-dryland snack',detail:'Light carbs only. Banana or rice cake. Empty stomach kills power output.',color:'var(--orange)'},
+      {icon:'💪',time:'45min after dryland',label:'Post-dryland — critical',detail:'40g+ protein + carbs. Refuel glycogen. Chicken rice bowl, cottage cheese + berries, protein shake.',color:'var(--purple)'},
+      {icon:'🍽️',time:'Meals',label:'Hit your targets',detail:`${data.carbs}g carbs · ${data.protein}g protein · ${data.fat}g fat across 3–4 meals.`,color:'var(--text)'},
+    ];
+  } else {
+    mealRows=[
+      {icon:'😴',time:'Rest day',label:'Eat to recover',detail:'Lower carbs, higher protein. Still hit your protein target — muscle repairs on rest days.',color:'var(--muted)'},
+      {icon:'🥩',time:'Protein priority',label:`${data.protein}g protein target`,detail:'Spread across 4 meals ~30g each. Body can only use ~30–40g per sitting.',color:'var(--accent)'},
+    ];
+  }
+
+  const mealHtml=mealRows.map(r=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:22px;flex-shrink:0;">${r.icon}</div>
+      <div style="flex:1;">
+        <div style="font-size:10px;color:${r.color};font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">${r.time}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:1px 0;">${r.label}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">${r.detail}</div>
+      </div>
+    </div>`).join('');
+
+  el.innerHTML=`
+  <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div class="card-title" style="margin-bottom:0;">Today's Fuel</div>
       <span style="font-size:11px;font-weight:700;color:${dlColor};background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px;">${dl}</span>
@@ -2715,10 +2947,26 @@ function renderFuelTodayCard(){
       <div class="macro-box"><div class="macro-val macro-prot">${data.protein}g</div><div class="macro-lbl">Protein</div></div>
       <div class="macro-box"><div class="macro-val macro-fat">${data.fat}g</div><div class="macro-lbl">Fat</div></div>
     </div>
-    <div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-      <div style="font-size:24px;">💧</div>
-      <div><div style="font-size:20px;font-weight:800;color:var(--accent);">${data.waterL}L</div><div style="font-size:11px;color:var(--muted);">Water today</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="card-title" style="margin-bottom:0;">💧 Hydration</div>
+      <span style="font-size:12px;font-weight:700;color:${hydColor};">${hydCount} / ${targetCups} cups (${data.waterL}L target)</span>
     </div>
+    <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;">
+      <div style="background:${hydColor};height:100%;width:${hydPct}%;border-radius:4px;transition:width 0.3s;"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="logHydration(1)" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(0,198,255,0.15);color:var(--accent);font-size:18px;font-weight:700;cursor:pointer;">+ 250ml</button>
+      <button onclick="logHydration(-1)" style="width:44px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:18px;cursor:pointer;">−</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">2% dehydration = ~1–2% slower swim time. Stay ahead of it.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🕐 Meal Timing — ${dl}</div>
+    ${mealHtml}
   </div>`;
 }
 function renderNutrition(){
@@ -2773,7 +3021,8 @@ function renderHistory(){
   const hist=S.history;
   document.getElementById('history-list').innerHTML=!hist.length?'<div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div>':[...hist].reverse().map(h=>{
     const d=new Date(h.date);
-    return`<div class="history-item"><div style="font-size:11px;color:var(--muted);">${d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})}</div><div style="font-size:15px;font-weight:600;margin:2px 0;">${h.title}</div><div style="font-size:12px;color:var(--muted);">${h.phase.name} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div></div>`;
+    const rpeTag=h.rpe?`<span style="font-size:10px;background:rgba(0,198,255,0.12);color:var(--accent);padding:1px 6px;border-radius:6px;margin-left:4px;">RPE ${h.rpe}</span>`:'';
+    return`<div class="history-item"><div style="font-size:11px;color:var(--muted);">${d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})}</div><div style="font-size:15px;font-weight:600;margin:2px 0;">${h.title}${rpeTag}</div><div style="font-size:12px;color:var(--muted);">${h.phase.name} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div></div>`;
   }).join('');
 }
 function renderProgramTargets(){
@@ -2815,6 +3064,26 @@ function adjustWeek(d){
   document.getElementById('week-display').textContent=S.programWeek;
   document.getElementById('cycle-display').textContent=S.programCycle||1;
   renderHome();
+}
+function updateKmTarget(){
+  const inp=document.getElementById('km-target-input');
+  if(!inp)return;
+  const val=parseFloat(inp.value);
+  if(!val||val<10)return;
+  S.seasonKmTarget=val;
+  DB.set('seasonKmTarget',val);
+  renderKmTracker();
+  const st=document.getElementById('km-target-status');
+  if(st)st.textContent=`Target saved: ${val} ${S.useKm?'km':'mi'}`;
+}
+function initKmTargetInput(){
+  const inp=document.getElementById('km-target-input');
+  const lbl=document.getElementById('km-target-unit-label');
+  if(inp){
+    const targetKm=S.seasonKmTarget||500;
+    inp.value=S.useKm?targetKm:(targetKm*0.621371).toFixed(0);
+  }
+  if(lbl)lbl.textContent=S.useKm?'km':'mi';
 }
 function confirmReset(){if(confirm('Delete ALL data? Export a backup first!')){localStorage.clear();location.reload();}}
 
@@ -2919,17 +3188,26 @@ function beepDone(ctx){
 // ── Notifications ──
 function updateNotifStatus(){
   const el=document.getElementById('notif-status');if(!el)return;
-  if(!('Notification' in window)){el.textContent='';return;}
-  if(Notification.permission==='granted'){el.textContent='🔔 Notifications on';el.style.color='var(--green)';}
-  else if(Notification.permission==='denied'){el.textContent='🔕 Notifications blocked';el.style.color='var(--red)';}
-  else{el.textContent='🔔 Tap Start to enable alerts';el.style.color='var(--muted)';}
+  const expEl=document.getElementById('notif-explain');
+  if(!('Notification' in window)){el.textContent='';if(expEl)expEl.style.display='none';return;}
+  if(Notification.permission==='granted'){
+    el.textContent='🔔 On';el.style.color='var(--green)';
+    if(expEl)expEl.style.display='none';
+  } else if(Notification.permission==='denied'){
+    el.textContent='🔕 Blocked';el.style.color='var(--red)';
+    if(expEl)expEl.style.display='none';
+  } else {
+    el.textContent='';
+    if(expEl)expEl.style.display='block';
+  }
 }
 function requestNotifPermission(){
   if(!('Notification' in window))return;
   if(Notification.permission==='default'){
     Notification.requestPermission().then(()=>updateNotifStatus());
+  } else {
+    updateNotifStatus();
   }
-  updateNotifStatus();
 }
 function sendRestNotif(){
   // Fire a web notification — works in background / other tabs if permission granted
@@ -3011,6 +3289,10 @@ function renderBaseline(){
   const subtitle=hasAny
     ?`Set ${weeks!==null?weeks+'wk ago':'—'} · Based on Epley formula`
     :'Enter any weight × reps you can do confidently — no need to max out.';
+  const firstTimeIntro=!hasAny?`<div style="background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;">🎯 Week 1 — Set Your Strength Baselines</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;">The weight loading system is locked until you set these. You don't need to max out — just enter a weight and reps you've done in training. The app calculates your estimated 1RM using the Epley formula and uses it to prescribe the right weight for every session.</div>
+  </div>`:'';
   el.innerHTML=`<div class="card" style="margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div class="card-title" style="margin-bottom:0;">Strength Baselines (1RM)</div>
@@ -3018,10 +3300,11 @@ function renderBaseline(){
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${subtitle}</div>
     ${retestBanner}
+    ${firstTimeIntro}
     ${hasAny?`<div id="baseline-summary">${buildBaselineSummary()}</div>`:''}
     <div id="baseline-inputs" style="display:${hasAny?'none':'block'};">
       ${rows}
-      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveBaseline()">Save Baselines</button>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveBaseline()">Save Baselines →</button>
     </div>
   </div>`;
 }
@@ -3134,7 +3417,7 @@ function showSection(name){
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();updateUnitPickers();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();updateUnitPickers();initKmTargetInput();}
 }
 
 // INIT
