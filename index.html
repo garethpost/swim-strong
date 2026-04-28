@@ -1345,7 +1345,7 @@ function buildCard(ex,bi,ei,scheme){
   }
   const hBtn=ex.weighted?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;flex-shrink:0;" onclick="showWH('${esc(ex.name)}')">Log</button>`:'';
   const schemeStr=ex.detail||`${ns}×${scheme.reps}`;
-  const tempoTag=ex.tempo?`<span style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(0,198,255,0.12);color:var(--accent);font-size:10px;font-weight:700;margin-left:4px;" title="Tempo: Eccentric-Pause-Concentric-Rest">⏱ ${ex.tempo}</span>`:'';
+  const tempoTag=ex.tempo?`<span onclick="showTempoInfo('${ex.tempo}')" style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(0,198,255,0.12);color:var(--accent);font-size:10px;font-weight:700;margin-left:4px;cursor:pointer;">⏱ ${ex.tempo} <span style="font-size:9px;opacity:0.7;">ⓘ</span></span>`:'';
   return`<div class="exercise-card" id="ecard-${id}">
     <div class="ex-header">
       <div class="ex-check" id="check-${id}" onclick="toggleAllSets('${id}',${ns})"></div>
@@ -1379,6 +1379,37 @@ function toggleAllSets(id,ns){
   for(let s=1;s<=ns;s++){const k=`${id}-${s}`,sc=document.getElementById(`sc-${id}-${s}`);if(!isDone){completedSets[k]=true;sc.classList.add('done');sc.textContent='✓';}else{delete completedSets[k];sc.classList.remove('done');sc.textContent='';}}
 }
 function showExInfo(name,desc,cue){document.getElementById('ex-modal-title').textContent=name;document.getElementById('ex-modal-desc').textContent=desc;document.getElementById('ex-modal-cue').textContent='💡 '+cue;openModal('ex-modal');}
+
+function showTempoInfo(tempo){
+  const parts=tempo.split('-');
+  const labels=['Eccentric (lowering)','Pause at bottom','Concentric (lifting)'];
+  const explain={
+    'X':'Explosive — as fast as possible',
+    '0':'No pause — go straight into next phase',
+    '1':'1 second',
+    '2':'2 seconds',
+    '3':'3 seconds',
+    '4':'4 seconds',
+    '5':'5 seconds',
+  };
+  // Build rows for each tempo number shown (3 numbers)
+  const rows=parts.slice(0,3).map((v,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="width:28px;height:28px;border-radius:8px;background:rgba(0,198,255,0.15);color:var(--accent);font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${v}</div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">${labels[i]}</div>
+        <div style="font-size:13px;color:var(--text);">${explain[v]||v+'s'}</div>
+      </div>
+    </div>`).join('');
+  const isExplosive=tempo.startsWith('X');
+  const example=isExplosive
+    ?'E.g. for a Box Jump: load fast → jump as explosively as possible → land and reset.'
+    :`E.g. for a Back Squat at ${tempo}: lower for ${parts[0]}s → pause ${parts[1]}s at bottom → drive up in ${parts[2]}s.`;
+  document.getElementById('ex-modal-title').textContent=`Tempo: ${tempo}`;
+  document.getElementById('ex-modal-desc').innerHTML=`<div>${rows}</div><div style="margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;">${example}</div>`;
+  document.getElementById('ex-modal-cue').textContent='💡 Controlling tempo builds more strength than just lifting as fast as you can.';
+  openModal('ex-modal');
+}
 
 function generateWorkout(forceType){
   const phase=getPhase(S.programWeek);
@@ -1558,15 +1589,19 @@ function renderWorkoutTab(){
     const phaseColor=phaseObj.color;
     const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">🎯 ${g}</div>`).join('');
     const pct=Math.min(100,Math.round(((totalW-weeks)/totalW)*100));
-    // Week-by-week mini timeline
-    const timelineBlocks=Array.from({length:totalW},(_, i)=>{
+    // Week-by-week timeline with phase labels
+    const timelineBlocks=Array.from({length:totalW},(_,i)=>{
       const wkRemaining=totalW-i;
       const ph=goalPhaseFromPosition(totalW,wkRemaining);
       const isCurrent=wkRemaining===weeks;
       const isPast=wkRemaining>weeks;
       const colors={GPP:'#00e676',Stimulus:'#00e676',Strength:'#ff5252',Sharpen:'#ff9800',Taper:'#00c6ff'};
       const bg=isPast?'var(--border)':colors[ph.name]||'var(--border)';
-      return`<div title="Wk ${i+1}: ${ph.name}" style="flex:1;height:${isCurrent?'14px':'8px'};border-radius:3px;background:${bg};opacity:${isPast?0.3:1};margin-top:${isCurrent?'0':'3px'};transition:all 0.2s;"></div>`;
+      const labelColor=isPast?'var(--border)':colors[ph.name]||'var(--muted)';
+      return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <div style="width:100%;height:${isCurrent?'14px':'8px'};border-radius:3px;background:${bg};opacity:${isPast?0.3:1};margin-top:${isCurrent?'0':'3px'};transition:all 0.2s;${isCurrent?'box-shadow:0 0 6px '+bg+';':''}"></div>
+        <div style="font-size:9px;color:${isCurrent?labelColor:'var(--muted)'};font-weight:${isCurrent?'700':'400'};opacity:${isPast?0.4:1};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;">${isCurrent?'▲ '+ph.name:ph.name}</div>
+      </div>`;
     }).join('');
     modeHtml=`
       <p class="section-title">Goal Program Active</p>
@@ -1583,7 +1618,7 @@ function renderWorkoutTab(){
             <div style="font-size:10px;color:var(--muted);">to meet</div>
           </div>
         </div>
-        <div style="display:flex;gap:3px;align-items:flex-end;margin-bottom:12px;">${timelineBlocks}</div>
+        <div style="display:flex;gap:4px;align-items:flex-start;margin-bottom:12px;">${timelineBlocks}</div>
         ${goalsDisplay}
       </div>
       <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
@@ -2813,10 +2848,43 @@ function importData(event){
 // ── Timer ──
 function setTimer(s){S.timerSecs=s;updTimer();}
 function updTimer(){const m=Math.floor(S.timerSecs/60),s=S.timerSecs%60;document.getElementById('timer-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;}
+function beepTimer(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    // Three short beeps
+    [0,0.25,0.5].forEach(t=>{
+      const osc=ctx.createOscillator();const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.frequency.value=880;osc.type='sine';
+      gain.gain.setValueAtTime(0.6,ctx.currentTime+t);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.18);
+      osc.start(ctx.currentTime+t);osc.stop(ctx.currentTime+t+0.2);
+    });
+    setTimeout(()=>ctx.close(),1000);
+  }catch(e){}
+}
+function timerDone(){
+  beepTimer();
+  try{navigator.vibrate&&navigator.vibrate([200,100,200,100,200]);}catch(e){}
+  // Flash the timer display green
+  const el=document.getElementById('timer-display');
+  const btn=document.getElementById('timer-btn');
+  if(el){
+    el.style.color='var(--green)';
+    el.textContent='GO!';
+    setTimeout(()=>{el.style.color='var(--accent)';updTimer();},1500);
+  }
+  if(btn)btn.textContent='Start';
+}
 function toggleTimer(){
   if(S.timerRunning){clearInterval(S.timerInterval);S.timerRunning=false;document.getElementById('timer-btn').textContent='Start';}
   else{S.timerRunning=true;document.getElementById('timer-btn').textContent='Stop';
-    S.timerInterval=setInterval(()=>{S.timerSecs--;updTimer();if(S.timerSecs<=0){clearInterval(S.timerInterval);S.timerRunning=false;document.getElementById('timer-btn').textContent='Start';S.timerSecs=90;updTimer();try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}}},1000);
+    S.timerInterval=setInterval(()=>{
+      S.timerSecs--;updTimer();
+      // Warning beep at 3 seconds
+      if(S.timerSecs===3)beepTimer();
+      if(S.timerSecs<=0){clearInterval(S.timerInterval);S.timerRunning=false;S.timerSecs=90;timerDone();}
+    },1000);
   }
 }
 
