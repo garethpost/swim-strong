@@ -279,6 +279,24 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-schedule" class="section">
       <p class="section-title">Schedule</p>
       <p class="section-sub" id="sched-month-label">—</p>
+      <!-- New-user guide — shown only until a season template is applied -->
+      <div id="schedule-new-user-guide" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.25);border-radius:12px;padding:16px;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px;">👋 Set up your season in 3 steps</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+            <div><strong style="color:var(--text);">Add your meets</strong> — scroll down to "Add a Meet" and enter your key competitions. A-meets get a full taper; B-meets a partial one.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+            <div><strong style="color:var(--text);">Set your season template</strong> — scroll to "Season Template", enter your season dates and set each weekday to Swim / Dryland / Double / Rest, then tap <em>Apply to Season</em>. The calendar fills automatically.</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+            <div><strong style="color:var(--text);">Tap any day to override</strong> — once the template is applied, tap any calendar day to change that day's session type individually.</div>
+          </div>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
         <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
         <button class="btn-ghost" onclick="changeMonth(1)">Next →</button>
@@ -390,6 +408,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
         </div>
       </div>
+      <div class="card">
+        <div class="card-title">Body Weight Trend</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Logged each time you save body stats in the Fuel tab. Up to 90 days.</p>
+        <div id="weight-trend-chart" style="width:100%;height:110px;position:relative;"></div>
+        <div id="weight-trend-stats" style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;"></div>
+      </div>
 
       <!-- ── PROGRAM ── -->
       <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:12px 2px 6px;">Program</div>
@@ -426,7 +450,31 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div style="font-size:11px;color:var(--muted);" id="km-target-status"></div>
       </div>
       <div class="card">
-        <div class="card-title">Session History</div>
+        <div class="card-title">Mobility & Stretch Progress</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Logged automatically when you complete a mobility workout.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-this-week">0</div>
+            <div style="font-size:10px;color:var(--muted);">This week</div>
+          </div>
+          <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-30day">0</div>
+            <div style="font-size:10px;color:var(--muted);">Last 30 days</div>
+          </div>
+          <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
+            <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-streak">0</div>
+            <div style="font-size:10px;color:var(--muted);">Wk streak</div>
+          </div>
+        </div>
+        <div id="mob-last-label" style="font-size:11px;color:var(--muted);text-align:center;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Pool Session Log</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Logged from the home screen on swim days.</p>
+        <div id="pool-log-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Dryland Session History</div>
         <div id="history-list"><div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div></div>
       </div>
       <div class="card">
@@ -568,6 +616,57 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 
 <!-- MODALS -->
+
+<!-- Pool Session Check-In Modal -->
+<div class="modal-overlay" id="pool-checkin-modal"><div class="modal"><div class="modal-handle"></div>
+<div style="text-align:center;margin-bottom:16px;">
+  <div style="font-size:36px;margin-bottom:4px;">🏊</div>
+  <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;">Pool Check-In</h3>
+  <div id="pool-checkin-date" style="font-size:12px;color:var(--muted);"></div>
+</div>
+<!-- Feel -->
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">How did it feel?</div>
+  <div style="display:flex;gap:6px;" id="pool-feel-btns">
+    <button onclick="setPoolFeel(1)" id="pf-1" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;">💀</button>
+    <button onclick="setPoolFeel(2)" id="pf-2" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;">😤</button>
+    <button onclick="setPoolFeel(3)" id="pf-3" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;">😐</button>
+    <button onclick="setPoolFeel(4)" id="pf-4" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;">😊</button>
+    <button onclick="setPoolFeel(5)" id="pf-5" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;">🔥</button>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;padding:0 2px;">
+    <span>Terrible</span><span>Average</span><span>On fire</span>
+  </div>
+</div>
+<!-- Yardage -->
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Approximate distance</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <input type="number" id="pool-dist-input" placeholder="e.g. 5.5" step="0.1" min="0" max="30"
+      style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;font-family:var(--font);">
+    <div style="font-size:13px;color:var(--muted);font-weight:700;" id="pool-dist-unit">km</div>
+  </div>
+</div>
+<!-- Timed swim -->
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Timed effort? <span style="font-size:10px;text-transform:none;font-weight:400;">(optional)</span></div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input type="text" id="pool-timed-event" placeholder="Event (e.g. 100 Free)"
+      style="flex:2;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
+    <input type="text" id="pool-timed-time" placeholder="Time"
+      style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
+  </div>
+</div>
+<!-- Notes -->
+<div style="margin-bottom:16px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Quick note <span style="font-size:10px;text-transform:none;font-weight:400;">(optional)</span></div>
+  <input type="text" id="pool-notes-input" placeholder="Felt strong on the turns, back-half faded..."
+    style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
+</div>
+<button class="btn btn-primary" onclick="savePoolCheckin()" style="margin-bottom:8px;">Log Session ✓</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('pool-checkin-modal')">Skip</button>
+</div></div>
+
 <div class="modal-overlay" id="session-summary-modal"><div class="modal"><div class="modal-handle"></div>
 <div style="text-align:center;margin-bottom:16px;">
   <div style="font-size:40px;margin-bottom:6px;">✅</div>
@@ -795,6 +894,9 @@ let S={
   hydrationLog:DB.get('hydrationLog',{}), // {YYYY-MM-DD: count}
   seasonKmTarget:DB.get('seasonKmTarget',500), // km target for the season
   sessionRPELog:DB.get('sessionRPELog',[]), // [{date,rpe,load}]
+  weightTrendLog:DB.get('weightTrendLog',[]), // [{date,wtKg}] — logged each time body stats saved
+  poolLog:DB.get('poolLog',[]), // [{date,feel,timedSwim,timedTime,distKm,notes}]
+  mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
 };
 
 // Units
@@ -832,6 +934,8 @@ function applyUnitSettings(){
   if(S.currentWorkout)renderWorkout(S.currentWorkout);
   // Update pickers immediately — no re-render touches the More tab settings card
   updateUnitPickers();
+  // If fuel tab is currently visible, re-render so height field updates cm↔ft+in
+  if(document.getElementById('section-fuel').classList.contains('active'))renderNutrition();
 }
 function setWeightUnit(kg){
   S.useKg=kg;DB.set('useKg',kg);
@@ -1622,9 +1726,17 @@ function renderWorkoutTab(){
 
   // ── Mode toggle ──
   const toggleHtml=`
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button onclick="setWorkoutMode('standard')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">📋 Standard</button>
-      <button onclick="setWorkoutMode('goal')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">🎯 Goal Program</button>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Training Mode</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+          📋<br><span style="font-size:11px;">Standard</span>
+        </button>
+        <button onclick="setWorkoutMode('goal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+          🎯<br><span style="font-size:11px;">Goal Program</span>
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">${isGoal?'Workouts are biased toward your target meet and selected goals.':'Adaptive dryland based on your schedule, phase, and readiness.'}</div>
     </div>`;
 
   let modeHtml='';
@@ -1908,6 +2020,13 @@ function confirmSession(){
   // Save RPE to session RPE log
   S.sessionRPELog.push({date:new Date().toISOString(),rpe,load,phase:w.phase.name,title:w.title});
   if(S.sessionRPELog.length>60)S.sessionRPELog=S.sessionRPELog.slice(-60);
+  // Track mobility sessions separately for streak/progress
+  if(w.dayType==='mobility'){
+    const todayKey=dKey(new Date());
+    if(!S.mobilityLog.includes(todayKey))S.mobilityLog.push(todayKey);
+    if(S.mobilityLog.length>90)S.mobilityLog=S.mobilityLog.slice(-90);
+    DB.set('mobilityLog',S.mobilityLog);
+  }
   DB.set('sessionRPELog',S.sessionRPELog);
   // Save session to history (with rpe)
   S.history.push({...w,date:new Date().toISOString(),rpe});DB.set('history',S.history);
@@ -2189,12 +2308,25 @@ function renderHomeTodaySummary(){
         <span style="font-size:11px;font-weight:600;color:${m.color};white-space:pre-line;line-height:1.3;">${m.label}</span>
       </div>`;
     }).join('');
+  // Pool check-in state for today
+  const todayPoolLog=S.poolLog.find(e=>e.date===key);
+  const hasSwimToday=swimCount>0;
+  const feelEmojis=['','💀','😤','😐','😊','🔥'];
+  const poolCheckinHtml=hasSwimToday?(
+    todayPoolLog
+      ?`<div style="margin-top:8px;padding:7px 10px;background:rgba(0,198,255,0.08);border-radius:8px;border-left:2px solid var(--accent);font-size:11px;color:var(--muted);">
+          Pool: ${feelEmojis[todayPoolLog.feel]||''} ${todayPoolLog.distKm?(S.useKm?todayPoolLog.distKm.toFixed(1)+'km':(todayPoolLog.distKm*0.621371).toFixed(1)+'mi'):''}
+          ${todayPoolLog.timedSwim?` · ⏱ ${todayPoolLog.timedEvent} ${todayPoolLog.timedTime}`:''}
+          ${todayPoolLog.notes?`<div style="margin-top:2px;font-style:italic;">"${todayPoolLog.notes}"</div>`:''}
+        </div>`
+      :`<button onclick="openPoolCheckin()" style="margin-top:8px;width:100%;padding:7px;border-radius:8px;border:1px dashed var(--accent);background:rgba(0,198,255,0.06);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🏊 Log pool session</button>`
+  ):'';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
       <div class="card-title" style="margin-bottom:0;">Today</div>
       <span style="font-size:9px;font-weight:700;color:var(--bg);background:${loadColor};padding:2px 7px;border-radius:6px;">${loadLabel}</span>
     </div>
-    ${rows}`;
+    ${rows}${poolCheckinHtml}`;
 }
 function renderHomeMeets(){
   const el=document.getElementById('home-meets-list');
@@ -2409,6 +2541,12 @@ function isTaperDay(dt){
 function renderCalendar(){
   const yr=S.calYear,mo=S.calMonth;
   document.getElementById('sched-month-label').textContent=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})+' — tap any day to edit';
+  // Show new-user guide until a season template has been applied
+  const guideEl=document.getElementById('schedule-new-user-guide');
+  if(guideEl){
+    const hasTemplate=S.seasonTemplate&&S.seasonTemplate.start&&Object.keys(S.daySchedule||{}).length>0;
+    guideEl.style.display=hasTemplate?'none':'block';
+  }
   document.getElementById('month-header').innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="cal-header-cell">${d}</div>`).join('');
   const first=new Date(yr,mo,1).getDay(),days=new Date(yr,mo+1,0).getDate();
   const today=new Date();today.setHours(0,0,0,0);
@@ -2830,6 +2968,12 @@ function calcNutrition(){
   S.lastStatsUpdate=new Date().toISOString();
   DB.set('bodyStats',S.bodyStats);
   DB.set('lastStatsUpdate',S.lastStatsUpdate);
+  // Log weight trend entry (one per day max)
+  const todayKey=dKey(new Date());
+  S.weightTrendLog=S.weightTrendLog.filter(e=>e.date!==todayKey);
+  S.weightTrendLog.push({date:todayKey,wtKg});
+  if(S.weightTrendLog.length>90)S.weightTrendLog=S.weightTrendLog.slice(-90);
+  DB.set('weightTrendLog',S.weightTrendLog);
   // Clear the input fields after save (anti-autofill)
   ['height-cm-input','height-ft-input','height-in-input','weight-input'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
@@ -3109,6 +3253,12 @@ function exportData(){
     bodyStats:S.bodyStats,
     lastStatsUpdate:S.lastStatsUpdate,
     useKg:S.useKg,
+    weightTrendLog:S.weightTrendLog,
+    poolLog:S.poolLog,
+    hydrationLog:S.hydrationLog,
+    sessionRPELog:S.sessionRPELog,
+    seasonKmTarget:S.seasonKmTarget,
+    mobilityLog:S.mobilityLog,
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -3145,6 +3295,12 @@ function importData(event){
       if(data.bodyStats)DB.set('bodyStats',data.bodyStats);
       if(data.lastStatsUpdate)DB.set('lastStatsUpdate',data.lastStatsUpdate);
       if(typeof data.useKg!=='undefined')DB.set('useKg',data.useKg);
+      if(data.weightTrendLog)DB.set('weightTrendLog',data.weightTrendLog);
+      if(data.poolLog)DB.set('poolLog',data.poolLog);
+      if(data.hydrationLog)DB.set('hydrationLog',data.hydrationLog);
+      if(data.sessionRPELog)DB.set('sessionRPELog',data.sessionRPELog);
+      if(data.seasonKmTarget)DB.set('seasonKmTarget',data.seasonKmTarget);
+      if(data.mobilityLog)DB.set('mobilityLog',data.mobilityLog);
       alert('✅ Backup restored! Reloading app...');
       location.reload();
     }catch(err){
@@ -3347,6 +3503,162 @@ function saveBaseline(){
   renderBaseline();
 }
 
+// ── Pool Log Renderer ──
+function renderPoolLog(){
+  const el=document.getElementById('pool-log-list');
+  if(!el)return;
+  const log=[...S.poolLog].reverse().slice(0,15);
+  if(!log.length){
+    el.innerHTML=`<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0;">No pool sessions logged yet.</div>`;
+    return;
+  }
+  const feelEmojis=['','💀','😤','😐','😊','🔥'];
+  const feelLabel=['','Terrible','Tough','Average','Good','On fire'];
+  el.innerHTML=log.map(e=>{
+    const d=localDate(e.date);
+    const dStr=d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+    const distStr=e.distKm?(S.useKm?e.distKm.toFixed(1)+'km':(e.distKm*0.621371).toFixed(1)+'mi'):'';
+    const timedStr=e.timedSwim?`⏱ ${e.timedEvent} ${e.timedTime}`:'';
+    const notesStr=e.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${e.notes}"</div>`:'';
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);">${dStr}</div>
+        <div style="font-size:13px;">${feelEmojis[e.feel]||''} <span style="font-size:10px;color:var(--muted);">${feelLabel[e.feel]||''}</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">${[distStr,timedStr].filter(Boolean).join(' · ')}</div>
+      ${notesStr}
+    </div>`;
+  }).join('')+'<div style="padding-bottom:4px;"></div>';
+}
+
+// ── Pool Session Check-In ──
+let _pendingPoolFeel=3;
+function openPoolCheckin(){
+  _pendingPoolFeel=3;
+  document.getElementById('pool-checkin-date').textContent=new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('pool-dist-input').value='';
+  document.getElementById('pool-timed-event').value='';
+  document.getElementById('pool-timed-time').value='';
+  document.getElementById('pool-notes-input').value='';
+  document.getElementById('pool-dist-unit').textContent=S.useKm?'km':'mi';
+  setPoolFeel(3);
+  openModal('pool-checkin-modal');
+}
+function setPoolFeel(n){
+  _pendingPoolFeel=n;
+  for(let i=1;i<=5;i++){
+    const btn=document.getElementById(`pf-${i}`);
+    if(!btn)continue;
+    const active=(i===n);
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(0,198,255,0.15)':'var(--surface)';
+  }
+}
+function savePoolCheckin(){
+  const distRaw=parseFloat(document.getElementById('pool-dist-input').value)||0;
+  const distKm=distRaw>0?(S.useKm?distRaw:distRaw*1.60934):0;
+  const timedEvent=document.getElementById('pool-timed-event').value.trim();
+  const timedTime=document.getElementById('pool-timed-time').value.trim();
+  const notes=document.getElementById('pool-notes-input').value.trim();
+  const entry={
+    date:dKey(new Date()),
+    feel:_pendingPoolFeel,
+    distKm,
+    timedSwim:!!(timedEvent&&timedTime),
+    timedEvent:timedEvent||null,
+    timedTime:timedTime||null,
+    notes:notes||null,
+  };
+  S.poolLog.push(entry);
+  if(S.poolLog.length>90)S.poolLog=S.poolLog.slice(-90);
+  DB.set('poolLog',S.poolLog);
+  closeModal('pool-checkin-modal');
+  // If there's also a timed swim, optionally log it in time history?
+  renderHome();
+}
+
+// ── Mobility Stats ──
+function renderMobilityStats(){
+  const log=S.mobilityLog||[];
+  const today=new Date();today.setHours(0,0,0,0);
+  // This week (Mon–Sun)
+  const dow=today.getDay();const monOffset=dow===0?-6:1-dow;
+  const weekStart=new Date(today);weekStart.setDate(today.getDate()+monOffset);
+  const thisWeek=log.filter(d=>{const dt=localDate(d);return dt>=weekStart&&dt<=today;}).length;
+  // Last 30 days
+  const ago30=new Date(today);ago30.setDate(today.getDate()-30);
+  const last30=log.filter(d=>localDate(d)>=ago30).length;
+  // Week streak — count consecutive weeks (including this week) with at least 1 session
+  let streak=0;
+  for(let w=0;;w++){
+    const ws=new Date(weekStart);ws.setDate(weekStart.getDate()-w*7);
+    const we=new Date(ws);we.setDate(ws.getDate()+6);
+    const count=log.filter(d=>{const dt=localDate(d);return dt>=ws&&dt<=we;}).length;
+    if(count>0)streak++;
+    else break;
+  }
+  const el1=document.getElementById('mob-this-week');
+  const el2=document.getElementById('mob-30day');
+  const el3=document.getElementById('mob-streak');
+  const el4=document.getElementById('mob-last-label');
+  if(el1)el1.textContent=thisWeek;
+  if(el2)el2.textContent=last30;
+  if(el3)el3.textContent=streak;
+  if(el4){
+    if(log.length){
+      const lastDate=new Date(log[log.length-1]);
+      el4.textContent=`Last session: ${lastDate.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}`;
+    } else {
+      el4.textContent='No mobility sessions logged yet — complete a mobility workout to start tracking.';
+    }
+  }
+}
+
+// ── Weight Trend Chart ──
+function renderWeightTrendChart(){
+  const el=document.getElementById('weight-trend-chart');
+  const statsEl=document.getElementById('weight-trend-stats');
+  if(!el)return;
+  const log=[...S.weightTrendLog].sort((a,b)=>a.date.localeCompare(b.date));
+  if(log.length<2){
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--muted);">Log body stats at least twice to see a trend.</div>`;
+    if(statsEl)statsEl.textContent='';
+    return;
+  }
+  const W=320,H=110,pad={l:36,r:10,t:10,b:22};
+  const gW=W-pad.l-pad.r,gH=H-pad.t-pad.b;
+  const weights=log.map(e=>e.wtKg);
+  const minW=Math.min(...weights),maxW=Math.max(...weights);
+  const rng=Math.max(maxW-minW,1);
+  const xPos=i=>(i/(log.length-1))*gW+pad.l;
+  const yPos=w=>pad.t+gH-(((w-minW)/rng)*gH);
+  const pts=log.map((e,i)=>({x:xPos(i),y:yPos(e.wtKg)}));
+  const pathD=pts.map((p,i)=>(i===0?`M${p.x.toFixed(1)},${p.y.toFixed(1)}`:`L${p.x.toFixed(1)},${p.y.toFixed(1)}`)).join('');
+  const unit=S.useKg?'kg':'lbs';
+  const dispW=w=>S.useKg?w.toFixed(1):(w*2.205).toFixed(1);
+  const yLabels=[];
+  const steps=3;
+  for(let i=0;i<=steps;i++){const w=minW+(rng/steps)*i;yLabels.push(`<text x="${pad.l-4}" y="${(yPos(w)+4).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="end">${dispW(w)}</text>`);}
+  // x labels — show first, mid, last
+  const xLabelIdxs=[0,Math.floor((log.length-1)/2),log.length-1];
+  const xLabels=xLabelIdxs.map(i=>{const d=new Date(log[i].date);return `<text x="${xPos(i).toFixed(1)}" y="${H-4}" font-size="9" fill="var(--muted)" text-anchor="middle">${d.toLocaleDateString('en-CA',{month:'short',day:'numeric'})}</text>`;});
+  // Dots
+  const dots=pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i===pts.length-1?4:2}" fill="${i===pts.length-1?'var(--accent)':'var(--purple)'}" opacity="0.9"/>`);
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+gH}" stroke="var(--border)" stroke-width="1"/>
+    <line x1="${pad.l}" y1="${pad.t+gH}" x2="${pad.l+gW}" y2="${pad.t+gH}" stroke="var(--border)" stroke-width="1"/>
+    ${yLabels.join('')}${xLabels.join('')}
+    <path d="${pathD}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots.join('')}
+  </svg>`;
+  const first=log[0],last=log[log.length-1];
+  const delta=last.wtKg-first.wtKg;
+  const sign=delta>=0?'+':'';
+  const dispDelta=S.useKg?`${sign}${delta.toFixed(1)}kg`:`${sign}${(delta*2.205).toFixed(1)}lbs`;
+  const days=Math.round((new Date(last.date)-new Date(first.date))/86400000);
+  if(statsEl)statsEl.textContent=`${log.length} entries over ${days} days · ${dispDelta} trend · Current: ${dispW(last.wtKg)}${unit}`;
+}
+
 // ── Check-In History Chart ──
 function renderCheckinChart(){
   const el=document.getElementById('checkin-chart');
@@ -3417,7 +3729,7 @@ function showSection(name){
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();updateUnitPickers();initKmTargetInput();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();}
 }
 
 // INIT
