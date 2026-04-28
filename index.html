@@ -1139,38 +1139,38 @@ const EX={
     {name:'Thoracic Rotations',detail:'2×10 each',desc:'Quadruped, rotate upper back open to ceiling.',cue:'Breathe into the rotation. Fly power lives here.',weighted:false},
   ],
   lower:[
-    {name:'Back Squat',sets:4,detail:null,desc:'Barbell back squat. 1RM directly predicts start performance.',cue:'Break hip and knee simultaneously. Drive the floor away.',weighted:true},
-    {name:'Romanian Deadlift',sets:4,detail:null,desc:'Hinge at hip, bar close to legs, soft knee.',cue:'Push hips to the wall. Hamstring stretch. Bar close to shins.',weighted:true},
-    {name:'Bulgarian Split Squat',sets:3,detail:null,desc:'Rear foot elevated, front shin vertical.',cue:'Hips drop straight down. No knee cave. This one should hurt.',weighted:true},
-    {name:'Hip Thrust',sets:4,detail:null,desc:'Barbell across hips, drive to ceiling from bench.',cue:'Squeeze glutes hard at top. Full hip extension. This is your fly kick.',weighted:true},
-    {name:'Goblet Squat',sets:3,detail:null,desc:'Dumbbell at chest, squat deep with upright torso.',cue:'Elbows push knees out at bottom. Pause at bottom.',weighted:true},
-    {name:'Single-Leg RDL',sets:3,detail:null,desc:'Hinge on one leg, dumbbell opposite hand.',cue:'Hip stays square. T shape at bottom.',weighted:true},
-    {name:'Step-Ups',sets:3,detail:null,desc:'Step onto box with full hip extension at top.',cue:'Drive through heel. Full lockout. Do not push off back foot.',weighted:true},
-    {name:'Nordic Ham Curls',sets:3,detail:'3×5 slow eccentric',desc:'Feet anchored, lower slowly resisting with hamstrings.',cue:'Slow eccentric is the point. Prevents hamstring tears.',weighted:false},
+    {name:'Back Squat',sets:4,detail:null,desc:'Barbell back squat. 1RM directly predicts start performance.',cue:'Break hip and knee simultaneously. Drive the floor away.',weighted:true,tags:['squat'],tempo:'3-1-1-0'},
+    {name:'Romanian Deadlift',sets:4,detail:null,desc:'Hinge at hip, bar close to legs, soft knee.',cue:'Push hips to the wall. Hamstring stretch. Bar close to shins.',weighted:true,tags:['hinge'],tempo:'3-1-1-0'},
+    {name:'Bulgarian Split Squat',sets:3,detail:null,desc:'Rear foot elevated, front shin vertical.',cue:'Hips drop straight down. No knee cave. This one should hurt.',weighted:true,tags:['single-leg','squat'],tempo:'3-1-1-0'},
+    {name:'Hip Thrust',sets:4,detail:null,desc:'Barbell across hips, drive to ceiling from bench.',cue:'Squeeze glutes hard at top. Full hip extension. This is your fly kick.',weighted:true,tags:['hinge','explosive'],tempo:'2-1-X-0'},
+    {name:'Goblet Squat',sets:3,detail:null,desc:'Dumbbell at chest, squat deep with upright torso.',cue:'Elbows push knees out at bottom. Pause at bottom.',weighted:true,tags:['squat'],tempo:'3-2-1-0'},
+    {name:'Single-Leg RDL',sets:3,detail:null,desc:'Hinge on one leg, dumbbell opposite hand.',cue:'Hip stays square. T shape at bottom.',weighted:true,tags:['single-leg','hinge'],tempo:'3-1-1-0'},
+    {name:'Step-Ups',sets:3,detail:null,desc:'Step onto box with full hip extension at top.',cue:'Drive through heel. Full lockout. Do not push off back foot.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
+    {name:'Nordic Ham Curls',sets:3,detail:'3×5',desc:'Feet anchored, lower slowly resisting with hamstrings.',cue:'Slow eccentric is the point. Prevents hamstring tears.',weighted:false,tags:['hinge'],tempo:'5-0-1-0'},
   ],
   upper:[
-    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar. Pronated grip.',cue:'Pull elbows to hips. Initiate with lats. Full dead hang each rep.',weighted:false},
-    {name:'Seated Cable Row',sets:4,detail:null,desc:'Row to lower sternum, elbows track body.',cue:'Squeeze scapula before pulling. Control the return.',weighted:true},
-    {name:'Incline DB Press',sets:4,detail:null,desc:'Moderate incline, press from shoulder height.',cue:'Control the eccentric. Feel chest stretch at bottom.',weighted:true},
-    {name:'Lat Pulldown',sets:4,detail:null,desc:'Wide grip pulldown to upper chest.',cue:'Lean back slightly. Pull elbows to pockets.',weighted:true},
-    {name:'Single-Arm DB Row',sets:4,detail:null,desc:'Knee on bench, heavy DB, pull to hip.',cue:'Elbow drives back and up. No spinal rotation.',weighted:true},
-    {name:'Landmine Press',sets:3,detail:null,desc:'Single arm press with barbell in landmine at 45 degrees.',cue:'Shoulder-safe pressing. Rotate slightly at top.',weighted:true},
-    {name:'Tricep Pushdown',sets:3,detail:null,desc:'Cable pushdown with rope.',cue:'Elbows stay at sides. Full extension.',weighted:true},
-    {name:'Face Pulls',sets:3,detail:'3×20 light',desc:'Cable at face height, pull to ears with external rotation.',cue:'Elbows high and wide. Non-negotiable for shoulder health.',weighted:true},
-    {name:'Prone Y-T-W',sets:3,detail:'3×10 each, very light',desc:'Incline bench, raise in Y, T, W shapes with very light DBs.',cue:'Thumbs up. Slow. Injury prevention, not strength.',weighted:true},
-    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body, slow lat activation.',cue:'Core tight. Mimics your streamline.',weighted:false},
+    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar. Pronated grip.',cue:'Pull elbows to hips. Initiate with lats. Full dead hang each rep.',weighted:false,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Seated Cable Row',sets:4,detail:null,desc:'Row to lower sternum, elbows track body.',cue:'Squeeze scapula before pulling. Control the return.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Incline DB Press',sets:4,detail:null,desc:'Moderate incline, press from shoulder height.',cue:'Control the eccentric. Feel chest stretch at bottom.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
+    {name:'Lat Pulldown',sets:4,detail:null,desc:'Wide grip pulldown to upper chest.',cue:'Lean back slightly. Pull elbows to pockets.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Single-Arm DB Row',sets:4,detail:null,desc:'Knee on bench, heavy DB, pull to hip.',cue:'Elbow drives back and up. No spinal rotation.',weighted:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Landmine Press',sets:3,detail:null,desc:'Single arm press with barbell in landmine at 45 degrees.',cue:'Shoulder-safe pressing. Rotate slightly at top.',weighted:true,tags:['push','shoulder'],tempo:'3-1-1-0'},
+    {name:'Tricep Pushdown',sets:3,detail:null,desc:'Cable pushdown with rope.',cue:'Elbows stay at sides. Full extension.',weighted:true,tags:['push'],tempo:'2-1-1-0'},
+    {name:'Face Pulls',sets:3,detail:'3×20 light',desc:'Cable at face height, pull to ears with external rotation.',cue:'Elbows high and wide. Non-negotiable for shoulder health.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Prone Y-T-W',sets:3,detail:'3×10 each, very light',desc:'Incline bench, raise in Y, T, W shapes with very light DBs.',cue:'Thumbs up. Slow. Injury prevention, not strength.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body, slow lat activation.',cue:'Core tight. Mimics your streamline.',weighted:false,tags:['pull'],tempo:'3-0-1-0'},
   ],
   plyos:[
-    {name:'Box Jumps',sets:4,detail:null,desc:'Jump onto box, land soft, step down. Full reset between reps.',cue:'Full extension at take-off. Land quarter squat. Step down never jump down.',weighted:false},
-    {name:'Broad Jumps',sets:4,detail:null,desc:'Jump forward for max distance, stick the landing.',cue:'Swing arms aggressively. Stick 2 full seconds.',weighted:false},
-    {name:'Depth Jumps',sets:3,detail:null,desc:'Step off box, land and immediately explode up.',cue:'Hot floor. Minimum ground contact. Readiness 4+ only.',weighted:false},
-    {name:'Bounding',sets:3,detail:'3×20m',desc:'Exaggerated strides for max distance per stride.',cue:'Drive knee aggressively. Full hip extension.',weighted:false},
-    {name:'Tuck Jumps',sets:4,detail:null,desc:'Jump and pull knees to chest at peak.',cue:'Pull knees UP. Do not bring chest down.',weighted:false},
-    {name:'Med Ball Slam',sets:4,detail:null,desc:'Overhead slam as hard as possible.',cue:'Reach tall, violently contract everything. Slam it.',weighted:false},
-    {name:'Med Ball Chest Pass',sets:4,detail:null,desc:'Explosive chest pass into wall.',cue:'Full arm extension at release. Mimics butterfly pull-through.',weighted:false},
-    {name:'Jump Squat',sets:4,detail:null,desc:'Load into squat then explode to full jump, land soft.',cue:'Full hip extension at take-off. Land softly. Reset fully.',weighted:false},
-    {name:'Lateral Bounds',sets:3,detail:null,desc:'Jump side to side on single leg, stick each landing.',cue:'Stick 2 seconds each side.',weighted:false},
-    {name:'Clap Push-Ups',sets:3,detail:null,desc:'Push-up with force to clap between reps.',cue:'Land with soft elbows. Drop to standard if form breaks.',weighted:false},
+    {name:'Box Jumps',sets:4,detail:null,desc:'Jump onto box, land soft, step down. Full reset between reps.',cue:'Full extension at take-off. Land quarter squat. Step down never jump down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Broad Jumps',sets:4,detail:null,desc:'Jump forward for max distance, stick the landing.',cue:'Swing arms aggressively. Stick 2 full seconds.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Depth Jumps',sets:3,detail:null,desc:'Step off box, land and immediately explode up.',cue:'Hot floor. Minimum ground contact. Readiness 4+ only.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Bounding',sets:3,detail:'3×20m',desc:'Exaggerated strides for max distance per stride.',cue:'Drive knee aggressively. Full hip extension.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Tuck Jumps',sets:4,detail:null,desc:'Jump and pull knees to chest at peak.',cue:'Pull knees UP. Do not bring chest down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Med Ball Slam',sets:4,detail:null,desc:'Overhead slam as hard as possible.',cue:'Reach tall, violently contract everything. Slam it.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Med Ball Chest Pass',sets:4,detail:null,desc:'Explosive chest pass into wall.',cue:'Full arm extension at release. Mimics butterfly pull-through.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Jump Squat',sets:4,detail:null,desc:'Load into squat then explode to full jump, land soft.',cue:'Full hip extension at take-off. Land softly. Reset fully.',weighted:false,tags:['explosive','plyos'],tempo:'3-0-X-0'},
+    {name:'Lateral Bounds',sets:3,detail:null,desc:'Jump side to side on single leg, stick each landing.',cue:'Stick 2 seconds each side.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-2-X-0'},
+    {name:'Clap Push-Ups',sets:3,detail:null,desc:'Push-up with force to clap between reps.',cue:'Land with soft elbows. Drop to standard if form breaks.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
   ],
   core:[
     {name:'Dead Bug',detail:'3×10 each',desc:'Opposite arm and leg lower slowly, lower back flat.',cue:'Push lower back INTO floor. Shorten range if it arches.',weighted:false},
@@ -1345,12 +1345,13 @@ function buildCard(ex,bi,ei,scheme){
   }
   const hBtn=ex.weighted?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;flex-shrink:0;" onclick="showWH('${esc(ex.name)}')">Log</button>`:'';
   const schemeStr=ex.detail||`${ns}×${scheme.reps}`;
+  const tempoTag=ex.tempo?`<span style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(0,198,255,0.12);color:var(--accent);font-size:10px;font-weight:700;margin-left:4px;" title="Tempo: Eccentric-Pause-Concentric-Rest">⏱ ${ex.tempo}</span>`:'';
   return`<div class="exercise-card" id="ecard-${id}">
     <div class="ex-header">
       <div class="ex-check" id="check-${id}" onclick="toggleAllSets('${id}',${ns})"></div>
       <div class="ex-title-wrap">
         <div class="ex-name" onclick="showExInfo('${esc(ex.name)}','${esc(ex.desc)}','${esc(ex.cue)}')">${ex.name} <span style="font-size:10px;color:var(--muted)">ⓘ</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${schemeStr} · ${scheme.pct||''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${schemeStr} · ${scheme.pct||''}${tempoTag}</div>
         ${ex.note?`<div class="ex-note">${ex.note}</div>`:''}
       </div>
       ${hBtn}
@@ -1391,24 +1392,26 @@ function generateWorkout(forceType){
   const scheme=getScheme(phase.name,mult);
   const dt=tp.yes&&!forceType&&tp.meet.priority!=='C';
   let blocks=[];
-  blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,4).map(e=>({...e,sets:1}))});
+  blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
-    const wEx=pickFresh(EX.lower.filter(e=>e.weighted),dt?2:4);
+    const wEx=pickFresh(EX.lower.filter(e=>e.weighted),dt?2:3);
     const nordic=EX.lower.find(e=>e.name==='Nordic Ham Curls');
-    blocks.push({title:'🦵 Lower Body Strength',exercises:[...wEx,...(dt||!nordic?[]:[nordic])].map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
+    const main=[...wEx,...(dt||!nordic?[]:[nordic])].slice(0,4).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}));
+    blocks.push({title:'🦵 Lower Body Strength',exercises:main});
+    blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='upper'){
-    const mand=EX.upper.filter(e=>e.name==='Face Pulls'||e.name==='Prone Y-T-W');
+    // 1 mandatory shoulder health + 3 main lifts = 4 total
+    const mand=[EX.upper.find(e=>e.name==='Face Pulls')].filter(Boolean);
     let rest;
-    if(emp==='fly'&&!dt){const pulls=EX.upper.filter(e=>['Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name));const others=pickFresh(EX.upper.filter(e=>!['Face Pulls','Prone Y-T-W','Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name)),2);rest=[...pulls,...others];}
-    else{rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),dt?2:4);}
+    if(emp==='fly'&&!dt){const pulls=EX.upper.filter(e=>['Pull-Ups','Lat Pulldown','Seated Cable Row'].includes(e.name));rest=pickFresh(pulls,3);}
+    else{rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),dt?2:3);}
     blocks.push({title:'💪 Upper Body Strength',exercises:[...rest,...mand].map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
-    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,dt?1:2).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='power'){
-    blocks.push({title:'⚡ Plyometric Power',exercises:pickFresh(EX.plyos,dt?3:5).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
+    blocks.push({title:'⚡ Plyometric Power',exercises:pickFresh(EX.plyos,dt?2:4).map(e=>({...e,sets:dt?2:e.sets||scheme.sets}))});
     blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,6).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,5).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
     blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
@@ -1638,34 +1641,42 @@ function generateGoalWorkout(forceType){
   const wantsPower=extraTypes.includes('power');
   const wantsMobility=extraTypes.includes('mobility');
   let blocks=[];
-  blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,4).map(e=>({...e,sets:1}))});
+  blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
-    // Prefer explosive exercises if goals point that way
-    let pool=wantsPower?EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('plyos'))):EX.lower.filter(e=>e.weighted);
-    if(pool.length<3)pool=EX.lower.filter(e=>e.weighted); // fallback
-    const wEx=pickFresh(pool,4);
-    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:wEx.map(e=>({...e,sets:e.sets||scheme.sets}))});
+    // 2 primary goal-focused + 2 supporting = 4 total
+    let primary=wantsPower?EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('plyos'))):[];
+    if(primary.length<2)primary=EX.lower.filter(e=>e.weighted&&e.tags&&e.tags.includes('hinge'));
+    const primaryPicked=pickFresh(primary,2);
+    const supporting=pickFresh(EX.lower.filter(e=>e.weighted&&!primaryPicked.includes(e)),2);
+    const main=[...primaryPicked,...supporting].slice(0,4).map(e=>({...e,sets:e.sets||scheme.sets}));
+    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main});
     blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='upper'){
-    const mand=EX.upper.filter(e=>e.name==='Face Pulls'||e.name==='Prone Y-T-W');
-    const rest=pickFresh(EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W'),4);
+    // 1 mandatory shoulder health + 3 goal-biased = 4 total
+    const mand=[EX.upper.find(e=>e.name==='Face Pulls')].filter(Boolean);
+    const wantsPull=biases.some(b=>b.upper&&b.upper.includes('pull'));
+    const wantsShoulder=biases.some(b=>b.upper&&b.upper.includes('shoulder'));
+    const pool=wantsPull?EX.upper.filter(e=>e.tags&&e.tags.includes('pull')&&e.name!=='Face Pulls'):
+               wantsShoulder?EX.upper.filter(e=>e.tags&&e.tags.includes('shoulder')&&e.name!=='Face Pulls'):
+               EX.upper.filter(e=>e.name!=='Face Pulls'&&e.name!=='Prone Y-T-W');
+    const rest=pickFresh(pool,3);
     blocks.push({title:'💪 Upper Body',exercises:[...rest,...mand].map(e=>({...e,sets:e.sets||scheme.sets}))});
     blocks.push({title:'🔩 Core Finisher',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='power'){
-    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:pickFresh(EX.plyos,5).map(e=>({...e,sets:e.sets||scheme.sets}))});
+    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:pickFresh(EX.plyos,4).map(e=>({...e,sets:e.sets||scheme.sets}))});
     blocks.push({title:'🔩 Core',exercises:pickFresh(EX.core,2).map(e=>({...e,sets:2}))});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,6).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility,5).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio,2).map(e=>({...e,sets:8}))});
     blocks.push({title:'🔩 Core',exercises:pick(EX.core,2).map(e=>({...e,sets:2}))});
   }
-  // Add goal-specific finisher if power/mobility goal
+  // Goal-specific finisher — 2 exercises max, only if not already a power/mobility day
   if(wantsPower&&dayType!=='power'&&dayType!=='mobility'){
     blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(EX.plyos,2).map(e=>({...e,sets:3}))});
   }
   if(wantsMobility&&dayType!=='mobility'){
-    blocks.push({title:'🎯 Goal Finisher — Injury Prevention',exercises:pick(EX.mobility,3).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🎯 Goal Finisher — Injury Prevention',exercises:pick(EX.mobility,2).map(e=>({...e,sets:2}))});
   }
   blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
   const meetNote=meet?`Target: ${meet.name} · ${weeks}w out`:'Goal Program';
