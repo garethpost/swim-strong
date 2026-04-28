@@ -231,7 +231,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="workout-content"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
         <div class="card" style="margin-bottom:12px;">
-          <div class="card-title">Rest Timer</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="card-title" style="margin-bottom:0;">Rest Timer</div>
+            <div id="notif-status" style="font-size:10px;color:var(--muted);"></div>
+          </div>
           <div class="timer-display" id="timer-display">1:30</div>
           <div class="timer-controls">
             <button class="btn-ghost" onclick="setTimer(60)">60s</button>
@@ -2874,15 +2877,44 @@ function beepDone(ctx){
   // Three ascending beeps — GO!
   playBeeps([{freq:660,t:0,dur:0.18},{freq:880,t:0.22,dur:0.18},{freq:1100,t:0.44,dur:0.3}],ctx);
 }
+// ── Notifications ──
+function updateNotifStatus(){
+  const el=document.getElementById('notif-status');if(!el)return;
+  if(!('Notification' in window)){el.textContent='';return;}
+  if(Notification.permission==='granted'){el.textContent='🔔 Notifications on';el.style.color='var(--green)';}
+  else if(Notification.permission==='denied'){el.textContent='🔕 Notifications blocked';el.style.color='var(--red)';}
+  else{el.textContent='🔔 Tap Start to enable alerts';el.style.color='var(--muted)';}
+}
+function requestNotifPermission(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    Notification.requestPermission().then(()=>updateNotifStatus());
+  }
+  updateNotifStatus();
+}
+function sendRestNotif(){
+  // Fire a web notification — works in background / other tabs if permission granted
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  try{
+    new Notification('Rest over — GO! 💥',{
+      body:'Time to hit your next set. SwimFitPro',
+      icon:'/icons/icon-192.png',
+      badge:'/icons/icon-192.png',
+      silent:false,
+      tag:'rest-timer', // replaces any previous timer notification
+    });
+  }catch(e){}
+}
+
 function timerDone(){
   try{const ctx=getAudioCtx();beepDone(ctx);}catch(e){}
   try{navigator.vibrate&&navigator.vibrate([100,80,100,80,300]);}catch(e){}
+  sendRestNotif();
   const el=document.getElementById('timer-display');
   const btn=document.getElementById('timer-btn');
   if(el){
     el.style.color='var(--green)';
     el.textContent='GO! ✓';
-    // Flash animation
     let flashes=0;const flash=setInterval(()=>{
       el.style.opacity=el.style.opacity==='0.3'?'1':'0.3';
       if(++flashes>=6){clearInterval(flash);el.style.opacity='1';}
@@ -2896,8 +2928,9 @@ function toggleTimer(){
     clearInterval(S.timerInterval);S.timerRunning=false;
     document.getElementById('timer-btn').textContent='Start';
   } else {
-    // Unlock audio on this user gesture
+    // Unlock audio + request notification permission on this user gesture
     try{getAudioCtx();}catch(e){}
+    requestNotifPermission();
     S.timerRunning=true;
     document.getElementById('timer-btn').textContent='Stop';
     S.timerInterval=setInterval(()=>{
@@ -3060,7 +3093,7 @@ function showSection(name){
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
-  if(name==='workout'){renderWorkoutTab();renderBaseline();}
+  if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();}
 }
