@@ -783,16 +783,13 @@ function getHeightCm(){
   }
 }
 function applyUnitSettings(){
-  // Update any inline unit labels across the whole page
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  // Re-render all affected sections
   renderKmTracker();
   renderHomeCals();
   renderBaseline();
   if(S.currentWorkout)renderWorkout(S.currentWorkout);
-  renderNutrition();
-  // Update pickers last — after all renders settle — so buttons aren't wiped by a re-render above
-  setTimeout(updateUnitPickers,0);
+  // Update pickers immediately — no re-render touches the More tab settings card
+  updateUnitPickers();
 }
 function setWeightUnit(kg){
   S.useKg=kg;DB.set('useKg',kg);
@@ -2721,7 +2718,6 @@ function renderFuelTodayCard(){
 }
 function renderNutrition(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
   // Build inputs dynamically so iOS Safari cannot autofill them
   const pf=document.getElementById('athlete-profile-fields');
   if(pf){
