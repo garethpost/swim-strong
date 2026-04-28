@@ -20,6 +20,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 #header h1{font-size:21px;font-weight:700;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 #header .sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
+.unit-picker-btn.active{background:var(--accent);color:#000;}
+#wt-kg.active,#wt-lbs.active,#dist-km.active,#dist-mi.active{background:var(--accent);color:#000;}
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;}
 #nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 20px;z-index:100;}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--muted);font-size:9px;font-family:var(--font);cursor:pointer;padding:6px 0;transition:color 0.2s;}
@@ -411,9 +413,27 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       </div>
       <div class="card">
         <div class="card-title">Settings</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div><div style="font-size:14px;font-weight:600;">Weight Units</div><div style="font-size:12px;color:var(--muted);">Tap to switch</div></div>
-          <button class="unit-toggle" onclick="toggleUnits()" id="unit-btn2">kg</button>
+        <!-- Weight units -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Weights</div>
+            <div style="font-size:12px;color:var(--muted);">Gym & workout weights</div>
+          </div>
+          <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <button id="wt-kg" onclick="setWeightUnit(true)" style="padding:7px 16px;font-size:13px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;">kg</button>
+            <button id="wt-lbs" onclick="setWeightUnit(false)" style="padding:7px 16px;font-size:13px;font-weight:700;font-family:var(--font);border:none;border-left:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;">lbs</button>
+          </div>
+        </div>
+        <!-- Distance units -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+          <div>
+            <div style="font-size:14px;font-weight:600;">Distance</div>
+            <div style="font-size:12px;color:var(--muted);">Season km tracker</div>
+          </div>
+          <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+            <button id="dist-km" onclick="setDistUnit(true)" style="padding:7px 16px;font-size:13px;font-weight:700;font-family:var(--font);border:none;cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;">km</button>
+            <button id="dist-mi" onclick="setDistUnit(false)" style="padding:7px 16px;font-size:13px;font-weight:700;font-family:var(--font);border:none;border-left:1px solid var(--border);cursor:pointer;background:var(--surface);color:var(--muted);transition:all 0.15s;">mi</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -708,7 +728,8 @@ let S={
   goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
-  useKg:DB.get('useKg',true),
+  useKg:DB.get('useKg',true),   // weight: true=kg, false=lbs
+  useKm:DB.get('useKm',true),   // distance: true=km, false=miles
   timeHistory:DB.get('timeHistory',{'50 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'24.80',lcm:'24.93'}],'100 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'53.83',lcm:'54.65'}],'200 Free':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:59.49',lcm:'2:01.04'}],'50 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'27.47',lcm:'28.01'}],'100 Fly':[{date:'2024-01-01',meet:'Season Start PB',scm:'1:01.54',lcm:'1:02.81'}]}),
   history:DB.get('history',[]),
   weightLog:DB.get('weightLog',{}),
@@ -761,20 +782,31 @@ function getHeightCm(){
     return Math.round((ft*12+inch)*2.54);
   }
 }
-function toggleUnits(){
-  S.useKg=!S.useKg;
-  DB.set('useKg',S.useKg);
-  document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
+function applyUnitSettings(){
+  // Update any inline unit labels
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
-  // Rebuild fuel tab inputs for correct height unit
+  // Rebuild fuel tab if open
   if(document.getElementById('athlete-profile-fields'))renderNutrition();
-  // Re-render baseline card and any active workout in new units
+  // Re-render baseline card
   if(document.getElementById('baseline-card'))renderBaseline();
-  // Update km tracker unit label and home calorie tile
+  // Update distance tracker + home cals
   renderKmTracker();
   renderHomeCals();
+  // Update settings pickers to reflect current state
+  updateUnitPickers();
 }
-document.querySelectorAll('#unit-btn,#unit-btn2').forEach(b=>b.textContent=S.useKg?'Metric':'Imperial');
+function setWeightUnit(kg){
+  S.useKg=kg;DB.set('useKg',kg);
+  applyUnitSettings();
+}
+function setDistUnit(km){
+  S.useKm=km;DB.set('useKm',km);
+  applyUnitSettings();
+}
+function updateUnitPickers(){
+  ['wt-kg','wt-lbs'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active',id==='wt-kg'?S.useKg:!S.useKg);});
+  ['dist-km','dist-mi'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.toggle('active',id==='dist-km'?S.useKm:!S.useKm);});
+}
 document.getElementById('unit-btn').style.display='none';
 
 // Helpers
@@ -985,9 +1017,8 @@ function applyClubLogo(){
 // ── KM Tracker ──
 function renderKmTracker(){
   const total=S.swimKmTotal||0;
-  const useKm=S.useKg; // metric = km, imperial = miles
-  const disp=useKm?total.toFixed(1):(total*0.621371).toFixed(1);
-  const unit=useKm?'km':'mi';
+  const disp=S.useKm?total.toFixed(1):(total*0.621371).toFixed(1);
+  const unit=S.useKm?'km':'mi';
   const el=document.getElementById('km-display');
   const ul=document.getElementById('km-unit-label');
   if(el)el.textContent=disp;
@@ -3095,7 +3126,7 @@ function showSection(name){
   if(name==='schedule'){renderCalendar();renderTemplateGrid();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel')renderNutrition();
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderProfileDisplay();updateUnitPickers();}
 }
 
 // INIT
