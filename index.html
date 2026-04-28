@@ -6,18 +6,34 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SwimFitPro">
-<meta name="theme-color" content="#0a1628">
+<script>
+(function(){
+  const svgIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="44" fill="#0D1F3C"/><path d="M72 88 C72 70 82 60 96 58 C110 56 120 66 120 82 C120 94 114 102 104 106 C94 110 80 106 74 98 Z" fill="#FFFFFF"/><path d="M78 88 C80 84 86 82 92 84 C98 86 102 92 100 96 C98 100 92 102 87 100 C82 98 78 94 78 88 Z" fill="#1a3a6c"/><path d="M86 88 C87 85 90 84 93 85 C96 86 97 89 96 92 C95 95 92 96 89 95 C86 94 85 91 86 88 Z" fill="#0a2a5a"/><path d="M40 112 C48 98 62 90 76 88 C80 87 84 88 86 92 C88 96 84 102 80 106 C72 114 68 124 74 132 C80 140 94 138 102 130 C108 124 110 116 108 110" fill="#FFFFFF"/><path d="M78 82 C82 68 96 54 118 50 C132 47 148 52 156 64 C160 70 158 78 150 80 C140 82 126 76 114 74 C100 72 88 74 80 80" fill="#FFFFFF"/><path d="M22 138 C38 126 56 136 72 128 C88 120 100 130 116 124 C132 118 148 126 166 118 C170 116 174 120 170 124 C154 132 138 124 122 130 C106 136 90 126 74 132 C58 138 42 130 26 140 Z" fill="#1ABCBF"/><path d="M18 152 C36 142 56 150 76 144 C96 138 114 146 134 140 C150 135 164 142 178 136 L178 148 C164 154 150 147 134 152 C114 158 96 150 76 156 C56 162 36 154 18 164 Z" fill="#0E9BAA" opacity="0.7"/><rect x="120" y="120" width="11" height="24" rx="2.5" fill="#1ABCBF"/><rect x="135" y="108" width="11" height="36" rx="2.5" fill="#1ABCBF"/><rect x="150" y="94" width="11" height="50" rx="2.5" fill="#1ABCBF"/><path d="M112 134 C122 122 138 106 166 78" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round"/><path d="M166 78 L156 80 M166 78 L164 88" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const blob=new Blob([svgIcon],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);
+  const manifest={name:'SwimFitPro',short_name:'SwimFitPro',start_url:'/',display:'standalone',background_color:'#0D1F3C',theme_color:'#0D1F3C',description:'Dryland strength, fuel and race prep for competitive swimmers',icons:[{src:url,sizes:'192x192',type:'image/svg+xml'},{src:url,sizes:'512x512',type:'image/svg+xml'}]};
+  const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const mUrl=URL.createObjectURL(mBlob);
+  const link=document.createElement('link');
+  link.rel='manifest';link.href=mUrl;
+  document.head.appendChild(link);
+  const touch=document.createElement('link');
+  touch.rel='apple-touch-icon';touch.href=url;
+  document.head.appendChild(touch);
+})();
+</script>
+<meta name="theme-color" content="#0D1F3C">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>SwimFitPro</title>
 <style>
-:root{--bg:#0a1628;--surface:#111f38;--card:#172a4a;--accent:#00c6ff;--accent2:#0072ff;--gold:#f5c842;--green:#00e676;--red:#ff5252;--orange:#ff9800;--purple:#c084fc;--text:#e8f0fe;--muted:#7a8faa;--border:#1e3258;--radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;}
+:root{--bg:#0D1F3C;--surface:#112240;--card:#16284d;--accent:#1ABCBF;--accent2:#0D1F3C;--gold:#E4A833;--green:#00e676;--red:#ff5252;--orange:#ff9800;--purple:#c084fc;--text:#e8f0fe;--muted:#7a8faa;--border:#1e3a5f;--radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
 #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;}
 #header{padding:50px 20px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;}
-#header h1{font-size:21px;font-weight:700;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#header h1{font-size:21px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
 #header .sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
 .unit-picker-btn.active{background:var(--accent);color:#000;}
@@ -153,7 +169,24 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div id="header">
     <div style="display:flex;align-items:center;gap:10px;">
       <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
-      <div><h1>SwimFitPro 🌊</h1><div class="sub" id="header-sub">Loading...</div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <svg width="32" height="32" viewBox="0 0 200 200" style="flex-shrink:0;border-radius:7px;">
+          <rect x="0" y="0" width="200" height="200" rx="44" fill="#0D1F3C"/>
+          <path d="M72 88 C72 70 82 60 96 58 C110 56 120 66 120 82 C120 94 114 102 104 106 C94 110 80 106 74 98 Z" fill="#FFFFFF"/>
+          <path d="M78 88 C80 84 86 82 92 84 C98 86 102 92 100 96 C98 100 92 102 87 100 C82 98 78 94 78 88 Z" fill="#1a3a6c"/>
+          <path d="M86 88 C87 85 90 84 93 85 C96 86 97 89 96 92 C95 95 92 96 89 95 C86 94 85 91 86 88 Z" fill="#0a2a5a"/>
+          <path d="M40 112 C48 98 62 90 76 88 C80 87 84 88 86 92 C88 96 84 102 80 106 C72 114 68 124 74 132 C80 140 94 138 102 130 C108 124 110 116 108 110" fill="#FFFFFF"/>
+          <path d="M78 82 C82 68 96 54 118 50 C132 47 148 52 156 64 C160 70 158 78 150 80 C140 82 126 76 114 74 C100 72 88 74 80 80" fill="#FFFFFF"/>
+          <path d="M22 138 C38 126 56 136 72 128 C88 120 100 130 116 124 C132 118 148 126 166 118 C170 116 174 120 170 124 C154 132 138 124 122 130 C106 136 90 126 74 132 C58 138 42 130 26 140 Z" fill="#1ABCBF"/>
+          <path d="M18 152 C36 142 56 150 76 144 C96 138 114 146 134 140 C150 135 164 142 178 136 L178 148 C164 154 150 147 134 152 C114 158 96 150 76 156 C56 162 36 154 18 164 Z" fill="#0E9BAA" opacity="0.7"/>
+          <rect x="120" y="120" width="11" height="24" rx="2.5" fill="#1ABCBF"/>
+          <rect x="135" y="108" width="11" height="36" rx="2.5" fill="#1ABCBF"/>
+          <rect x="150" y="94" width="11" height="50" rx="2.5" fill="#1ABCBF"/>
+          <path d="M112 134 C122 122 138 106 166 78" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round"/>
+          <path d="M166 78 L156 80 M166 78 L164 88" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div><h1>SwimFitPro</h1><div class="sub" id="header-sub">Loading...</div></div>
+      </div>
     </div>
     <button class="unit-toggle" onclick="toggleUnits()" id="unit-btn">kg</button>
   </div>
@@ -563,8 +596,25 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div id="section-onboarding" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;overflow-y:auto;-webkit-overflow-scrolling:touch;">
   <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:480px;margin:0 auto;">
     <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
-      <div style="font-size:52px;margin-bottom:10px;">🌊</div>
-      <h1 style="font-size:26px;font-weight:800;background:linear-gradient(90deg,var(--accent),#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;">SwimFitPro</h1>
+      <div style="margin-bottom:14px;">
+        <svg width="90" height="90" viewBox="0 0 200 200" style="border-radius:20px;">
+          <rect x="0" y="0" width="200" height="200" rx="44" fill="#0D1F3C"/>
+          <path d="M72 88 C72 70 82 60 96 58 C110 56 120 66 120 82 C120 94 114 102 104 106 C94 110 80 106 74 98 Z" fill="#FFFFFF"/>
+          <path d="M78 88 C80 84 86 82 92 84 C98 86 102 92 100 96 C98 100 92 102 87 100 C82 98 78 94 78 88 Z" fill="#1a3a6c"/>
+          <path d="M86 88 C87 85 90 84 93 85 C96 86 97 89 96 92 C95 95 92 96 89 95 C86 94 85 91 86 88 Z" fill="#0a2a5a"/>
+          <path d="M40 112 C48 98 62 90 76 88 C80 87 84 88 86 92 C88 96 84 102 80 106 C72 114 68 124 74 132 C80 140 94 138 102 130 C108 124 110 116 108 110" fill="#FFFFFF"/>
+          <path d="M78 82 C82 68 96 54 118 50 C132 47 148 52 156 64 C160 70 158 78 150 80 C140 82 126 76 114 74 C100 72 88 74 80 80" fill="#FFFFFF"/>
+          <path d="M22 138 C38 126 56 136 72 128 C88 120 100 130 116 124 C132 118 148 126 166 118 C170 116 174 120 170 124 C154 132 138 124 122 130 C106 136 90 126 74 132 C58 138 42 130 26 140 Z" fill="#1ABCBF"/>
+          <path d="M18 152 C36 142 56 150 76 144 C96 138 114 146 134 140 C150 135 164 142 178 136 L178 148 C164 154 150 147 134 152 C114 158 96 150 76 156 C56 162 36 154 18 164 Z" fill="#0E9BAA" opacity="0.7"/>
+          <rect x="120" y="120" width="11" height="24" rx="2.5" fill="#1ABCBF"/>
+          <rect x="135" y="108" width="11" height="36" rx="2.5" fill="#1ABCBF"/>
+          <rect x="150" y="94" width="11" height="50" rx="2.5" fill="#1ABCBF"/>
+          <path d="M112 134 C122 122 138 106 166 78" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round"/>
+          <path d="M166 78 L156 80 M166 78 L164 88" fill="none" stroke="#1ABCBF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
+      <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
       <p style="font-size:14px;color:var(--muted);line-height:1.5;">Set up your athlete profile to get personalised training, time standards, and nutrition.</p>
     </div>
 
@@ -1089,14 +1139,14 @@ function toggleMoreSection(bodyId,chevronId){
 // ── Theme System ──
 const THEMES={
   original:{
-    name:'Original',
-    desc:'Deep navy · cyan — the classic',
-    preview:['#0a1628','#00c6ff','#172a4a'],
+    name:'SwimFitPro',
+    desc:'Navy · teal · gold — brand default',
+    preview:['#0D1F3C','#1ABCBF','#16284d'],
     vars:{
-      '--bg':'#0a1628','--surface':'#111f38','--card':'#172a4a',
-      '--accent':'#00c6ff','--accent2':'#0072ff',
-      '--text':'#e8f0fe','--muted':'#7a8faa','--border':'#1e3258',
-      '--gold':'#f5c842','--green':'#00e676','--red':'#ff5252',
+      '--bg':'#0D1F3C','--surface':'#112240','--card':'#16284d',
+      '--accent':'#1ABCBF','--accent2':'#0D1F3C',
+      '--text':'#e8f0fe','--muted':'#7a8faa','--border':'#1e3a5f',
+      '--gold':'#E4A833','--green':'#00e676','--red':'#ff5252',
       '--orange':'#ff9800','--purple':'#c084fc',
     }
   },
@@ -1161,15 +1211,10 @@ function applyTheme(key){
   const h1=document.querySelector('#header h1');
   const isLight=(key==='tide'||key==='speedstripe');
   if(h1){
-    if(isLight){
-      h1.style.background='none';
-      h1.style['-webkit-background-clip']='unset';
-      h1.style['-webkit-text-fill-color']=theme.vars['--accent2']||theme.vars['--accent'];
-    } else {
-      h1.style.background='linear-gradient(90deg,var(--accent),#7b61ff)';
-      h1.style['-webkit-background-clip']='text';
-      h1.style['-webkit-text-fill-color']='transparent';
-    }
+    h1.style.background='none';
+    h1.style['-webkit-background-clip']='unset';
+    h1.style['-webkit-text-fill-color']=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
+    h1.style.color=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
   }
   // btn-primary: on light themes the white text is fine, but we need readable btn text
   // All btn-primary already use var(--accent2) and var(--accent) in their gradient — auto follows
@@ -2373,7 +2418,7 @@ function renderWorkoutTab(){
       const ph=goalPhaseFromPosition(totalW,wkRemaining);
       const isCurrent=wkRemaining===weeks;
       const isPast=wkRemaining>weeks;
-      const colors={GPP:'#00e676',Stimulus:'#00e676',Strength:'#ff5252',Sharpen:'#ff9800',Taper:'#00c6ff'};
+      const colors={GPP:'#00e676',Stimulus:'#00e676',Strength:'#ff5252',Sharpen:'#ff9800',Taper:'#1ABCBF'};
       const bg=isPast?'var(--border)':colors[ph.name]||'var(--border)';
       const labelColor=isPast?'var(--border)':colors[ph.name]||'var(--muted)';
       return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
@@ -2660,13 +2705,13 @@ function buildChart(hist,field){
   const W=320,H=110,PX=32,PY=14,iW=W-PX*2,iH=H-PY*2;
   const pts=vals.map((v,i)=>[PX+i*(iW/Math.max(1,vals.length-1)),PY+iH-((v-mn)/rng)*iH]);
   let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible;">`;
-  svg+=`<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00c6ff" stop-opacity="0.4"/><stop offset="100%" stop-color="#00c6ff" stop-opacity="0"/></linearGradient></defs>`;
+  svg+=`<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1ABCBF" stop-opacity="0.4"/><stop offset="100%" stop-color="#1ABCBF" stop-opacity="0"/></linearGradient></defs>`;
   for(let i=0;i<=4;i++){const y=PY+i*(iH/4);svg+=`<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#1e3258" stroke-width="1"/>`;}
   const aPath=`M ${pts[0][0]} ${pts[0][1]} ${pts.slice(1).map(p=>`L ${p[0]} ${p[1]}`).join(' ')} L ${pts[pts.length-1][0]} ${PY+iH} L ${pts[0][0]} ${PY+iH} Z`;
   svg+=`<path d="${aPath}" fill="url(#cg)"/>`;
-  svg+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#00c6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  svg+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#1ABCBF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   pts.forEach(([x,y],i)=>{
-    svg+=`<circle cx="${x}" cy="${y}" r="4" fill="#00c6ff"/>`;
+    svg+=`<circle cx="${x}" cy="${y}" r="4" fill="#1ABCBF"/>`;
     const a=i===0?'start':i===vals.length-1?'end':'middle';
     svg+=`<text x="${x}" y="${y-9}" fill="#e8f0fe" font-size="9" text-anchor="${a}">${secDisp(vals[i])}</text>`;
     svg+=`<text x="${x}" y="${H-2}" fill="#7a8faa" font-size="8" text-anchor="${a}">${labels[i]}</text>`;
@@ -5025,7 +5070,7 @@ function renderMeetDayBanner(){
 
     const warmup=getWarmupProtocol(race.event,race.session,race.pool||'lcm');
     const hasIntel=warmup.some(s=>s.intelNote||s.adapted);
-    const intelBadge=hasIntel?`<span style="font-size:9px;font-weight:800;letter-spacing:.5px;background:linear-gradient(90deg,var(--accent),#7b61ff);color:#fff;padding:2px 7px;border-radius:20px;margin-left:6px;">AI ADAPTED</span>`:'';
+    const intelBadge=hasIntel?`<span style="font-size:9px;font-weight:800;letter-spacing:.5px;background:var(--accent);color:#0D1F3C;padding:2px 7px;border-radius:20px;margin-left:6px;">AI ADAPTED</span>`:'';
     const warmupHtml=`<details style="margin-top:8px;"><summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol${intelBadge}</summary>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
         ${warmup.map((s,i)=>{
