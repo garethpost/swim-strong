@@ -1132,6 +1132,7 @@ let S={
   appTheme:DB.get('appTheme','original'),
   meetRaces:DB.get('meetRaces',[]), // [{id,meetId,event,pool,seedTime,day,session}]
   meetRaceLog:DB.get('meetRaceLog',[]), // [{id,meetId,raceId,time,coachTags:[],coachNotes,ts}]
+  _raceModeDissmissedDate:DB.get('raceModeDissmissedDate',null), // date key when swimmer dismissed race mode
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
 };
@@ -5646,6 +5647,28 @@ function getRestProtocol(gapHours,prelimResult,seedTime,coachTags){
 }
 
 // ── Meet Day Banner ──
+function deleteRace(raceId){
+  if(!confirm('Delete this race?'))return;
+  S.meetRaces=S.meetRaces.filter(r=>String(r.id)!==String(raceId));
+  S.meetRaceLog=S.meetRaceLog.filter(l=>String(l.raceId)!==String(raceId));
+  DB.set('meetRaces',S.meetRaces);
+  DB.set('meetRaceLog',S.meetRaceLog);
+  renderMeetDayBanner();
+}
+
+function dismissRaceMode(){
+  // Store dismiss key for today — race mode won't show again today unless reopened
+  S._raceModeDissmissedDate=dKey(new Date());
+  DB.set('raceModeDissmissedDate',S._raceModeDissmissedDate);
+  renderMeetDayBanner();
+}
+
+function restoreRaceMode(){
+  S._raceModeDissmissedDate=null;
+  DB.set('raceModeDissmissedDate',null);
+  renderMeetDayBanner();
+}
+
 function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
   if(!todayRaces.length){
     return`<div style="text-align:center;padding:24px 16px;background:var(--surface);border-radius:12px;border:1px dashed var(--gold);">
@@ -5662,6 +5685,8 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
     const sessionColor=isFinals?'var(--gold)':'var(--accent)';
     const sessionLabel=race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session';
     const sessionIcon=isFinals?'🥇':'🏊';
+    // Default open if no result yet; collapsed once result is logged
+    const cardOpen=!latestLog;
 
     let resultHtml='';
     if(latestLog){
@@ -5688,7 +5713,7 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
         ${warmup.map(s=>{
           const borderColor=s.adapted?'var(--accent)':sessionColor;
           const bg=s.adapted?'rgba(0,198,255,0.06)':'var(--surface)';
-          const adaptedTag=s.adapted?`<span style="font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.4px;background:rgba(0,198,255,0.12);padding:1px 6px;border-radius:10px;margin-left:6px;">ADAPTED</span>`:'';
+          const adaptedTag=s.adapted?`<span style="font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.4px;background:rgba(0,198,195,0.12);padding:1px 6px;border-radius:10px;margin-left:6px;">ADAPTED</span>`:'';
           const intelNote=s.intelNote?`<div style="font-size:10px;color:var(--accent);margin-top:5px;padding:5px 8px;background:rgba(0,198,255,0.08);border-radius:6px;line-height:1.5;">🧠 ${s.intelNote}</div>`:'';
           const adapterNote=s.adapterNote?`<div style="font-size:10px;color:var(--accent);margin-top:4px;font-style:italic;opacity:.85;">↳ ${s.adapterNote}</div>`:'';
           const focusCue=s.focusCueText?`<div style="margin-top:6px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);font-size:10px;color:var(--gold);line-height:1.5;">🎯 ${s.focusCueText}</div>`:'';
@@ -5731,21 +5756,36 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
       </details>`;
     }
 
-    return`<div style="background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--border);border-top:3px solid ${sessionColor};">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:20px;">${sessionIcon}</span>
-          <div>
-            <div style="font-size:17px;font-weight:900;color:var(--text);line-height:1.1;">${race.event}</div>
-            <div style="font-size:10px;color:${sessionColor};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:1px;">${sessionLabel} · ${race.pool?.toUpperCase()||'LCM'}</div>
+    // Result summary shown in collapsed header
+    const collapsedSummary=latestLog
+      ?`<span style="font-size:12px;font-weight:800;color:var(--green);margin-left:6px;">${latestLog.time} ✓</span>`
+      :`<span style="font-size:11px;color:var(--muted);margin-left:6px;">No result yet</span>`;
+
+    return`<details style="margin-bottom:10px;" ${cardOpen?'open':''}>
+      <summary style="list-style:none;cursor:pointer;background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);border-top:3px solid ${sessionColor};display:block;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:20px;">${sessionIcon}</span>
+            <div>
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:17px;font-weight:900;color:var(--text);line-height:1.1;">${race.event}</span>
+                ${collapsedSummary}
+              </div>
+              <div style="font-size:10px;color:${sessionColor};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">${sessionLabel} · ${race.pool?.toUpperCase()||'LCM'}${race.seedTime?' · Seed: '+race.seedTime:''}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span style="font-size:12px;color:var(--muted);">▼</span>
+            <button onclick="event.preventDefault();event.stopPropagation();deleteRace(${race.id})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;" title="Delete race">✕</button>
           </div>
         </div>
-        ${race.seedTime?`<div style="text-align:right;"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Seed</div><div style="font-size:14px;font-weight:700;color:var(--muted);">${race.seedTime}</div></div>`:''}
+      </summary>
+      <div style="background:var(--card);border-radius:0 0 14px 14px;padding:0 14px 14px;border:1px solid var(--border);border-top:none;margin-top:-4px;">
+        ${resultHtml}
+        ${restHtml}
+        ${warmupHtml}
       </div>
-      ${resultHtml}
-      ${restHtml}
-      ${warmupHtml}
-    </div>`;
+    </details>`;
   }).join('');
 }
 
@@ -5776,6 +5816,30 @@ function renderMeetDayBanner(){
     }
     return;
   }
+
+  // ── Dismissed today? Show normal schedule with a "Return to Race Mode" banner ──
+  const todayKey=dKey(today);
+  if(S._raceModeDissmissedDate===todayKey){
+    raceMode.style.display='none';
+    normalMode.style.display='block';
+    if(navBtn){
+      navBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule`;
+      navBtn.style.color='';
+    }
+    // Inject a small "return to race mode" prompt at top of normal schedule
+    const existingBanner=document.getElementById('race-mode-return-banner');
+    if(!existingBanner){
+      const banner=document.createElement('div');
+      banner.id='race-mode-return-banner';
+      banner.style.cssText='margin-bottom:12px;padding:10px 14px;background:rgba(245,200,66,0.08);border:1px solid var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:space-between;';
+      banner.innerHTML=`<span style="font-size:13px;font-weight:700;color:var(--gold);">🏁 ${activeMeet.name} is on today</span>
+        <button onclick="restoreRaceMode()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--gold);background:rgba(245,200,66,0.12);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Race Mode</button>`;
+      normalMode.insertBefore(banner,normalMode.firstChild);
+    }
+    return;
+  }
+  // Remove return banner if race mode is active
+  const rb=document.getElementById('race-mode-return-banner');if(rb)rb.remove();
 
   // ── Race Mode ──
   S.activeMeetId=activeMeet.id;
@@ -5825,7 +5889,10 @@ function renderMeetDayBanner(){
           <div style="font-size:22px;font-weight:900;color:var(--text);line-height:1.1;">${activeMeet.name}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px;">Day ${meetDay} of ${totalDays}</div>
         </div>
-        <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
+          <button onclick="dismissRaceMode()" style="padding:3px 10px;border-radius:8px;border:none;background:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);">Exit Race Mode</button>
+        </div>
       </div>
       ${totalRaces?`
       <div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
