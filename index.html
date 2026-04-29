@@ -314,7 +314,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-            <div><strong style="color:var(--text);">Set your season template</strong> — scroll to "Season Template", enter your season dates and set each weekday to Swim / Dryland / Double / Rest, then tap <em>Apply to Season</em>. The calendar fills automatically.</div>
+            <div><strong style="color:var(--text);">Set your season template</strong> — go to the <strong style="color:var(--accent);">More</strong> tab and find "Season Template". Enter your season dates and set each weekday to Swim / Dryland / Double / Rest, then tap <em>Apply to Season</em>. The calendar fills automatically.</div>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
             <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
@@ -413,9 +413,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <!-- ── PROGRAM (collapsible) ── -->
       <button onclick="toggleMoreSection('more-program-body','more-program-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
         <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Program</span>
-        <span id="more-program-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;">▼</span>
+        <span id="more-program-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
       </button>
-      <div id="more-program-body">
+      <div id="more-program-body" style="display:none;">
         <div class="card">
           <div class="card-title">Season Template</div>
           <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Set your weekly training pattern and season dates. The calendar fills automatically. Tap any day to override.</p>
@@ -505,7 +505,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <!-- ── SETTINGS (collapsible) ── -->
       <button onclick="toggleMoreSection('more-settings-body','more-settings-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
         <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Settings</span>
-        <span id="more-settings-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;">▼</span>
+        <span id="more-settings-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
       </button>
       <div id="more-settings-body" style="display:none;">
         <div class="card">
@@ -548,7 +548,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <!-- ── DATA (collapsible) ── -->
       <button onclick="toggleMoreSection('more-data-body','more-data-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
         <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Data</span>
-        <span id="more-data-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;">▼</span>
+        <span id="more-data-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
       </button>
       <div id="more-data-body" style="display:none;">
         <div class="card">
@@ -582,7 +582,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:480px;margin:0 auto;">
     <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
       <div style="margin-bottom:14px;">
-        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:fill;background:#0D1F3C;display:block;">
+        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:fill;background:#0D1F3C;display:inline-block;">
       </div>
       <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
       <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
@@ -594,7 +594,26 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div class="card-title">👤 About You</div>
       <div class="form-row"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Alex" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
       <div class="form-row"><label>Club / Team</label><input type="text" id="ob-club" placeholder="e.g. Cascade Swim Club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
-      <div class="form-row"><label>Date of Birth</label><input type="date" id="ob-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
+      <div class="form-row"><label>Date of Birth</label>
+        <input type="hidden" id="ob-dob">
+        <div style="display:grid;grid-template-columns:2fr 1fr 2fr;gap:6px;">
+          <select id="ob-dob-month" onchange="updateObDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 8px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+            <option value="">Month</option>
+            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+          </select>
+          <select id="ob-dob-day" onchange="updateObDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 4px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+            <option value="">Day</option>
+            ${Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}</option>`).join('')}
+          </select>
+          <select id="ob-dob-year" onchange="updateObDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 8px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+            <option value="">Year</option>
+            ${Array.from({length:15},(_,i)=>`<option value="${new Date().getFullYear()-10-i}">${new Date().getFullYear()-10-i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
       <div class="form-row"><label>Gender</label>
         <select id="ob-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
           <option value="" disabled selected>Select gender</option>
@@ -603,10 +622,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </select>
       </div>
       <div class="form-row"><label>Units</label>
-        <select id="ob-units" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
-          <option value="metric">Metric (kg / km)</option>
-          <option value="imperial">Imperial (lbs / miles)</option>
-        </select>
+        <input type="hidden" id="ob-units" value="metric">
+        <div style="display:flex;gap:8px;">
+          <button type="button" id="ob-units-metric" onclick="setObUnits('metric')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,188,191,0.12);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">Metric<br><span style="font-size:11px;font-weight:400;color:var(--muted);">kg / km</span></button>
+          <button type="button" id="ob-units-imperial" onclick="setObUnits('imperial')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">Imperial<br><span style="font-size:11px;font-weight:400;color:var(--muted);">lbs / miles</span></button>
+        </div>
       </div>
     </div>
 
@@ -834,7 +854,26 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="modal-overlay" id="profile-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:16px;">Edit Profile</h3>
 <div class="form-row"><label>First Name</label><input type="text" id="pm-name" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
 <div class="form-row"><label>Club / Team</label><input type="text" id="pm-club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
-<div class="form-row"><label>Date of Birth</label><input type="date" id="pm-dob" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);-webkit-appearance:none;"></div>
+<div class="form-row"><label>Date of Birth</label>
+  <input type="hidden" id="pm-dob">
+  <div style="display:grid;grid-template-columns:2fr 1fr 2fr;gap:6px;">
+    <select id="pm-dob-month" onchange="updatePmDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 8px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+      <option value="">Month</option>
+      <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+      <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+      <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+      <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+    </select>
+    <select id="pm-dob-day" onchange="updatePmDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 4px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+      <option value="">Day</option>
+      ${Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}</option>`).join('')}
+    </select>
+    <select id="pm-dob-year" onchange="updatePmDob()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 8px;font-family:var(--font);-webkit-appearance:none;appearance:none;text-align:center;">
+      <option value="">Year</option>
+      ${Array.from({length:15},(_,i)=>`<option value="${new Date().getFullYear()-10-i}">${new Date().getFullYear()-10-i}</option>`).join('')}
+    </select>
+  </div>
+</div>
 <div class="form-row"><label>Gender</label><select id="pm-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
   <option value="male">Male</option><option value="female">Female</option>
 </select></div>
@@ -1352,6 +1391,34 @@ function setObEquip(val){
   });
   const inp=document.getElementById('ob-equip-val');if(inp)inp.value=val;
 }
+function setObUnits(val){
+  ['metric','imperial'].forEach(k=>{
+    const btn=document.getElementById('ob-units-'+k);
+    if(!btn)return;
+    const active=k===val;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(26,188,191,0.12)':'var(--surface)';
+  });
+  const inp=document.getElementById('ob-units');if(inp)inp.value=val;
+}
+function updateObDob(){
+  const m=document.getElementById('ob-dob-month');
+  const d=document.getElementById('ob-dob-day');
+  const y=document.getElementById('ob-dob-year');
+  const inp=document.getElementById('ob-dob');
+  if(m&&d&&y&&inp&&m.value&&d.value&&y.value){
+    inp.value=`${y.value}-${m.value}-${d.value}`;
+  }
+}
+function updatePmDob(){
+  const m=document.getElementById('pm-dob-month');
+  const d=document.getElementById('pm-dob-day');
+  const y=document.getElementById('pm-dob-year');
+  const inp=document.getElementById('pm-dob');
+  if(m&&d&&y&&inp&&m.value&&d.value&&y.value){
+    inp.value=`${y.value}-${m.value}-${d.value}`;
+  }
+}
 function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'intermediate';}
 function getStandard(ev,course){
   // Canada Trials: pick Senior (18+) or Junior (<18) based on comp age
@@ -1442,7 +1509,18 @@ function openProfileModal(){
   if(!S.profile)return openModal('profile-modal');
   document.getElementById('pm-name').value=S.profile.name||'';
   document.getElementById('pm-club').value=S.profile.club||'';
-  document.getElementById('pm-dob').value=S.profile.dob||'';
+  // Pre-fill DOB selects from stored YYYY-MM-DD
+  const dobStr=S.profile.dob||'';
+  document.getElementById('pm-dob').value=dobStr;
+  if(dobStr&&dobStr.length===10){
+    const [dobY,dobM,dobD]=dobStr.split('-');
+    const mSel=document.getElementById('pm-dob-month');
+    const dSel=document.getElementById('pm-dob-day');
+    const ySel=document.getElementById('pm-dob-year');
+    if(mSel)mSel.value=dobM||'';
+    if(dSel)dSel.value=dobD||'';
+    if(ySel)ySel.value=dobY||'';
+  }
   document.getElementById('pm-gender').value=S.profile.gender||'male';
   initProfileEventPicker('pm-events',S.profile.primaryEvents||[]);
   setPmLevel(S.profile.trainingLevel||'intermediate');
@@ -2392,10 +2470,24 @@ function renderWorkoutTab(){
   let modeHtml='';
   if(!isGoal){
     // Standard mode — show subtitle + action buttons
+    const todayDayType=getTodayDrylandType();
+    const isRestDay=todayDayType==='rest';
+    const restBanner=isRestDay?`
+      <div class="card" style="margin-bottom:12px;text-align:center;padding:20px 16px;">
+        <div style="font-size:36px;margin-bottom:8px;">😴</div>
+        <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Rest Day</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">No dryland scheduled today. Recovery is training.</div>
+        <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:12px;text-align:left;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery Options</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;">🚶 20min easy walk<br>🧘 10min breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9hrs sleep tonight</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Optional: do a mobility session anyway</button>
+      </div>`:''
     modeHtml=`
       <p class="section-title">Today's Session</p>
       <p class="section-sub" id="workout-subtitle">—</p>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>
+      ${restBanner}
+      ${!isRestDay?`<button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>`:''}
       <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
   } else if(!gp){
     // Goal mode — setup card
@@ -3842,7 +3934,7 @@ function calcNutrition(){
   let wt=parseFloat(document.getElementById('weight-input').value);
   const age=parseInt(document.getElementById('age-input').value)||(getRealAge()||16);
   const sex=document.getElementById('sex-select').value;
-  if(!htCm||!wt||!age||!sex)return alert('Enter height, weight, age and sex.');
+  if(!htCm||!wt||!age||!sex)return alert('Enter height, weight, age and gender.');
   const wtKg=S.useKg?wt:wt/2.205;
   S.bodyStats={ht:htCm,wtKg,age,sex,updated:new Date().toISOString()};
   S.lastStatsUpdate=new Date().toISOString();
@@ -4010,8 +4102,51 @@ function removeMealEntry(idx){
   renderMealTracker();
 }
 
+function _buildMealFoodResults(){
+  const q=(S._mealSearch||'').toLowerCase();
+  const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
+  const filtered=q?SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q)):SWIMMER_FOODS;
+  let html='';
+  if(q){
+    if(filtered.length){
+      html+=`<div style="max-height:280px;overflow-y:auto;">`;
+      filtered.forEach(food=>{
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${food.name}</div>
+            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P · ${food.fat}g F</div>
+          </div>
+          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
+        </div>`;
+      });
+      html+=`</div>`;
+    } else {
+      html+=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No matches — try a different search</div>`;
+    }
+  } else {
+    cats.forEach(cat=>{
+      const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">${cat}</div>`;
+      catFoods.forEach(food=>{
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${food.name}</div>
+            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P</div>
+          </div>
+          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
+        </div>`;
+      });
+    });
+  }
+  return html;
+}
+function updateMealSearchResults(){
+  const res=document.getElementById('meal-food-results');
+  if(res)res.innerHTML=_buildMealFoodResults();
+}
 function renderMealTracker(){
   const el=document.getElementById('meal-tracker-section');if(!el)return;
+  S.mealLog=DB.get('mealLog',S.mealLog||{});
   const meals=getTodayMeals();
   const targets=getDailyCalFromSchedule();
   // Sum today's logged macros
@@ -4024,11 +4159,6 @@ function renderMealTracker(){
   });
   const pct=(v,t)=>t?Math.min(100,Math.round(v/t*100)):0;
   const col=(p)=>p>=90?'var(--green)':p>=60?'var(--accent)':'var(--orange)';
-
-  // Search state
-  const q=(S._mealSearch||'').toLowerCase();
-  const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
-  const filtered=q?SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q)):SWIMMER_FOODS;
 
   let html=`<div class="card" style="margin-bottom:12px;">
     <div class="card-title">Today's Meals</div>
@@ -4061,46 +4191,14 @@ function renderMealTracker(){
     html+=`<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:13px;">No meals logged yet today</div>`;
   }
 
-  // Add food section
+  // Add food section — search input is static; results update independently to preserve keyboard focus
   html+=`<div>
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Add food</div>
     <input type="text" id="meal-search-input" placeholder="Search foods..." value="${S._mealSearch||''}"
-      oninput="S._mealSearch=this.value;renderMealTracker()"
-      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);margin-bottom:10px;">`;
+      oninput="S._mealSearch=this.value;updateMealSearchResults();"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);margin-bottom:10px;">
+    <div id="meal-food-results">${_buildMealFoodResults()}</div>`;
 
-  if(q){
-    // Show search results
-    if(filtered.length){
-      html+=`<div style="max-height:280px;overflow-y:auto;">`;
-      filtered.forEach(food=>{
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px;font-weight:600;">${food.name}</div>
-            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P · ${food.fat}g F</div>
-          </div>
-          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
-        </div>`;
-      });
-      html+=`</div>`;
-    } else {
-      html+=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No matches — try a different search</div>`;
-    }
-  } else {
-    // Show by category
-    cats.forEach(cat=>{
-      const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">${cat}</div>`;
-      catFoods.forEach(food=>{
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px;font-weight:600;">${food.name}</div>
-            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P</div>
-          </div>
-          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
-        </div>`;
-      });
-    });
-  }
   html+=`</div></div>`;
   el.innerHTML=html;
 }
@@ -4258,7 +4356,7 @@ function renderNutrition(){
       <div id="athlete-profile-fields"></div>
       <div class="form-grid-2">
         <div class="form-row"><label>Age</label><div id="age-field-wrap"></div></div>
-        <div class="form-row"><label>Sex</label>
+        <div class="form-row"><label>Gender</label>
           <select id="sex-select">
             <option value="" disabled selected>Select</option>
             <option value="male">Male</option>
@@ -4292,7 +4390,7 @@ function renderNutrition(){
   // Age field — pre-fill from profile if available
   const aw=document.getElementById('age-field-wrap');
   if(aw){aw.innerHTML='';aw.appendChild(makeInput('age-input','number','',{min:14,max:25}));}
-  // Sex dropdown — pre-fill from profile
+  // Gender dropdown — pre-fill from profile
   const sx=document.getElementById('sex-select');
   if(sx){sx.value=S.profile&&S.profile.gender?S.profile.gender:'';}
   // Delay clear of height/weight only (not age/sex which come from profile)
