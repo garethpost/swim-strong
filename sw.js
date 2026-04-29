@@ -1,9 +1,8 @@
 // SwimFitPro Service Worker — cache-first for offline support
-const CACHE_NAME = 'swimfitpro-v1';
+const CACHE_NAME = 'swimfitpro-v2';
 const CACHE_URLS = [
-  '/',
-  '/index.html',
-  '/icons/icon-513.jpeg',
+  './index.html',
+  './icons/Icon-513.jpeg',
 ];
 
 // Install: cache core assets
@@ -26,7 +25,7 @@ self.addEventListener('activate', event => {
 
 // Fetch: cache-first, fall back to network, cache new successful responses
 self.addEventListener('fetch', event => {
-  // Only handle GET requests for same-origin or CDN resources
+  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
@@ -38,7 +37,7 @@ self.addEventListener('fetch', event => {
         if (response && response.status === 200) {
           const url = new URL(event.request.url);
           const ext = url.pathname.split('.').pop().toLowerCase();
-          if (['html','js','css','jpeg','jpg','png','svg','woff','woff2'].includes(ext) || url.pathname === '/') {
+          if (['html','js','css','jpeg','jpg','png','svg','woff','woff2'].includes(ext)) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           }
@@ -47,7 +46,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => {
         // Offline fallback for navigation requests
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       });
     })

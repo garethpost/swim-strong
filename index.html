@@ -6,12 +6,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SwimFitPro">
-<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-513.jpeg">
-<link rel="apple-touch-icon" href="/icons/icon-513.jpeg">
-<link rel="shortcut icon" href="/icons/icon-513.jpeg" type="image/jpeg">
+<link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-513.jpeg">
+<link rel="apple-touch-icon" href="icons/Icon-513.jpeg">
+<link rel="shortcut icon" href="icons/Icon-513.jpeg" type="image/jpeg">
 <script>
 (function(){
-  const manifest={name:'SwimFitPro',short_name:'SwimFitPro',start_url:'/',display:'standalone',background_color:'#0D1F3C',theme_color:'#0D1F3C',description:'Dryland strength, fuel and race prep for competitive swimmers',icons:[{src:'/icons/icon-513.jpeg',sizes:'512x512',type:'image/jpeg'},{src:'/icons/icon-513.jpeg',sizes:'192x192',type:'image/jpeg'}]};
+  const manifest={name:'SwimFitPro',short_name:'SwimFitPro',start_url:'./index.html',display:'standalone',background_color:'#0D1F3C',theme_color:'#0D1F3C',description:'Dryland strength, fuel and race prep for competitive swimmers',icons:[{src:'icons/Icon-513.jpeg',sizes:'512x512',type:'image/jpeg'},{src:'icons/Icon-513.jpeg',sizes:'192x192',type:'image/jpeg'}]};
   const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   const mUrl=URL.createObjectURL(mBlob);
   const link=document.createElement('link');
@@ -168,7 +168,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="display:flex;align-items:center;gap:10px;">
       <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:8px;object-fit:fill;flex-shrink:0;background:#0D1F3C;display:block;">
+        <img src="icons/Icon-513.jpeg" alt="SwimFitPro" style="width:32px;height:32px;border-radius:8px;object-fit:fill;flex-shrink:0;background:#0D1F3C;display:block;">
         <div><h1>SwimFitPro</h1><div class="sub" id="header-sub">Loading...</div></div>
       </div>
     </div>
@@ -582,7 +582,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:480px;margin:0 auto;">
     <div style="text-align:center;padding-top:32px;margin-bottom:28px;">
       <div style="margin-bottom:14px;">
-        <img src="/icons/icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:fill;background:#0D1F3C;display:inline-block;">
+        <img src="icons/Icon-513.jpeg" alt="SwimFitPro" style="width:90px;height:90px;border-radius:20px;object-fit:fill;background:#0D1F3C;display:inline-block;">
       </div>
       <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
       <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
@@ -621,11 +621,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <option value="female">Female</option>
         </select>
       </div>
-      <div class="form-row"><label>Units</label>
-        <input type="hidden" id="ob-units" value="metric">
+      <div class="form-row"><label>Weight unit</label>
         <div style="display:flex;gap:8px;">
-          <button type="button" id="ob-units-metric" onclick="setObUnits('metric')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,188,191,0.12);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">Metric<br><span style="font-size:11px;font-weight:400;color:var(--muted);">kg / km</span></button>
-          <button type="button" id="ob-units-imperial" onclick="setObUnits('imperial')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">Imperial<br><span style="font-size:11px;font-weight:400;color:var(--muted);">lbs / miles</span></button>
+          <button type="button" id="ob-wt-kg" onclick="setObWeight('kg')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,188,191,0.12);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">kg</button>
+          <button type="button" id="ob-wt-lbs" onclick="setObWeight('lbs')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">lbs</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Distance unit</label>
+        <div style="display:flex;gap:8px;">
+          <button type="button" id="ob-dist-km" onclick="setObDist('km')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,188,191,0.12);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">km</button>
+          <button type="button" id="ob-dist-miles" onclick="setObDist('miles')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">miles</button>
         </div>
       </div>
     </div>
@@ -1443,15 +1448,24 @@ function setObEquip(val){
   });
   const inp=document.getElementById('ob-equip-val');if(inp)inp.value=val;
 }
-function setObUnits(val){
-  ['metric','imperial'].forEach(k=>{
-    const btn=document.getElementById('ob-units-'+k);
+function setObUnits(val){} // legacy stub — replaced by setObWeight/setObDist
+function setObWeight(val){
+  ['kg','lbs'].forEach(k=>{
+    const btn=document.getElementById('ob-wt-'+k);
     if(!btn)return;
     const active=k===val;
     btn.style.borderColor=active?'var(--accent)':'var(--border)';
     btn.style.background=active?'rgba(26,188,191,0.12)':'var(--surface)';
   });
-  const inp=document.getElementById('ob-units');if(inp)inp.value=val;
+}
+function setObDist(val){
+  ['km','miles'].forEach(k=>{
+    const btn=document.getElementById('ob-dist-'+k);
+    if(!btn)return;
+    const active=k===val;
+    btn.style.borderColor=active?'var(--accent)':'var(--border)';
+    btn.style.background=active?'rgba(26,188,191,0.12)':'var(--surface)';
+  });
 }
 function updateObDob(){
   const m=document.getElementById('ob-dob-month');
@@ -1514,18 +1528,19 @@ function saveProfile(fromOnboarding){
     const stdRadio=document.querySelector('input[name="ob-std"]:checked');
     const preferredStandard=stdRadio?stdRadio.value:'provchamp';
     const longTermGoals=getPickedGoals('ob-goals');
-    const unitsEl=document.getElementById('ob-units');
-    const unitsPref=unitsEl?unitsEl.value:'metric';
     const lvlInpOb=document.getElementById('ob-level-val');
     const trainingLevelOb=lvlInpOb?lvlInpOb.value:'intermediate';
     const equipInpOb=document.getElementById('ob-equip-val');
     const equipModeOb=equipInpOb?equipInpOb.value:'gym';
-    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,unitsPref,trainingLevel:trainingLevelOb};
+    // Read separate weight + distance unit selections
+    const useKgOb=document.getElementById('ob-wt-lbs')&&document.getElementById('ob-wt-lbs').style.borderColor==='var(--accent)'?false:true;
+    const useKmOb=document.getElementById('ob-dist-miles')&&document.getElementById('ob-dist-miles').style.borderColor==='var(--accent)'?false:true;
+    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,trainingLevel:trainingLevelOb};
     S.equipmentMode=equipModeOb;DB.set('equipmentMode',equipModeOb);
     // Apply preferred standard and units immediately
     S.activeStandard=preferredStandard;DB.set('activeStandard',preferredStandard);
-    S.useKg=unitsPref!=='imperial';DB.set('useKg',S.useKg);
-    S.useKm=unitsPref!=='imperial';DB.set('useKm',S.useKm);
+    S.useKg=useKgOb;DB.set('useKg',S.useKg);
+    S.useKm=useKmOb;DB.set('useKm',S.useKm);
   } else {
     // Edit profile — preserve existing longTermGoals/preferredStandard if not editing them
     const longTermGoals=document.getElementById('pm-goals')?getPickedGoals('pm-goals'):(S.profile&&S.profile.longTermGoals||[]);
@@ -3172,7 +3187,7 @@ function showPBCard(ev,time,course,meet){
         <div style="position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(26,188,191,0.18) 0%,transparent 70%);pointer-events:none;"></div>
         <!-- Logo + brand -->
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;">
-          <img src="/icons/icon-513.jpeg" style="width:36px;height:36px;border-radius:8px;display:block;" crossorigin="anonymous">
+          <img src="icons/Icon-513.jpeg" style="width:36px;height:36px;border-radius:8px;display:block;" crossorigin="anonymous">
           <div style="text-align:left;">
             <div style="font-size:13px;font-weight:800;color:#e8f0fe;letter-spacing:-0.2px;">SwimFitPro</div>
             <div style="font-size:10px;color:#1ABCBF;letter-spacing:0.1em;text-transform:uppercase;">Dryland · Fuel · Race Prep</div>
@@ -5028,8 +5043,8 @@ function sendRestNotif(){
   try{
     new Notification('Rest over — GO! 💥',{
       body:'Time to hit your next set. SwimFitPro',
-      icon:'/icons/icon-192.png',
-      badge:'/icons/icon-192.png',
+      icon:'icons/Icon-513.jpeg',
+      badge:'icons/Icon-513.jpeg',
       silent:false,
       tag:'rest-timer', // replaces any previous timer notification
     });
@@ -6193,7 +6208,7 @@ renderHome();
 maybeShowCheckinSheet();
 // Register service worker for offline support
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 </script>
 </body>
