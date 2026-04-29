@@ -233,6 +233,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div id="home-nudge-card" style="display:none;margin-bottom:12px;"></div>
+      <!-- Off-season phase widget — shown during off-season -->
+      <div id="offseason-home-widget" class="card" style="display:none;margin-bottom:12px;padding:12px 16px;"></div>
       <!-- Load recommendation pill — shown after check-in -->
       <div id="home-load-pill" style="display:none;margin-bottom:12px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
@@ -423,12 +425,22 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
             <div class="form-row"><label>Season Start</label><input type="date" id="season-start-input"></div>
             <div class="form-row"><label>Season End</label><input type="date" id="season-end-input"></div>
           </div>
+          <div class="form-row" style="margin-top:8px;">
+            <label>Next Season Start <span style="font-size:11px;color:var(--muted);">(for off-season plan)</span></label>
+            <input type="date" id="next-season-start-input" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="next-season-hint">Defaults to this season's start date. Off-season plan activates automatically when season ends.</div>
+          </div>
           <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Weekly Pattern</p>
           <div id="template-grid" style="display:grid;gap:6px;"></div>
           <div style="display:flex;gap:8px;margin-top:14px;">
             <button class="btn btn-primary" style="flex:1;" onclick="applySeasonTemplate()">Apply to Season</button>
             <button class="btn btn-secondary btn-sm" onclick="clearSeasonTemplate()">Clear All</button>
           </div>
+        </div>
+        <!-- Off-season status card — shown when season has ended -->
+        <div class="card" id="offseason-card" style="display:none;">
+          <div class="card-title">❄️ Off-Season Plan</div>
+          <div id="offseason-status"></div>
         </div>
         <div class="card">
           <div class="card-title">Program Progress</div>
@@ -1417,6 +1429,7 @@ let S={
   swimKmTotal:DB.get('swimKmTotal',0), // cumulative season km
   swimKmLog:DB.get('swimKmLog',[]), // [{date,km}]
   workoutMode:DB.get('workoutMode','standard'), // 'standard' | 'goal'
+  offSeason:DB.get('offSeason',{active:false,nextSeasonStart:'',phases:[]}), // out-of-season plan
   goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
@@ -3122,15 +3135,16 @@ function startWorkout(btn){
   }
   // Small delay so the button state renders before the heavy compute
   setTimeout(()=>{
-    const w=S.workoutMode==='goal'?generateGoalWorkout(null):generateWorkout(null);
+    const isOOS=S.offSeason&&S.offSeason.active&&getCurrentOffSeasonPhase();
+    const w=isOOS?generateOffSeasonWorkout(null):S.workoutMode==='goal'?generateGoalWorkout(null):generateWorkout(null);
     S.currentWorkout=w;completedSets={};renderWorkout(w);
-    if(btn){btn.disabled=false;btn.textContent=S.workoutMode==='goal'?'Generate Goal Workout →':'Generate Today\'s Workout →';btn.style.opacity='';}
+    if(btn){btn.disabled=false;btn.textContent=isOOS?'Generate Off-Season Workout →':S.workoutMode==='goal'?'Generate Goal Workout →':'Generate Today\'s Workout →';btn.style.opacity='';}
     // Scroll workout content into view
     const wc=document.getElementById('workout-content');
     if(wc)wc.scrollIntoView({behavior:'smooth',block:'start'});
   },120);
 }
-function forceWorkout(t){closeModal('picker-modal');S.currentWorkout=S.workoutMode==='goal'?generateGoalWorkout(t):generateWorkout(t);completedSets={};showSection('workout');renderWorkout(S.currentWorkout);}
+function forceWorkout(t){closeModal('picker-modal');const isOOS=S.offSeason&&S.offSeason.active&&getCurrentOffSeasonPhase();S.currentWorkout=isOOS?generateOffSeasonWorkout(t):S.workoutMode==='goal'?generateGoalWorkout(t):generateWorkout(t);completedSets={};showSection('workout');renderWorkout(S.currentWorkout);}
 
 function renderWorkout(w){
   const subEl=document.getElementById('workout-subtitle');if(subEl)subEl.textContent=w.subtitle;
@@ -3897,6 +3911,16 @@ function renderHome(){
   renderHomeMeets();
   renderPostSessionNudge();
   renderHomLoadPill();
+  renderOffSeasonHomeWidget();
+  // Update phase-info to show off-season phase if active
+  const osPh=getCurrentOffSeasonPhase();
+  if(osPh){
+    const osStart=new Date(osPh.start+'T00:00:00');
+    const today2=new Date();today2.setHours(0,0,0,0);
+    const osWeek=Math.floor((today2-osStart)/(7*86400000))+1;
+    document.getElementById('phase-info').textContent=`Off-Season · ${osPh.name} · Week ${osWeek} of ${osPh.weeks}`;
+    document.getElementById('header-sub').textContent=`Off-Season · ${osPh.name} Wk ${osWeek}`;
+  }
 }
 let checkinSaveTimer=null;
 function updateCheckin(){
@@ -4390,6 +4414,12 @@ function renderTemplateGrid(){
   const se=document.getElementById('season-end-input');
   if(ss&&tmpl.start)ss.value=tmpl.start;
   if(se&&tmpl.end)se.value=tmpl.end;
+  // Pre-fill next season start — default to last season's start date
+  const nss=document.getElementById('next-season-start-input');
+  if(nss){
+    const savedNext=S.offSeason&&S.offSeason.nextSeasonStart;
+    nss.value=savedNext||tmpl.start||'';
+  }
   const grid=document.getElementById('template-grid');
   if(!grid)return;
   grid.innerHTML=DOW_LABELS.map((day,dow)=>{
@@ -4535,6 +4565,332 @@ function clearSeasonTemplate(){
   S.seasonTemplate={start:'',end:'',days:{}};
   DB.set('seasonTemplate',S.seasonTemplate);
   renderTemplateGrid();renderCalendar();
+}
+
+// ── Off-Season Engine ──
+
+// Calculate off-season phases proportionally from total available weeks
+function calcOffSeasonPhases(seasonEndStr, nextSeasonStartStr){
+  const end = new Date(seasonEndStr+'T00:00:00');
+  const next = new Date(nextSeasonStartStr+'T00:00:00');
+  const totalDays = Math.round((next - end) / 86400000);
+  const totalWeeks = Math.max(2, Math.round(totalDays / 7));
+
+  // Phase proportions: Transition 15%, GPP 45%, Specific Prep 40%
+  // Minimum 1 week each if enough room; collapse gracefully for short windows
+  let tWeeks, gppWeeks, spWeeks;
+  if(totalWeeks <= 3){
+    tWeeks=1; gppWeeks=1; spWeeks=Math.max(1,totalWeeks-2);
+  } else if(totalWeeks <= 6){
+    tWeeks=1; gppWeeks=Math.round(totalWeeks*0.45); spWeeks=totalWeeks-1-gppWeeks;
+  } else {
+    tWeeks=Math.max(1,Math.round(totalWeeks*0.15));
+    gppWeeks=Math.round(totalWeeks*0.45);
+    spWeeks=totalWeeks-tWeeks-gppWeeks;
+  }
+
+  const phases=[];
+  let cursor=new Date(end);cursor.setDate(cursor.getDate()+1);
+
+  const addPhase=(name,weeks,desc,drylandPattern,cardioPerWeek,liftIntensity)=>{
+    const start=new Date(cursor);
+    const end2=new Date(cursor);end2.setDate(end2.getDate()+weeks*7-1);
+    phases.push({name,weeks,start:dKey(start),end:dKey(end2),desc,drylandPattern,cardioPerWeek,liftIntensity});
+    cursor.setDate(cursor.getDate()+weeks*7);
+  };
+
+  // Transition: bodyweight/mobility only, 2 cardio/wk, very light
+  addPhase('Transition',tWeeks,
+    'Active recovery. Deload the body, maintain movement quality.',
+    {0:'mobility',1:'cardio',2:'rest',3:'mobility',4:'cardio',5:'rest',6:'rest'},
+    2,'bodyweight');
+
+  // GPP: compound lifts 65-70% 1RM, 3 cardio/wk, aerobic base
+  addPhase('GPP',gppWeeks,
+    'General Physical Preparation. Build aerobic base and foundational strength.',
+    {0:'lower',1:'cardio',2:'upper',3:'cardio',4:'lower',5:'cardio',6:'rest'},
+    3,'GPP');
+
+  // Specific Prep: heavier lifts 80-85% 1RM, 2 interval cardio/wk, stroke-specific
+  addPhase('Specific Prep',spWeeks,
+    'Sport-specific strength and power. Transition back toward in-season loading.',
+    {0:'lower',1:'cardio',2:'upper',3:'power',4:'lower',5:'cardio',6:'rest'},
+    2,'Strength');
+
+  return{totalWeeks,phases};
+}
+
+// Determine current off-season phase based on today's date
+function getCurrentOffSeasonPhase(){
+  const os=S.offSeason;
+  if(!os||!os.active||!os.phases||!os.phases.length)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  for(const ph of os.phases){
+    const ps=new Date(ph.start+'T00:00:00');
+    const pe=new Date(ph.end+'T00:00:00');
+    if(today>=ps&&today<=pe)return ph;
+  }
+  return null;
+}
+
+// Get the off-season workout type for today
+function getOffSeasonDayType(){
+  const ph=getCurrentOffSeasonPhase();
+  if(!ph)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  return ph.drylandPattern[dow]||'rest';
+}
+
+// Activate off-season plan — populates calendar with off-season sessions
+function activateOffSeason(){
+  const tmpl=S.seasonTemplate||{};
+  if(!tmpl.end){alert('Set your season end date first.');return;}
+  const nextStart=S.offSeason&&S.offSeason.nextSeasonStart?S.offSeason.nextSeasonStart:tmpl.start;
+  if(!nextStart){alert('Set a next season start date in the Season Template section.');return;}
+
+  const result=calcOffSeasonPhases(tmpl.end,nextStart);
+  S.offSeason={active:true,nextSeasonStart:nextStart,phases:result.phases,totalWeeks:result.totalWeeks};
+  DB.set('offSeason',S.offSeason);
+
+  // Populate daySchedule with off-season sessions
+  for(const ph of result.phases){
+    const ps=new Date(ph.start+'T00:00:00');
+    const pe=new Date(ph.end+'T00:00:00');
+    const cur=new Date(ps);
+    while(cur<=pe){
+      const key=dKey(cur);
+      const dow=cur.getDay();
+      const dayType=ph.drylandPattern[dow]||'rest';
+      const sessions=dayType==='rest'?['dry_rest']:
+        dayType==='cardio'?['oos_cardio']:
+        dayType==='mobility'?['dry_mobility']:
+        ['dry_'+dayType];
+      // Don't overwrite manual overrides
+      if(!S.daySchedule[key]||!S.daySchedule[key].override){
+        S.daySchedule[key]={sessions,offSeason:true,phase:ph.name};
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+  }
+  DB.set('daySchedule',S.daySchedule);
+  renderOffSeasonCard();
+  renderCalendar();
+  renderHome();
+  alert('✅ Off-season plan activated!\n\n'+result.phases.map(p=>`${p.name}: ${p.weeks} week${p.weeks>1?'s':''}`).join('\n')+'\n\nCalendar updated. Workout tab will reflect off-season phases.');
+}
+
+function deactivateOffSeason(){
+  if(!confirm('Deactivate off-season plan? This will remove off-season sessions from the calendar.'))return;
+  // Remove oos sessions from daySchedule
+  Object.keys(S.daySchedule).forEach(k=>{
+    if(S.daySchedule[k].offSeason)delete S.daySchedule[k];
+  });
+  DB.set('daySchedule',S.daySchedule);
+  S.offSeason={active:false,nextSeasonStart:'',phases:[]};
+  DB.set('offSeason',S.offSeason);
+  renderOffSeasonCard();
+  renderCalendar();
+  renderHome();
+}
+
+function saveNextSeasonStart(){
+  const inp=document.getElementById('next-season-start-input');
+  if(!inp||!inp.value){alert('Enter the next season start date.');return;}
+  S.offSeason=S.offSeason||{};
+  S.offSeason.nextSeasonStart=inp.value;
+  DB.set('offSeason',S.offSeason);
+  document.getElementById('next-season-hint').textContent='Next season start saved: '+inp.value;
+}
+
+function renderOffSeasonCard(){
+  const card=document.getElementById('offseason-card');
+  const statusEl=document.getElementById('offseason-status');
+  if(!card||!statusEl)return;
+
+  const tmpl=S.seasonTemplate||{};
+  const today=new Date();today.setHours(0,0,0,0);
+  const seasonEnded=tmpl.end&&new Date(tmpl.end+'T00:00:00')<today;
+
+  if(!seasonEnded){card.style.display='none';return;}
+  card.style.display='block';
+
+  const os=S.offSeason;
+  if(os&&os.active&&os.phases&&os.phases.length){
+    const curPhase=getCurrentOffSeasonPhase();
+    const phaseBlocks=os.phases.map(ph=>{
+      const ps=new Date(ph.start+'T00:00:00');
+      const pe=new Date(ph.end+'T00:00:00');
+      const isCurrent=curPhase&&curPhase.name===ph.name;
+      const done=pe<today;
+      return`<div style="padding:8px 10px;border-radius:8px;border:1px solid ${isCurrent?'var(--accent)':done?'var(--green)':'var(--border)'};background:${isCurrent?'rgba(0,198,255,0.08)':done?'rgba(0,255,128,0.05)':'var(--surface)'};margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:13px;font-weight:700;color:${isCurrent?'var(--accent)':done?'var(--green)':'var(--text)'};">${done?'✓ ':''}${isCurrent?'▶ ':''}${ph.name}</div>
+          <div style="font-size:11px;color:var(--muted);">${ph.weeks}w · ${ph.start} → ${ph.end}</div>
+        </div>
+        ${isCurrent?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">${ph.desc}</div>`:''}
+      </div>`;
+    }).join('');
+    statusEl.innerHTML=`
+      <div style="margin-bottom:12px;">${phaseBlocks}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Next season starts: <strong>${os.nextSeasonStart||'—'}</strong></div>
+      <button class="btn btn-secondary btn-sm" onclick="deactivateOffSeason()" style="width:100%;">Deactivate Off-Season Plan</button>`;
+  } else {
+    const defaultNext=tmpl.start||'';
+    statusEl.innerHTML=`
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Your season has ended. Activate the off-season plan to get a structured Transition → GPP → Specific Prep program with cardio days built into your calendar.</p>
+      <div class="form-row">
+        <label>Next Season Start</label>
+        <input type="date" id="oos-next-start" value="${defaultNext}" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Defaults to last season's start. Adjust if your next season starts earlier or later.</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="activateOffSeasonFromCard()">Activate Off-Season Plan →</button>`;
+  }
+}
+
+function activateOffSeasonFromCard(){
+  const inp=document.getElementById('oos-next-start');
+  if(!inp||!inp.value){alert('Enter the next season start date.');return;}
+  S.offSeason=S.offSeason||{};
+  S.offSeason.nextSeasonStart=inp.value;
+  DB.set('offSeason',S.offSeason);
+  // Also save to the main next-season-start-input if visible
+  const mainInp=document.getElementById('next-season-start-input');
+  if(mainInp)mainInp.value=inp.value;
+  activateOffSeason();
+}
+
+// ── Off-Season Workout Generation ──
+function generateOffSeasonWorkout(forceType){
+  const ph=getCurrentOffSeasonPhase();
+  const dayType=forceType||getOffSeasonDayType()||'lower';
+  const sp=getStrokeProfile();
+  const intensity=ph?ph.liftIntensity:'GPP';
+
+  // Cardio session
+  if(dayType==='cardio'||dayType==='oos_cardio'){
+    const isTransition=ph&&ph.name==='Transition';
+    const isSpecific=ph&&ph.name==='Specific Prep';
+    const cardioDesc=isTransition
+      ?'Light aerobic — 20-30 min easy cycling, rowing, or running. HR <65% max. This is active recovery, not a workout.'
+      :isSpecific
+      ?'Interval cardio — 5 min warm-up, 6×3 min hard / 2 min easy, 5 min cool-down. HR 80-90% max on efforts.'
+      :'Steady-state aerobic — 30-40 min cycling, rowing, or running. Comfortable effort, HR 65-75% max.';
+    const cardioOptions=isTransition
+      ?['🚴 Easy Cycling','🚣 Light Rowing','🚶 Brisk Walk']
+      :isSpecific
+      ?['🚴 Cycling Intervals','🚣 Rowing Intervals','🏃 Track Intervals']
+      :['🚴 Steady Cycling','🚣 Steady Rowing','🏃 Easy Run'];
+    return{
+      type:'cardio',
+      phase:ph?ph.name:'Off-Season',
+      blocks:[{
+        title:`${ph?ph.name+' — ':''}Cardio`,
+        desc:cardioDesc,
+        exercises:cardioOptions.map(opt=>({
+          name:opt,
+          detail:isTransition?'20-30 min easy':isSpecific?'6×3 min hard / 2 min easy':'30-40 min steady',
+          desc:cardioDesc,
+          cue:'Choose one. Keep consistent effort. Track your HR if possible.',
+          weighted:false
+        })).slice(0,1)
+      }]
+    };
+  }
+
+  // Mobility session (Transition phase)
+  if(dayType==='mobility'){
+    return{
+      type:'mobility',
+      phase:ph?ph.name:'Off-Season',
+      blocks:[{
+        title:'Transition — Mobility & Recovery',
+        desc:'Full-body mobility. Focus on shoulder, hip, and thoracic spine.',
+        exercises:pickFresh(EX.mobility||EX.warmup,6)
+      }]
+    };
+  }
+
+  // Strength sessions — use phase intensity
+  const scheme={
+    bodyweight:{sets:3,reps:'12-15',note:'Bodyweight only. Focus on quality and range.'},
+    GPP:{sets:3,reps:'12-15',note:'60-70% 1RM. Volume focus. Build the base.'},
+    Strength:{sets:4,reps:'4-6',note:'80-85% 1RM. Quality over quantity. This is where you get strong.'},
+  }[intensity]||{sets:3,reps:'10-12',note:''};
+
+  // Stroke-specific exercise emphasis for Specific Prep
+  const strokeEmphasis={
+    fly:['Hip Thrust','Nordic Ham Curls','Landmine Press','Band Pull-Aparts'],
+    back:['Lat Pulldown','Seated Cable Row','Single-Arm DB Row','Band Pull-Aparts'],
+    breast:['Hip Thrust','Goblet Squat','Bulgarian Split Squat','Copenhagen Plank'],
+    im:['Back Squat','Romanian Deadlift','Lat Pulldown','Landmine Press'],
+    free:['Back Squat','Romanian Deadlift','Incline DB Press','Seated Cable Row'],
+    distance:['Romanian Deadlift','Nordic Ham Curls','Seated Cable Row','Copenhagen Plank'],
+  };
+  const emphasisNames=intensity==='Strength'?(strokeEmphasis[sp.stroke]||[]):[];
+
+  const blocks=[];
+  // Warmup
+  blocks.push({title:'Warm-Up',exercises:pickFresh(EX.warmup,3)});
+
+  if(dayType==='lower'){
+    let pool=[...EX.lower];
+    if(emphasisNames.length)pool.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
+    const exs=filterByEquipment(pickFresh(pool,4)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+    blocks.push({title:`${ph?ph.name+' — ':''}Lower Body`,desc:scheme.note,exercises:exs});
+    blocks.push({title:'Core Finisher',exercises:pickFresh(EX.core||[],3)});
+  } else if(dayType==='upper'){
+    let pool=[...EX.upper];
+    if(emphasisNames.length)pool.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
+    const exs=filterByEquipment(pickFresh(pool,4)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+    blocks.push({title:`${ph?ph.name+' — ':''}Upper Body`,desc:scheme.note,exercises:exs});
+    blocks.push({title:'Shoulder Health',exercises:pickFresh(EX.warmup.filter(e=>['Band Pull-Aparts','Arm Circles','Thoracic Rotations'].includes(e.name)),3)});
+  } else if(dayType==='power'){
+    const pool=filterByEquipment(EX.power||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
+    const exs=pickFresh(pool.length?pool:EX.lower,4).map(e=>({...e,sets:4,detail:'4×4-5 explosive'}));
+    blocks.push({title:'Specific Prep — Power',desc:'Explosive intent on every rep. Bar speed is the goal.',exercises:exs});
+  }
+
+  return{
+    type:dayType,
+    phase:ph?ph.name:'Off-Season',
+    offSeason:true,
+    scheme,
+    blocks
+  };
+}
+
+function filterByEquipment(arr){
+  const mode=S.equipmentMode||'gym';
+  const rank={bw:1,minimal:2,gym:3};
+  const modeRank=rank[mode]||3;
+  return arr.filter(e=>{
+    const req=EX_EQUIP[e.name]||'bw';
+    return rank[req]<=modeRank;
+  });
+}
+
+// ── Home tab off-season phase display ──
+function renderOffSeasonHomeWidget(){
+  const el=document.getElementById('offseason-home-widget');
+  if(!el)return;
+  const ph=getCurrentOffSeasonPhase();
+  if(!ph){el.style.display='none';return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  const phStart=new Date(ph.start+'T00:00:00');
+  const weekNum=Math.floor((today-phStart)/(7*86400000))+1;
+  el.style.display='block';
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;">Off-Season</div>
+      <div style="font-size:15px;font-weight:800;color:var(--accent);">${ph.name}</div>
+      <div style="font-size:11px;color:var(--muted);">Week ${weekNum} of ${ph.weeks} · ${ph.desc.split('.')[0]}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:10px;color:var(--muted);">Next season</div>
+      <div style="font-size:12px;font-weight:700;">${S.offSeason&&S.offSeason.nextSeasonStart||'—'}</div>
+    </div>
+  </div>`;
 }
 
 // ── Nutrition ──
@@ -6577,7 +6933,7 @@ function showSection(name){
   }
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();}
 
 }
 
