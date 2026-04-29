@@ -3914,12 +3914,19 @@ function renderHome(){
   renderOffSeasonHomeWidget();
   // Update phase-info to show off-season phase if active
   const osPh=getCurrentOffSeasonPhase();
-  if(osPh){
-    const osStart=new Date(osPh.start+'T00:00:00');
-    const today2=new Date();today2.setHours(0,0,0,0);
-    const osWeek=Math.floor((today2-osStart)/(7*86400000))+1;
-    document.getElementById('phase-info').textContent=`Off-Season · ${osPh.name} · Week ${osWeek} of ${osPh.weeks}`;
-    document.getElementById('header-sub').textContent=`Off-Season · ${osPh.name} Wk ${osWeek}`;
+  const osActive=S.offSeason&&S.offSeason.active;
+  if(osActive){
+    if(osPh){
+      const osStart=new Date(osPh.start+'T00:00:00');
+      const today2=new Date();today2.setHours(0,0,0,0);
+      const osWeek=Math.floor((today2-osStart)/(7*86400000))+1;
+      document.getElementById('phase-info').textContent=`Off-Season · ${osPh.name} · Week ${osWeek} of ${osPh.weeks}`;
+      document.getElementById('header-sub').textContent=`Off-Season · ${osPh.name} Wk ${osWeek}`;
+    } else {
+      // Off-season active but today outside phase range — show generic
+      document.getElementById('phase-info').textContent='Off-Season · Plan active';
+      document.getElementById('header-sub').textContent='Off-Season';
+    }
   }
 }
 let checkinSaveTimer=null;
@@ -4590,7 +4597,7 @@ function calcOffSeasonPhases(seasonEndStr, nextSeasonStartStr){
   }
 
   const phases=[];
-  let cursor=new Date(end);cursor.setDate(cursor.getDate()+1);
+  let cursor=new Date(end); // start off-season on season end date itself
 
   const addPhase=(name,weeks,desc,drylandPattern,cardioPerWeek,liftIntensity)=>{
     const start=new Date(cursor);
