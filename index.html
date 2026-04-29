@@ -1133,6 +1133,7 @@ let S={
   meetRaces:DB.get('meetRaces',[]), // [{id,meetId,event,pool,seedTime,day,session}]
   meetRaceLog:DB.get('meetRaceLog',[]), // [{id,meetId,raceId,time,coachTags:[],coachNotes,ts}]
   _raceModeDissmissedDate:DB.get('raceModeDissmissedDate',null), // date key when swimmer dismissed race mode
+  _raceCardOpen:{}, // {raceId: bool} — persists collapse state across tab switches
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
 };
@@ -1757,13 +1758,28 @@ function getDailyCalFromSchedule(){
 function renderHomeCals(){
   const data=getDailyCalFromSchedule();
   const calEl=document.getElementById('stat-cal');
+  const lblEl=document.getElementById('stat-cal-lbl');
   const macEl=document.getElementById('stat-macros');
   if(!data){
     if(calEl)calEl.textContent='—';
     if(macEl)macEl.textContent='Set up Fuel tab';
     return;
   }
-  if(calEl)calEl.textContent=data.cal.toLocaleString();
+  // Calculate remaining kcal (same logic as Fuel tab countdown)
+  S.mealLog=S.mealLog||DB.get('mealLog',{});
+  const todayMeals=(S.mealLog[dKey(new Date())]||[]);
+  let logCal=0,logCarbs=0,logProtein=0,logFat=0;
+  todayMeals.forEach(m=>{
+    const food=(typeof SWIMMER_FOODS!=='undefined'?SWIMMER_FOODS:[]).find(f=>f.id===m.foodId);
+    if(!food)return;
+    const q=m.qty||1;
+    logCal+=food.cal*q;logCarbs+=food.carbs*q;logProtein+=food.protein*q;logFat+=food.fat*q;
+  });
+  const remaining=Math.max(0,Math.round(data.cal-logCal));
+  const hit=logCal>=data.cal;
+  if(calEl)calEl.textContent=hit?'✓':remaining.toLocaleString();
+  if(calEl)calEl.style.color=hit?'var(--green)':'';
+  if(lblEl)lblEl.innerHTML=hit?'kcal<br>Done!':'kcal<br>left today';
   if(macEl)macEl.innerHTML=`C:${data.carbs}g P:${data.protein}g F:${data.fat}g`;
 }
 
@@ -4293,6 +4309,7 @@ function addMealEntry(foodId,qty){
   S.mealLog[key].push({foodId,qty:qty||1,ts:Date.now(),mealType:S._mealType||'Breakfast'});
   DB.set('mealLog',S.mealLog);
   renderMealTracker();
+  renderHomeCals();
 }
 function removeMealEntry(idx){
   const key=getMealLogKey();
@@ -4300,6 +4317,7 @@ function removeMealEntry(idx){
   S.mealLog[key].splice(idx,1);
   DB.set('mealLog',S.mealLog);
   renderMealTracker();
+  renderHomeCals();
 }
 function setMealType(t){
   S._mealType=t;
@@ -5684,9 +5702,12 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
     const isFinals=race.session==='finals';
     const sessionColor=isFinals?'var(--gold)':'var(--accent)';
     const sessionLabel=race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session';
-    const sessionIcon=isFinals?'🥇':'🏊';
-    // Default open if no result yet; collapsed once result is logged
-    const cardOpen=!latestLog;
+    const sessionIcon=isFinals?'⏱️':'🏊';
+    // Persist open/closed state across tab switches
+    if(!S._raceCardOpen)S._raceCardOpen={};
+    // Default: open if no result yet, collapsed once result is logged
+    if(S._raceCardOpen[race.id]===undefined)S._raceCardOpen[race.id]=!latestLog;
+    const cardOpen=S._raceCardOpen[race.id];
 
     let resultHtml='';
     if(latestLog){
@@ -5761,7 +5782,7 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
       ?`<span style="font-size:12px;font-weight:800;color:var(--green);margin-left:6px;">${latestLog.time} ✓</span>`
       :`<span style="font-size:11px;color:var(--muted);margin-left:6px;">No result yet</span>`;
 
-    return`<details style="margin-bottom:10px;" ${cardOpen?'open':''}>
+    return`<details style="margin-bottom:10px;" ${cardOpen?'open':''} ontoggle="if(!S._raceCardOpen)S._raceCardOpen={};S._raceCardOpen[${race.id}]=this.open;">
       <summary style="list-style:none;cursor:pointer;background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--border);border-top:3px solid ${sessionColor};display:block;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -5891,7 +5912,7 @@ function renderMeetDayBanner(){
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
           <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
-          <button onclick="dismissRaceMode()" style="padding:3px 10px;border-radius:8px;border:none;background:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);">Exit Race Mode</button>
+          <button onclick="dismissRaceMode()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">Exit Race Mode</button>
         </div>
       </div>
       ${totalRaces?`
