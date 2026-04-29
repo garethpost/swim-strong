@@ -298,64 +298,72 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
     <!-- SCHEDULE -->
     <div id="section-schedule" class="section">
-      <!-- Meet Day banner — auto-shown when today is a meet day -->
-      <div id="meet-day-banner" style="display:none;margin-bottom:14px;"></div>
-      <p class="section-title" id="sched-section-title">Schedule</p>
-      <p class="section-sub" id="sched-month-label">—</p>
-      <!-- Pool check-in shortcut — shown on swim days -->
-      <div id="schedule-pool-shortcut" style="display:none;margin-bottom:12px;"></div>
 
-      <!-- New-user guide — shown only until a season template is applied -->
-      <div id="schedule-new-user-guide" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.25);border-radius:12px;padding:16px;margin-bottom:14px;">
-        <div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px;">👋 Set up your season in 3 steps</div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;">
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
-            <div><strong style="color:var(--text);">Add your meets</strong> — scroll down to "Add a Meet" and enter your key competitions. A-meets get a full taper; B-meets a partial one.</div>
-          </div>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-            <div><strong style="color:var(--text);">Set your season template</strong> — go to the <strong style="color:var(--accent);">More</strong> tab and find "Season Template". Enter your season dates and set each weekday to Swim / Dryland / Double / Rest, then tap <em>Apply to Season</em>. The calendar fills automatically.</div>
-          </div>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
-            <div><strong style="color:var(--text);">Tap any day to override</strong> — once the template is applied, tap any calendar day to change that day's session type individually.</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-        <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
-        <button class="btn-ghost" onclick="changeMonth(1)">Next →</button>
-        <button class="btn btn-primary btn-sm" onclick="goToToday()">Today</button>
-      </div>
-      <div class="card" id="cal-card">
-        <div class="month-cal" id="month-header"></div>
-        <div class="month-cal" id="month-cal"></div>
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
-          <span><span class="cal-dot dot-swim"></span> Swim</span>
-          <span><span class="cal-dot dot-dryland"></span> Dryland</span>
-          <span><span class="cal-dot dot-meet"></span> Meet</span>
-          <span><span class="cal-dot dot-taper"></span> Taper wk</span>
-        </div>
-      </div>
+      <!-- ═══ RACE MODE — shown when today is a meet day ═══ -->
+      <div id="schedule-race-mode" style="display:none;"></div>
 
-      <!-- ADD A MEET -->
-      <div class="card">
-        <div class="card-title">Add a Meet</div>
-        <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
-        <div class="form-grid-2">
-          <div class="form-row"><label>Start Date</label><input type="date" id="meet-date-input" onchange="autoMeetEndDate()"></div>
-          <div class="form-row"><label>End Date</label><input type="date" id="meet-end-input"></div>
+      <!-- ═══ NORMAL MODE — hidden during meet days ═══ -->
+      <div id="schedule-normal">
+        <p class="section-title" id="sched-section-title">Schedule</p>
+        <p class="section-sub" id="sched-month-label">—</p>
+        <!-- Pool check-in shortcut — shown on swim days -->
+        <div id="schedule-pool-shortcut" style="display:none;margin-bottom:12px;"></div>
+
+        <!-- New-user guide — shown only until a season template is applied -->
+        <div id="schedule-new-user-guide" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.25);border-radius:12px;padding:16px;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px;">👋 Set up your season in 3 steps</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+              <div><strong style="color:var(--text);">Add your meets</strong> — scroll down to "Add a Meet" and enter your key competitions. A-meets get a full taper; B-meets a partial one.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+              <div><strong style="color:var(--text);">Set your season template</strong> — go to the <strong style="color:var(--accent);">More</strong> tab and find "Season Template". Enter your season dates and set each weekday to Swim / Dryland / Double / Rest, then tap <em>Apply to Season</em>. The calendar fills automatically.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+              <div><strong style="color:var(--text);">Tap any day to override</strong> — once the template is applied, tap any calendar day to change that day's session type individually.</div>
+            </div>
+          </div>
         </div>
-        <div class="form-row"><label>Meet Category</label>
-          <select id="meet-priority-input">
-            <option value="A">A Meet — Peak event. Full taper (7 days). Provincials, Nationals, Trials, major invitationals.</option>
-            <option value="B">B Meet — Important tune-up. Partial taper (4 days). Regional champs, club invitationals.</option>
-            <option value="C">C Meet — Training meet. No taper. Time trials, dual meets, development meets.</option>
-          </select>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
+          <button class="btn-ghost" onclick="changeMonth(1)">Next →</button>
+          <button class="btn btn-primary btn-sm" onclick="goToToday()">Today</button>
         </div>
-        <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
-      </div>
+        <div class="card" id="cal-card">
+          <div class="month-cal" id="month-header"></div>
+          <div class="month-cal" id="month-cal"></div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
+            <span><span class="cal-dot dot-swim"></span> Swim</span>
+            <span><span class="cal-dot dot-dryland"></span> Dryland</span>
+            <span><span class="cal-dot dot-meet"></span> Meet</span>
+            <span><span class="cal-dot dot-taper"></span> Taper wk</span>
+          </div>
+        </div>
+
+        <!-- ADD A MEET -->
+        <div class="card">
+          <div class="card-title">Add a Meet</div>
+          <div class="form-row"><label>Meet Name</label><input type="text" id="meet-name-input" placeholder="AB Provincials"></div>
+          <div class="form-grid-2">
+            <div class="form-row"><label>Start Date</label><input type="date" id="meet-date-input" onchange="autoMeetEndDate()"></div>
+            <div class="form-row"><label>End Date</label><input type="date" id="meet-end-input"></div>
+          </div>
+          <div class="form-row"><label>Meet Category</label>
+            <select id="meet-priority-input">
+              <option value="A">A Meet — Peak event. Full taper (7 days). Provincials, Nationals, Trials, major invitationals.</option>
+              <option value="B">B Meet — Important tune-up. Partial taper (4 days). Regional champs, club invitationals.</option>
+              <option value="C">C Meet — Training meet. No taper. Time trials, dual meets, development meets.</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
+        </div>
+      </div><!-- end #schedule-normal -->
+
+      <!-- Legacy anchor kept for backward compat — now empty -->
+      <div id="meet-day-banner" style="display:none;"></div>
 
     </div>
 
@@ -5638,76 +5646,49 @@ function getRestProtocol(gapHours,prelimResult,seedTime,coachTags){
 }
 
 // ── Meet Day Banner ──
-function renderMeetDayBanner(){
-  const el=document.getElementById('meet-day-banner');
-  const titleEl=document.getElementById('sched-section-title');
-  if(!el)return;
-  const today=new Date();today.setHours(0,0,0,0);
-  const todayKey=dKey(today);
-
-  // Find active meet today
-  const activeMeet=S.meets.find(m=>{
-    try{
-      const ms=localDate(m.date);
-      const me=m.endDate?localDate(m.endDate):ms;
-      return today>=ms&&today<=me;
-    }catch(e){return false;}
-  });
-
-  if(!activeMeet){
-    el.style.display='none';
-    if(titleEl)titleEl.textContent='Schedule';
-    return;
+function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
+  if(!todayRaces.length){
+    return`<div style="text-align:center;padding:24px 16px;background:var(--surface);border-radius:12px;border:1px dashed var(--gold);">
+      <div style="font-size:32px;margin-bottom:8px;">🏁</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">No races added for Day ${meetDay}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Add your events so your warm-up protocol and result logger are ready to go.</div>
+      <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:10px 20px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Add Races</button>
+    </div>`;
   }
-
-  // We are at a meet today
-  if(titleEl)titleEl.innerHTML=`Schedule <span style="font-size:13px;font-weight:600;color:var(--gold);">🏁 Meet Day</span>`;
-  S.activeMeetId=activeMeet.id;
-
-  // Which day of the meet is it?
-  const ms=localDate(activeMeet.date);
-  const meetDay=Math.floor((today-ms)/86400000)+1;
-
-  // Races for this meet
-  const races=S.meetRaces.filter(r=>String(r.meetId)===String(activeMeet.id));
-  const todayRaces=races.filter(r=>String(r.day)===String(meetDay));
-  const profile=S.profile||{};
-  const primaryEvents=(profile.primaryEvents||[]);
-
-  // Sort races: prelims first, finals second
-  todayRaces.sort((a,b)=>a.session==='finals'?1:b.session==='finals'?-1:0);
-
-  const raceCards=todayRaces.map(race=>{
+  return todayRaces.map(race=>{
     const log=S.meetRaceLog.filter(l=>String(l.raceId)===String(race.id));
     const latestLog=log.length?log[log.length-1]:null;
     const isFinals=race.session==='finals';
-    const prelimLog=isFinals?S.meetRaceLog.find(l=>String(l.raceId)===String(race.id)&&l.session==='prelims'):null;
     const sessionColor=isFinals?'var(--gold)':'var(--accent)';
     const sessionLabel=race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session';
+    const sessionIcon=isFinals?'🥇':'🏊';
 
-    // Result display
     let resultHtml='';
     if(latestLog){
-      const tSec=t=>{if(!t)return Infinity;const p=t.split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);};
-      const delta=race.seedTime?tSec(latestLog.time)-tSec(race.seedTime):null;
-      const deltaStr=delta!==null?(delta<0?`<span style="color:var(--green);">${delta.toFixed(2)}s PB territory</span>`:`<span style="color:var(--orange);">+${delta.toFixed(2)}s vs seed</span>`):'';
-      resultHtml=`<div style="margin-top:8px;padding:8px 10px;background:rgba(0,230,118,0.06);border-radius:8px;border-left:2px solid var(--green);">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Result logged</div>
-        <div style="font-size:18px;font-weight:800;color:var(--green);">${latestLog.time}</div>
-        <div style="font-size:11px;margin-top:2px;">${deltaStr}</div>
-        ${latestLog.coachTags&&latestLog.coachTags.length?`<div style="font-size:10px;color:var(--muted);margin-top:3px;">Coach: ${latestLog.coachTags.map(t=>COACH_TAGS.find(ct=>ct.id===t)?.label||t).join(' · ')}</div>`:''}
+      const _ts=t=>{if(!t)return Infinity;const p=t.split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);};
+      const delta=race.seedTime?_ts(latestLog.time)-_ts(race.seedTime):null;
+      const deltaStr=delta!==null?(delta<0?`<span style="color:var(--green);font-weight:700;">${Math.abs(delta).toFixed(2)}s PB ✓</span>`:`<span style="color:var(--orange);">+${delta.toFixed(2)}s vs seed</span>`):'';
+      resultHtml=`<div style="margin-top:10px;padding:12px;background:rgba(0,230,118,0.06);border-radius:10px;border:1px solid rgba(0,230,118,0.2);">
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Result</div>
+        <div style="font-size:28px;font-weight:900;color:var(--green);line-height:1;">${latestLog.time}</div>
+        <div style="font-size:12px;margin-top:4px;">${deltaStr}</div>
+        ${latestLog.coachTags&&latestLog.coachTags.length?`<div style="font-size:10px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">Coach: ${latestLog.coachTags.map(t=>COACH_TAGS.find(ct=>ct.id===t)?.label||t).join(' · ')}</div>`:''}
+        <button onclick="openRaceLog(${race.id})" style="margin-top:8px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);">Edit result</button>
       </div>`;
+    } else {
+      resultHtml=`<button onclick="openRaceLog(${race.id})" style="margin-top:10px;width:100%;padding:12px;border-radius:10px;border:2px dashed ${sessionColor};background:transparent;color:${sessionColor};font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Log Result</button>`;
     }
 
     const warmup=getWarmupProtocol(race.event,race.session,race.pool||'lcm');
     const hasIntel=warmup.some(s=>s.intelNote||s.adapted);
-    const intelBadge=hasIntel?`<span style="font-size:9px;font-weight:800;letter-spacing:.5px;background:var(--accent);color:#0D1F3C;padding:2px 7px;border-radius:20px;margin-left:6px;">AI ADAPTED</span>`:'';
-    const warmupHtml=`<details style="margin-top:8px;"><summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol${intelBadge}</summary>
+    const intelBadge=hasIntel?`<span style="font-size:9px;font-weight:800;letter-spacing:.5px;background:var(--accent);color:#0D1F3C;padding:2px 7px;border-radius:20px;margin-left:6px;">AI</span>`:'';
+    const warmupHtml=`<details style="margin-top:10px;">
+      <summary style="font-size:12px;font-weight:700;color:${sessionColor};cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Warm-up protocol${intelBadge}</summary>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
-        ${warmup.map((s,i)=>{
+        ${warmup.map(s=>{
           const borderColor=s.adapted?'var(--accent)':sessionColor;
           const bg=s.adapted?'rgba(0,198,255,0.06)':'var(--surface)';
-          const adaptedTag=s.adapted?`<span style="font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.4px;background:rgba(0,198,255,0.12);padding:1px 6px;border-radius:10px;margin-left:6px;">ADAPTED FOR YOU</span>`:'';
+          const adaptedTag=s.adapted?`<span style="font-size:9px;font-weight:800;color:var(--accent);letter-spacing:.4px;background:rgba(0,198,255,0.12);padding:1px 6px;border-radius:10px;margin-left:6px;">ADAPTED</span>`:'';
           const intelNote=s.intelNote?`<div style="font-size:10px;color:var(--accent);margin-top:5px;padding:5px 8px;background:rgba(0,198,255,0.08);border-radius:6px;line-height:1.5;">🧠 ${s.intelNote}</div>`:'';
           const adapterNote=s.adapterNote?`<div style="font-size:10px;color:var(--accent);margin-top:4px;font-style:italic;opacity:.85;">↳ ${s.adapterNote}</div>`:'';
           const focusCue=s.focusCueText?`<div style="margin-top:6px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);font-size:10px;color:var(--gold);line-height:1.5;">🎯 ${s.focusCueText}</div>`:'';
@@ -5722,7 +5703,6 @@ function renderMeetDayBanner(){
         }).join('')}
       </div></details>`;
 
-    // If finals — show inter-session recovery protocol (always, not just when prelim logged)
     let restHtml='';
     if(isFinals){
       const prelimRace=races.find(r=>r.event===race.event&&(r.session==='prelims'||r.session==='heats'));
@@ -5739,57 +5719,144 @@ function renderMeetDayBanner(){
         </div>`).join('');
       const coachFixHtml=coachFixes.length?`
         <div style="margin-top:8px;padding:8px 10px;background:rgba(245,200,66,0.06);border-radius:8px;border-left:2px solid var(--gold);">
-          <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;">🎯 Fix for finals — ${coachFixes.length===1?'1 thing':'top priorities'}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px;">🎯 Fix for finals</div>
           ${coachFixes.slice(0,2).map(f=>`<div style="font-size:11px;color:var(--text);margin-bottom:4px;line-height:1.5;">→ ${f}</div>`).join('')}
         </div>`:'';
-      restHtml=`<details style="margin-top:8px;">
-        <summary style="font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;">
-          <span>▶</span> Between sessions — what to do now
-        </summary>
+      restHtml=`<details style="margin-top:10px;">
+        <summary style="font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;padding:4px 0;list-style:none;display:flex;align-items:center;gap:6px;"><span>▶</span> Between sessions</summary>
         <div style="margin-top:8px;padding:10px 12px;background:rgba(245,200,66,0.04);border-radius:10px;border:1px solid rgba(245,200,66,0.15);">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">This window is where finals are won or lost. Follow the protocol — don't improvise.</div>
-          ${protocolHtml}
-          ${coachFixHtml}
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">This window is where finals are won or lost. Follow the protocol.</div>
+          ${protocolHtml}${coachFixHtml}
         </div>
       </details>`;
     }
 
-    return`<div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border);border-top:2px solid ${sessionColor};">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <div>
-          <span style="font-size:15px;font-weight:800;color:var(--text);">${race.event}</span>
-          <span style="font-size:10px;color:${sessionColor};font-weight:700;margin-left:6px;text-transform:uppercase;">${sessionLabel} · ${race.pool?.toUpperCase()||'LCM'}</span>
+    return`<div style="background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--border);border-top:3px solid ${sessionColor};">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:20px;">${sessionIcon}</span>
+          <div>
+            <div style="font-size:17px;font-weight:900;color:var(--text);line-height:1.1;">${race.event}</div>
+            <div style="font-size:10px;color:${sessionColor};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:1px;">${sessionLabel} · ${race.pool?.toUpperCase()||'LCM'}</div>
+          </div>
         </div>
-        ${race.seedTime?`<span style="font-size:11px;color:var(--muted);">Seed: ${race.seedTime}</span>`:''}
+        ${race.seedTime?`<div style="text-align:right;"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Seed</div><div style="font-size:14px;font-weight:700;color:var(--muted);">${race.seedTime}</div></div>`:''}
       </div>
-      ${resultHtml||`<button onclick="openRaceLog(${race.id})" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px dashed ${sessionColor};background:transparent;color:${sessionColor};font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Log result</button>`}
+      ${resultHtml}
       ${restHtml}
       ${warmupHtml}
     </div>`;
   }).join('');
+}
 
-  const noRacesHtml=!todayRaces.length?`<div style="padding:12px;background:var(--surface);border-radius:10px;font-size:12px;color:var(--muted);text-align:center;">No races entered for Day ${meetDay} yet.<br><button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="margin-top:8px;padding:6px 16px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Add races</button></div>`:'';
+function renderMeetDayBanner(){
+  const raceMode=document.getElementById('schedule-race-mode');
+  const normalMode=document.getElementById('schedule-normal');
+  const navBtn=document.getElementById('nav-schedule');
+  if(!raceMode||!normalMode)return;
 
-  el.style.display='block';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,rgba(245,200,66,0.08),rgba(0,198,255,0.04));border:1px solid var(--gold);border-radius:14px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold);">🏁 ${activeMeet.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Meet Day ${meetDay} · ${activeMeet.priority||'A'}-Meet</div>
+  const today=new Date();today.setHours(0,0,0,0);
+
+  // Find active meet today (midnight-to-midnight)
+  const activeMeet=S.meets.find(m=>{
+    try{
+      const ms=localDate(m.date);
+      const me=m.endDate?localDate(m.endDate):ms;
+      return today>=ms&&today<=me;
+    }catch(e){return false;}
+  });
+
+  if(!activeMeet){
+    // Normal mode
+    raceMode.style.display='none';
+    normalMode.style.display='block';
+    if(navBtn){
+      navBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule`;
+      navBtn.style.color='';
+    }
+    return;
+  }
+
+  // ── Race Mode ──
+  S.activeMeetId=activeMeet.id;
+  normalMode.style.display='none';
+  raceMode.style.display='block';
+
+  // Nav button transforms to Race Mode
+  if(navBtn){
+    navBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Race`;
+    navBtn.style.color='var(--gold)';
+  }
+
+  const ms=localDate(activeMeet.date);
+  const meetEndDate=activeMeet.endDate?localDate(activeMeet.endDate):ms;
+  const meetDay=Math.floor((today-ms)/86400000)+1;
+  const totalDays=Math.floor((meetEndDate-ms)/86400000)+1;
+
+  const races=S.meetRaces.filter(r=>String(r.meetId)===String(activeMeet.id));
+  const todayRaces=races.filter(r=>String(r.day)===String(meetDay));
+  todayRaces.sort((a,b)=>a.session==='finals'?1:b.session==='finals'?-1:0);
+
+  const totalRaces=races.length;
+  const loggedRaces=S.meetRaceLog.filter(l=>races.some(r=>String(r.id)===String(l.raceId))).length;
+  const progressPct=totalRaces?Math.round(loggedRaces/totalRaces*100):0;
+  const priorityColor=activeMeet.priority==='A'?'var(--gold)':activeMeet.priority==='B'?'var(--accent)':'var(--muted)';
+
+  // Day-switcher tabs (if multi-day meet)
+  const dayTabsHtml=totalDays>1?`
+    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      ${Array.from({length:totalDays},(_,i)=>{
+        const d=i+1;
+        const isActive=d===meetDay;
+        const dRaces=races.filter(r=>String(r.day)===String(d));
+        const dLogged=S.meetRaceLog.filter(l=>dRaces.some(r=>String(r.id)===String(l.raceId))).length;
+        return`<div style="flex-shrink:0;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid ${isActive?'var(--gold)':'var(--border)'};background:${isActive?'rgba(245,200,66,0.12)':'var(--surface)'};color:${isActive?'var(--gold)':'var(--muted)'};">
+          Day ${d}${dRaces.length?` · ${dLogged}/${dRaces.length}`:' · no races'}
+        </div>`;
+      }).join('')}
+    </div>`:'';
+
+  raceMode.innerHTML=`
+    <!-- Race Mode Header -->
+    <div style="background:linear-gradient(135deg,rgba(245,200,66,0.1),rgba(0,0,0,0));border:1px solid var(--gold);border-radius:16px;padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">🏁 Race Mode · ${activeMeet.priority||'A'}-Meet</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);line-height:1.1;">${activeMeet.name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">Day ${meetDay} of ${totalDays}</div>
+        </div>
+        <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
       </div>
-      <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:7px 12px;border-radius:8px;border:1px solid var(--gold);background:transparent;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
-    </div>
-    ${raceCards||noRacesHtml}
-    <div style="margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:10px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">📋 Meet Day Nutrition</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.7;">
-        <b style="color:var(--text);">Wake:</b> High-carb breakfast 2–3h before first warm-up. Oats, banana, toast + honey. No heavy protein.<br>
-        <b style="color:var(--text);">Between races:</b> Fast carbs every 45–60 min. Sports drink, banana, energy gels, dates.<br>
-        <b style="color:var(--text);">Hydration:</b> 150–200ml every 20 min all day. Do not wait until thirsty.<br>
-        <b style="color:var(--text);">Avoid:</b> High fat, high fibre, anything unfamiliar. Not the day to experiment.
+      ${totalRaces?`
+      <div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:10px;color:var(--muted);">Results logged</div>
+        <div style="font-size:11px;font-weight:700;color:${progressPct===100?'var(--green)':'var(--gold)'};">${loggedRaces} / ${totalRaces}</div>
       </div>
+      <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${progressPct}%;background:${progressPct===100?'var(--green)':'var(--gold)'};border-radius:3px;transition:width 0.4s;"></div>
+      </div>`:''}
     </div>
-  </div>`;
+
+    <!-- Day tabs for multi-day meets -->
+    ${dayTabsHtml}
+
+    <!-- Race cards -->
+    ${_buildRaceCards(todayRaces,races,activeMeet,meetDay)}
+
+    <!-- Meet Day Nutrition -->
+    <div class="card" style="margin-top:4px;">
+      <details>
+        <summary style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:2px 0;">
+          <span>📋 Meet Day Nutrition</span><span style="font-size:11px;color:var(--muted);">▼</span>
+        </summary>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.8;">
+          <b style="color:var(--text);">Wake:</b> High-carb breakfast 2–3h before warm-up. Oats, banana, toast + honey. No heavy protein.<br>
+          <b style="color:var(--text);">Between races:</b> Fast carbs every 45–60 min. Sports drink, banana, energy gels, dates.<br>
+          <b style="color:var(--text);">Hydration:</b> 150–200ml every 20 min all day. Don't wait until thirsty.<br>
+          <b style="color:var(--text);">Avoid:</b> High fat, high fibre, anything unfamiliar. Not the day to experiment.
+        </div>
+      </details>
+    </div>`;
 }
 
 // ── Meet Race Entry ──
@@ -5902,7 +5969,14 @@ function showSection(name){
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();}
-  if(name==='schedule'){renderMeetDayBanner();renderCalendar();renderSchedulePoolShortcut();document.getElementById('swim-phase-select').value=S.swimPhase;updatePhaseImpact();}
+  if(name==='schedule'){
+    renderMeetDayBanner(); // drives race mode vs normal mode toggle
+    renderCalendar();
+    renderSchedulePoolShortcut();
+    const phaseEl=document.getElementById('swim-phase-select');
+    if(phaseEl)phaseEl.value=S.swimPhase;
+    updatePhaseImpact();
+  }
   if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();}
