@@ -3901,11 +3901,11 @@ function renderCalendar(){
     const tmpl=S.seasonTemplate||{};
     const hasStart=tmpl.start&&tmpl.start!=='';
     const hasEnd=tmpl.end&&tmpl.end!=='';
-    const hasSchedule=Object.keys(S.daySchedule||{}).length>0;
+    const hasDays=Object.keys(tmpl.days||{}).length>0;
     const today=new Date();today.setHours(0,0,0,0);
     const seasonStart=hasStart?new Date(tmpl.start+'T00:00:00'):null;
     const seasonEnd=hasEnd?new Date(tmpl.end+'T00:00:00'):null;
-    const seasonActive=hasStart&&hasSchedule&&seasonStart<=today&&(!hasEnd||seasonEnd>=today);
+    const seasonActive=hasStart&&hasDays&&seasonStart<=today&&(!hasEnd||seasonEnd>=today);
     const seasonEnded=hasEnd&&seasonEnd<today;
     const titleEl=document.getElementById('schedule-guide-title');
     if(seasonEnded){
