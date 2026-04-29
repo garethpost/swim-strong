@@ -287,15 +287,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-times" class="section">
       <p class="section-title">Swim Times</p>
       <p class="section-sub" id="times-sub">Progression tracking for all strokes</p>
-      <!-- Standard toggle -->
-      <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
-        <button class="stroke-tab active" id="std-btn-provchamp" onclick="setStandard('provchamp')">🏅 Prov. Champ</button>
-        <button class="stroke-tab" id="std-btn-provtrials" onclick="setStandard('provtrials')">🥈 Prov. Trials</button>
-        <button class="stroke-tab" id="std-btn-canada" onclick="setStandard('canada')">🇨🇦 Canada Open</button>
-        <button class="stroke-tab" id="std-btn-canadatrials" onclick="setStandard('canadatrials')">🍁 Canada Trials</button>
-      </div>
+      <!-- Standard toggle — rendered dynamically based on province -->
+      <div id="std-btn-row" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>
       <div class="stroke-tabs" id="stroke-tabs"></div>
       <div id="times-content"></div>
+      <!-- Custom Target Meets — qualifying time standards -->
+      <div id="custom-target-meets" style="margin-top:4px;"></div>
     </div>
 
     <!-- SCHEDULE -->
@@ -767,6 +764,25 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <option value="female">Female</option>
         </select>
       </div>
+      <div class="form-row"><label>Country</label>
+        <select id="ob-country" onchange="updateObProvince()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+          <option value="CA" selected>🇨🇦 Canada</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Province / Territory</label>
+        <select id="ob-province" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+          <option value="AB" selected>Alberta</option>
+          <option value="BC">British Columbia</option>
+          <option value="MB">Manitoba</option>
+          <option value="NB">New Brunswick</option>
+          <option value="NL">Newfoundland &amp; Labrador</option>
+          <option value="NS">Nova Scotia</option>
+          <option value="ON">Ontario</option>
+          <option value="PE">Prince Edward Island</option>
+          <option value="QC">Quebec</option>
+          <option value="SK">Saskatchewan</option>
+        </select>
+      </div>
       <div class="form-row"><label>Weight unit</label>
         <div style="display:flex;gap:8px;">
           <button type="button" id="ob-wt-kg" onclick="setObWeight('kg')" style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,188,191,0.12);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">kg</button>
@@ -819,22 +835,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div class="card-title">🎯 Time Standard to Chase</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pick the standard you want to compare your times against. You can change this anytime.</p>
       <div id="ob-std-picker" style="display:flex;flex-direction:column;gap:8px;">
-        <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;">
-          <input type="radio" name="ob-std" value="provchamp" checked style="margin-top:3px;accent-color:var(--accent);">
-          <div><div style="font-size:14px;font-weight:600;">🏅 Provincial Championship</div><div style="font-size:11px;color:var(--muted);">Alberta Provincials qualifying standard. Great starting target for competitive club swimmers.</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;">
-          <input type="radio" name="ob-std" value="provtrials" style="margin-top:3px;accent-color:var(--accent);">
-          <div><div style="font-size:14px;font-weight:600;">🥈 Provincial Trials</div><div style="font-size:11px;color:var(--muted);">Alberta Trials qualifying standard. A step up from Provincials — for swimmers targeting Team Alberta.</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;">
-          <input type="radio" name="ob-std" value="canada" style="margin-top:3px;accent-color:var(--accent);">
-          <div><div style="font-size:14px;font-weight:600;">🇨🇦 Canadian Open</div><div style="font-size:11px;color:var(--muted);">National qualifying standard. For swimmers chasing a national-level meet entry.</div></div>
-        </label>
-        <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;">
-          <input type="radio" name="ob-std" value="canadatrials" style="margin-top:3px;accent-color:var(--accent);">
-          <div><div style="font-size:14px;font-weight:600;">🍁 Canadian Trials</div><div style="font-size:11px;color:var(--muted);">Olympic Trials standard. The highest target — for elite swimmers aiming for the national team.</div></div>
-        </label>
+        <!-- Populated dynamically by updateObStdPicker() based on province -->
       </div>
     </div>
 
@@ -1223,6 +1224,25 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="form-row"><label>Gender</label><select id="pm-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
   <option value="male">Male</option><option value="female">Female</option>
 </select></div>
+<div class="form-row"><label>Country</label>
+  <select id="pm-country" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+    <option value="CA">🇨🇦 Canada</option>
+  </select>
+</div>
+<div class="form-row"><label>Province / Territory</label>
+  <select id="pm-province" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+    <option value="AB">Alberta</option>
+    <option value="BC">British Columbia</option>
+    <option value="MB">Manitoba</option>
+    <option value="NB">New Brunswick</option>
+    <option value="NL">Newfoundland &amp; Labrador</option>
+    <option value="NS">Nova Scotia</option>
+    <option value="ON">Ontario</option>
+    <option value="PE">Prince Edward Island</option>
+    <option value="QC">Quebec</option>
+    <option value="SK">Saskatchewan</option>
+  </select>
+</div>
 <div class="form-row"><label>Primary Events</label><div id="pm-events" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div></div>
 <div class="form-row"><label>Primary Stroke</label>
   <select id="pm-primary-stroke" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
@@ -1276,6 +1296,24 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')" aria-label="Close dialog">Cancel</button>
 </div>
 </div></div>
+
+<!-- Custom Target Meet modal -->
+<div class="modal-overlay" id="ctm-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Custom Target Meet">
+<div class="modal-handle"></div>
+<h3 style="font-size:17px;margin-bottom:4px;">🎯 Target Meet Qualifying Times</h3>
+<p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Enter the qualifying times required for this meet. Leave blank for events you're not entering.</p>
+<div class="form-row"><label>Meet</label>
+  <select id="ctm-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
+  </select>
+</div>
+<div id="ctm-event-rows" style="max-height:55vh;overflow-y:auto;margin-top:2px;"></div>
+<input type="hidden" id="ctm-editing-id">
+<div style="display:flex;gap:8px;margin-top:12px;">
+  <button class="btn btn-primary" style="flex:1" onclick="saveCtmTimes()">Save</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('ctm-modal')">Cancel</button>
+</div>
+</div></div>
+
 <script>
 const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
@@ -1294,11 +1332,156 @@ const LONG_TERM_GOALS=[
 ];
 
 // ── Time Standards ──
-// Age categories for standards: '13u','14','15','16','open'
+// Age categories for standards: 13 (≤13), 14, 15, 16, open (17+)
 // Swimming Canada age is based on age on Dec 31 of the competition year
-// Swim Alberta uses same convention
+// All provincial bodies use same Dec 31 convention
 
-// Provincial Championship Standards 2025-26 (from Swim Alberta PDF)
+// ── BC Provincial Championship 2025-26 (Swim BC) ──
+// Source: Time-Standards-Provincials.pdf — BC Swim Provincial Championships
+// BC uses 2-yr age bands (11-12/13-14/15-16/17+) mapped to our single-age keys
+const STD_BC_PROV={
+  '50 Free': {male:{scm:{13:'26.60',14:'26.60',15:'25.20',16:'25.20',open:'24.30'},lcm:{13:'27.13',14:'27.13',15:'25.70',16:'25.70',open:'24.79'}},female:{scm:{13:'28.50',14:'28.50',15:'27.90',16:'27.90',open:'27.70'},lcm:{13:'29.07',14:'29.07',15:'28.46',16:'28.46',open:'28.25'}}},
+  '100 Free': {male:{scm:{13:'58.50',14:'58.50',15:'55.30',16:'55.30',open:'53.80'},lcm:{13:'59.67',14:'59.67',15:'56.41',16:'56.41',open:'54.88'}},female:{scm:{13:'1:02.70',14:'1:02.70',15:'1:01.10',16:'1:01.10',open:'1:00.50'},lcm:{13:'1:03.95',14:'1:03.95',15:'1:02.32',16:'1:02.32',open:'1:01.71'}}},
+  '200 Free': {male:{scm:{13:'2:06.90',14:'2:06.90',15:'2:00.40',16:'2:00.40',open:'1:56.60'},lcm:{13:'2:09.44',14:'2:09.44',15:'2:02.81',16:'2:02.81',open:'1:58.93'}},female:{scm:{13:'2:14.70',14:'2:14.70',15:'2:11.30',16:'2:11.30',open:'2:10.00'},lcm:{13:'2:17.39',14:'2:17.39',15:'2:13.93',16:'2:13.93',open:'2:12.60'}}},
+  '400 Free': {male:{scm:{13:'4:32.70',14:'4:32.70',15:'4:18.40',16:'4:18.40',open:'4:08.40'},lcm:{13:'4:38.15',14:'4:38.15',15:'4:23.57',16:'4:23.57',open:'4:13.37'}},female:{scm:{13:'4:43.30',14:'4:43.30',15:'4:38.90',16:'4:38.90',open:'4:35.70'},lcm:{13:'4:48.97',14:'4:48.97',15:'4:44.48',16:'4:44.48',open:'4:41.21'}}},
+  '800 Free': {male:{scm:{13:'9:17.90',14:'9:17.90',15:'8:55.64',16:'8:55.64',open:'8:39.50'},lcm:{13:'9:29.06',14:'9:29.06',15:'9:06.35',16:'9:06.35',open:'8:49.89'}},female:{scm:{13:'9:45.20',14:'9:45.20',15:'9:32.40',16:'9:32.40',open:'9:31.80'},lcm:{13:'9:56.90',14:'9:56.90',15:'9:43.85',16:'9:43.85',open:'9:43.24'}}},
+  '1500 Free': {male:{scm:{13:'17:59.40',14:'17:59.40',15:'17:15.20',16:'17:15.20',open:'16:38.70'},lcm:{13:'18:20.99',14:'18:20.99',15:'17:35.90',16:'17:35.90',open:'16:58.67'}},female:{scm:{13:'18:57.30',14:'18:57.30',15:'18:42.30',16:'18:42.30',open:'18:14.50'},lcm:{13:'19:20.05',14:'19:20.05',15:'19:04.75',16:'19:04.75',open:'18:36.39'}}},
+  '50 Back': {male:{scm:{13:'30.90',14:'30.90',15:'28.90',16:'28.90',open:'27.80'},lcm:{13:'31.52',14:'31.52',15:'29.48',16:'29.48',open:'28.36'}},female:{scm:{13:'32.40',14:'32.40',15:'31.80',16:'31.80',open:'31.80'},lcm:{13:'33.05',14:'33.05',15:'32.44',16:'32.44',open:'32.44'}}},
+  '100 Back': {male:{scm:{13:'1:06.80',14:'1:06.80',15:'1:02.60',16:'1:02.60',open:'1:00.60'},lcm:{13:'1:08.14',14:'1:08.14',15:'1:03.85',16:'1:03.85',open:'1:01.81'}},female:{scm:{13:'1:09.90',14:'1:09.90',15:'1:08.50',16:'1:08.50',open:'1:07.90'},lcm:{13:'1:11.30',14:'1:11.30',15:'1:09.87',16:'1:09.87',open:'1:09.26'}}},
+  '200 Back': {male:{scm:{13:'2:24.50',14:'2:24.50',15:'2:16.20',16:'2:16.20',open:'2:11.10'},lcm:{13:'2:27.39',14:'2:27.39',15:'2:18.92',16:'2:18.92',open:'2:13.72'}},female:{scm:{13:'2:29.70',14:'2:29.70',15:'2:26.80',16:'2:26.80',open:'2:25.20'},lcm:{13:'2:32.69',14:'2:32.69',15:'2:29.74',16:'2:29.74',open:'2:28.10'}}},
+  '50 Breast': {male:{scm:{13:'34.40',14:'34.40',15:'32.20',16:'32.20',open:'31.30'},lcm:{13:'35.09',14:'35.09',15:'32.84',16:'32.84',open:'31.93'}},female:{scm:{13:'36.70',14:'36.70',15:'36.00',16:'36.00',open:'36.00'},lcm:{13:'37.43',14:'37.43',15:'36.72',16:'36.72',open:'36.72'}}},
+  '100 Breast': {male:{scm:{13:'1:14.70',14:'1:14.70',15:'1:10.60',16:'1:10.60',open:'1:08.10'},lcm:{13:'1:16.19',14:'1:16.19',15:'1:12.01',16:'1:12.01',open:'1:09.46'}},female:{scm:{13:'1:20.20',14:'1:20.20',15:'1:18.70',16:'1:18.70',open:'1:18.50'},lcm:{13:'1:21.80',14:'1:21.80',15:'1:20.27',16:'1:20.27',open:'1:20.07'}}},
+  '200 Breast': {male:{scm:{13:'2:42.10',14:'2:42.10',15:'2:33.70',16:'2:33.70',open:'2:30.20'},lcm:{13:'2:45.34',14:'2:45.34',15:'2:36.77',16:'2:36.77',open:'2:33.20'}},female:{scm:{13:'2:53.20',14:'2:53.20',15:'2:49.00',16:'2:49.00',open:'2:48.40'},lcm:{13:'2:56.66',14:'2:56.66',15:'2:52.38',16:'2:52.38',open:'2:51.77'}}},
+  '50 Fly': {male:{scm:{13:'29.30',14:'29.30',15:'27.50',16:'27.50',open:'26.50'},lcm:{13:'29.89',14:'29.89',15:'28.05',16:'28.05',open:'27.03'}},female:{scm:{13:'31.00',14:'31.00',15:'30.10',16:'30.10',open:'29.90'},lcm:{13:'31.62',14:'31.62',15:'30.70',16:'30.70',open:'30.50'}}},
+  '100 Fly': {male:{scm:{13:'1:05.80',14:'1:05.80',15:'1:01.70',16:'1:01.70',open:'59.10'},lcm:{13:'1:07.12',14:'1:07.12',15:'1:02.93',16:'1:02.93',open:'1:00.28'}},female:{scm:{13:'1:09.50',14:'1:09.50',15:'1:07.90',16:'1:07.90',open:'1:06.70'},lcm:{13:'1:10.89',14:'1:10.89',15:'1:09.26',16:'1:09.26',open:'1:08.03'}}},
+  '200 Fly': {male:{scm:{13:'2:30.30',14:'2:30.30',15:'2:20.70',16:'2:20.70',open:'2:14.30'},lcm:{13:'2:33.31',14:'2:33.31',15:'2:23.51',16:'2:23.51',open:'2:16.99'}},female:{scm:{13:'2:39.00',14:'2:39.00',15:'2:35.40',16:'2:35.40',open:'2:33.00'},lcm:{13:'2:42.18',14:'2:42.18',15:'2:38.51',16:'2:38.51',open:'2:36.06'}}},
+  '200 IM': {male:{scm:{13:'2:24.10',14:'2:24.10',15:'2:15.90',16:'2:15.90',open:'2:12.20'},lcm:{13:'2:26.98',14:'2:26.98',15:'2:18.62',16:'2:18.62',open:'2:14.84'}},female:{scm:{13:'2:33.00',14:'2:33.00',15:'2:28.70',16:'2:28.70',open:'2:26.80'},lcm:{13:'2:36.06',14:'2:36.06',15:'2:31.67',16:'2:31.67',open:'2:29.74'}}},
+  '400 IM': {male:{scm:{13:'5:05.50',14:'5:05.50',15:'4:54.40',16:'4:54.40',open:'4:43.00'},lcm:{13:'5:11.61',14:'5:11.61',15:'5:00.29',16:'5:00.29',open:'4:48.66'}},female:{scm:{13:'5:23.10',14:'5:23.10',15:'5:18.00',16:'5:18.00',open:'5:14.50'},lcm:{13:'5:29.56',14:'5:29.56',15:'5:24.36',16:'5:24.36',open:'5:20.79'}}},
+};
+
+// ── Manitoba/Saskatchewan "AA" Standard 2024-2028 ──
+// Source: 2024-2028+ManSask+Time+Standards.pdf
+// "AA" = ManSask Championship qualifying standard (higher bar)
+// Girls: 16&O → open key. Boys: 17&O → open key
+const STD_MANSASK_AA={
+  '50 Free': {male:{scm:{13:'28.84',14:'27.83',15:'27.13',16:'26.73',open:'26.73'},lcm:{13:'31.31',14:'29.74',15:'28.70',16:'27.98',open:'27.56'}},female:{scm:{13:'30.27',14:'30.27',15:'29.82',16:'29.52',open:'29.52'},lcm:{13:'31.95',14:'30.99',15:'30.53',16:'30.22',open:'30.22'}}},
+  '100 Free': {male:{scm:{13:'1:03.02',14:'1:00.81',15:'59.29',16:'58.40',open:'58.40'},lcm:{13:'1:08.08',14:'1:04.68',15:'1:02.42',16:'1:00.86',open:'59.94'}},female:{scm:{13:'1:06.60',14:'1:06.60',15:'1:05.60',16:'1:04.95',open:'1:04.95'},lcm:{13:'1:09.85',14:'1:07.76',15:'1:06.74',16:'1:06.07',open:'1:06.07'}}},
+  '200 Free': {male:{scm:{13:'2:18.13',14:'2:13.30',15:'2:09.97',16:'2:08.02',open:'2:08.02'},lcm:{13:'2:29.10',14:'2:21.65',15:'2:16.69',16:'2:13.27',open:'2:11.27'}},female:{scm:{13:'2:24.83',14:'2:24.83',15:'2:22.65',16:'2:21.23',open:'2:21.23'},lcm:{13:'2:31.96',14:'2:27.40',15:'2:25.19',16:'2:23.74',open:'2:23.74'}}},
+  '400 Free': {male:{scm:{13:'4:53.10',14:'4:42.84',15:'4:35.77',16:'4:31.63',open:'4:31.63'},lcm:{13:'5:18.32',14:'5:02.40',15:'4:51.82',16:'4:44.52',open:'4:40.26'}},female:{scm:{13:'5:05.45',14:'5:05.45',15:'5:00.86',16:'4:57.86',open:'4:57.86'},lcm:{13:'5:22.70',14:'5:13.02',15:'5:08.32',16:'5:05.24',open:'5:05.24'}}},
+  '800 Free': {male:{scm:{13:'10:14.95',14:'9:53.42',15:'9:38.59',16:'9:29.91',open:'9:29.91'},lcm:{13:'11:08.91',14:'10:35.46',15:'10:13.22',16:'9:57.89',open:'9:48.92'}},female:{scm:{13:'10:33.83',14:'10:33.83',15:'10:24.32',16:'10:18.08',open:'10:18.08'},lcm:{13:'11:10.50',14:'10:50.38',15:'10:40.63',16:'10:34.22',open:'10:34.22'}}},
+  '1500 Free': {male:{scm:{13:'19:35.78',14:'18:54.63',15:'18:26.26',16:'18:09.67',open:'18:09.67'},lcm:{13:'21:10.92',14:'20:07.38',15:'19:25.12',16:'18:55.99',open:'18:38.95'}},female:{scm:{13:'20:44.48',14:'20:44.48',15:'20:25.81',16:'20:13.55',open:'20:13.55'},lcm:{13:'21:54.94',14:'21:15.49',15:'20:56.36',16:'20:43.79',open:'20:43.79'}}},
+  '50 Back': {male:{scm:{13:'33.35',14:'32.18',15:'31.37',16:'30.90',open:'30.90'},lcm:{13:'36.05',14:'34.25',15:'33.05',16:'32.22',open:'31.74'}},female:{scm:{13:'34.96',14:'34.96',15:'34.44',16:'34.09',open:'34.09'},lcm:{13:'36.83',14:'35.73',15:'35.19',16:'34.84',open:'34.84'}}},
+  '100 Back': {male:{scm:{13:'1:10.89',14:'1:08.41',15:'1:06.70',16:'1:05.70',open:'1:05.70'},lcm:{13:'1:17.63',14:'1:13.75',15:'1:11.17',16:'1:09.39',open:'1:08.35'}},female:{scm:{13:'1:14.45',14:'1:14.45',15:'1:13.33',16:'1:12.60',open:'1:12.60'},lcm:{13:'1:18.46',14:'1:16.11',15:'1:14.97',16:'1:14.22',open:'1:14.22'}}},
+  '200 Back': {male:{scm:{13:'2:33.10',14:'2:27.74',15:'2:24.04',16:'2:21.88',open:'2:21.88'},lcm:{13:'2:47.83',14:'2:39.44',15:'2:33.86',16:'2:30.02',open:'2:27.77'}},female:{scm:{13:'2:40.51',14:'2:40.51',15:'2:38.10',16:'2:36.52',open:'2:36.52'},lcm:{13:'2:50.85',14:'2:45.72',15:'2:43.24',16:'2:41.60',open:'2:41.60'}}},
+  '50 Breast': {male:{scm:{13:'37.35',14:'36.05',15:'35.14',16:'34.62',open:'34.62'},lcm:{13:'39.77',14:'37.78',15:'36.46',16:'35.55',open:'35.02'}},female:{scm:{13:'39.06',14:'39.06',15:'38.48',16:'38.09',open:'38.09'},lcm:{13:'40.97',14:'39.74',15:'39.14',16:'38.75',open:'38.75'}}},
+  '100 Breast': {male:{scm:{13:'1:20.10',14:'1:17.30',15:'1:15.37',16:'1:14.24',open:'1:14.24'},lcm:{13:'1:27.03',14:'1:22.68',15:'1:19.78',16:'1:17.79',open:'1:16.62'}},female:{scm:{13:'1:24.47',14:'1:24.47',15:'1:23.20',16:'1:22.37',open:'1:22.37'},lcm:{13:'1:29.55',14:'1:26.86',15:'1:25.56',16:'1:24.70',open:'1:24.70'}}},
+  '200 Breast': {male:{scm:{13:'2:54.60',14:'2:48.49',15:'2:44.28',16:'2:41.82',open:'2:41.82'},lcm:{13:'3:09.51',14:'3:00.03',15:'2:53.73',16:'2:49.39',open:'2:46.85'}},female:{scm:{13:'3:02.85',14:'3:02.85',15:'3:00.11',16:'2:58.31',open:'2:58.31'},lcm:{13:'3:13.76',14:'3:07.95',15:'3:05.13',16:'3:03.28',open:'3:03.28'}}},
+  '50 Fly': {male:{scm:{13:'31.74',14:'30.63',15:'29.87',16:'29.42',open:'29.42'},lcm:{13:'33.60',14:'31.92',15:'30.80',16:'30.03',open:'29.58'}},female:{scm:{13:'33.24',14:'33.24',15:'32.74',16:'32.42',open:'32.42'},lcm:{13:'34.50',14:'33.46',15:'32.96',16:'32.63',open:'32.63'}}},
+  '100 Fly': {male:{scm:{13:'1:10.15',14:'1:07.70',15:'1:06.01',16:'1:05.02',open:'1:05.02'},lcm:{13:'1:14.65',14:'1:10.92',15:'1:08.43',16:'1:06.72',open:'1:05.72'}},female:{scm:{13:'1:14.09',14:'1:14.09',15:'1:12.98',16:'1:12.25',open:'1:12.25'},lcm:{13:'1:17.29',14:'1:14.97',15:'1:13.84',16:'1:13.10',open:'1:13.10'}}},
+  '200 Fly': {male:{scm:{13:'2:37.03',14:'2:31.54',15:'2:27.75',16:'2:25.53',open:'2:25.53'},lcm:{13:'2:50.13',14:'2:41.63',15:'2:35.97',16:'2:32.07',open:'2:29.79'}},female:{scm:{13:'2:47.58',14:'2:47.58',15:'2:45.06',16:'2:43.41',open:'2:43.41'},lcm:{13:'2:57.29',14:'2:51.97',15:'2:49.39',16:'2:47.70',open:'2:47.70'}}},
+  '200 IM': {male:{scm:{13:'2:35.38',14:'2:29.94',15:'2:26.19',16:'2:24.00',open:'2:24.00'},lcm:{13:'2:47.78',14:'2:39.39',15:'2:33.81',16:'2:29.96',open:'2:27.71'}},female:{scm:{13:'2:43.56',14:'2:43.56',15:'2:41.11',16:'2:39.50',open:'2:39.50'},lcm:{13:'2:53.55',14:'2:48.34',15:'2:45.81',16:'2:44.16',open:'2:44.16'}}},
+  '400 IM': {male:{scm:{13:'5:32.69',14:'5:21.04',15:'5:13.02',16:'5:08.32',open:'5:08.32'},lcm:{13:'6:01.76',14:'5:43.68',15:'5:31.65',16:'5:23.36',open:'5:18.51'}},female:{scm:{13:'5:47.79',14:'5:47.79',15:'5:42.57',16:'5:39.15',open:'5:39.15'},lcm:{13:'6:08.03',14:'5:56.99',15:'5:51.64',16:'5:48.12',open:'5:48.12'}}},
+};
+
+// ── Manitoba/Saskatchewan "A" Standard 2024-2028 ──
+// "A" = Sask Junior Provincials qualifying / Manitoba Provincial A
+const STD_MANSASK_A={
+  '50 Free': {male:{scm:{13:'32.44',14:'31.31',15:'30.52',16:'30.07',open:'30.07'},lcm:{13:'35.22',14:'33.46',15:'32.29',16:'31.48',open:'31.01'}},female:{scm:{13:'34.06',14:'34.06',15:'33.55',16:'33.21',open:'33.21'},lcm:{13:'35.95',14:'34.87',15:'34.35',16:'34.00',open:'34.00'}}},
+  '100 Free': {male:{scm:{13:'1:10.89',14:'1:08.41',15:'1:06.70',16:'1:05.70',open:'1:05.70'},lcm:{13:'1:16.59',14:'1:12.76',15:'1:10.22',16:'1:08.46',open:'1:07.44'}},female:{scm:{13:'1:14.93',14:'1:14.93',15:'1:13.80',16:'1:13.07',open:'1:13.07'},lcm:{13:'1:18.58',14:'1:16.23',15:'1:15.08',16:'1:14.33',open:'1:14.33'}}},
+  '200 Free': {male:{scm:{13:'2:35.40',14:'2:29.96',15:'2:26.21',16:'2:24.02',open:'2:24.02'},lcm:{13:'2:47.74',14:'2:39.35',15:'2:33.78',16:'2:29.93',open:'2:27.68'}},female:{scm:{13:'2:42.93',14:'2:42.93',15:'2:40.48',16:'2:38.88',open:'2:38.88'},lcm:{13:'2:50.96',14:'2:45.83',15:'2:43.34',16:'2:41.71',open:'2:41.71'}}},
+  '400 Free': {male:{scm:{13:'5:29.73',14:'5:18.19',15:'5:10.24',16:'5:05.58',open:'5:05.58'},lcm:{13:'5:58.11',14:'5:40.20',15:'5:28.30',16:'5:20.09',open:'5:15.29'}},female:{scm:{13:'5:43.63',14:'5:43.63',15:'5:38.47',16:'5:35.09',open:'5:35.09'},lcm:{13:'6:03.03',14:'5:52.14',15:'5:46.86',16:'5:43.39',open:'5:43.39'}}},
+  '800 Free': {male:{scm:{13:'11:31.82',14:'11:07.60',15:'10:50.91',16:'10:41.15',open:'10:41.15'},lcm:{13:'12:32.52',14:'11:54.90',15:'11:29.88',16:'11:12.63',open:'11:02.54'}},female:{scm:{13:'11:53.05',14:'11:53.05',15:'11:42.36',16:'11:35.34',open:'11:35.34'},lcm:{13:'12:34.31',14:'12:11.68',15:'12:00.70',16:'11:53.50',open:'11:53.50'}}},
+  '1500 Free': {male:{scm:{13:'22:02.76',14:'21:16.46',15:'20:44.55',16:'20:25.88',open:'20:25.88'},lcm:{13:'23:49.79',14:'22:38.30',15:'21:50.76',16:'21:17.99',open:'20:58.82'}},female:{scm:{13:'23:20.04',14:'23:20.04',15:'22:59.04',16:'22:45.25',open:'22:45.25'},lcm:{13:'24:39.30',14:'23:54.92',15:'23:33.40',16:'23:19.27',open:'23:19.27'}}},
+  '50 Back': {male:{scm:{13:'37.51',14:'36.20',15:'35.30',16:'34.77',open:'34.77'},lcm:{13:'40.56',14:'38.53',15:'37.18',16:'36.25',open:'35.71'}},female:{scm:{13:'39.33',14:'39.33',15:'38.74',16:'38.36',open:'38.36'},lcm:{13:'41.44',14:'40.19',15:'39.59',16:'39.19',open:'39.19'}}},
+  '100 Back': {male:{scm:{13:'1:19.75',14:'1:16.96',15:'1:15.04',16:'1:13.91',open:'1:13.91'},lcm:{13:'1:27.34',14:'1:22.97',15:'1:20.07',16:'1:18.06',open:'1:16.89'}},female:{scm:{13:'1:23.75',14:'1:23.75',15:'1:22.50',16:'1:21.67',open:'1:21.67'},lcm:{13:'1:28.27',14:'1:25.62',15:'1:24.34',16:'1:23.49',open:'1:23.49'}}},
+  '200 Back': {male:{scm:{13:'2:52.23',14:'2:46.21',15:'2:42.05',16:'2:39.62',open:'2:39.62'},lcm:{13:'3:08.81',14:'2:59.37',15:'2:53.09',16:'2:48.77',open:'2:46.24'}},female:{scm:{13:'3:00.57',14:'3:00.57',15:'2:57.86',16:'2:56.08',open:'2:56.08'},lcm:{13:'3:12.20',14:'3:06.44',15:'3:03.64',16:'3:01.80',open:'3:01.80'}}},
+  '50 Breast': {male:{scm:{13:'42.02',14:'40.55',15:'39.54',16:'38.94',open:'38.94'},lcm:{13:'44.74',14:'42.51',15:'41.02',16:'39.99',open:'39.39'}},female:{scm:{13:'43.95',14:'43.95',15:'43.29',16:'42.86',open:'42.86'},lcm:{13:'46.09',14:'44.70',15:'44.03',16:'43.59',open:'43.59'}}},
+  '100 Breast': {male:{scm:{13:'1:30.11',14:'1:26.96',15:'1:24.79',16:'1:23.52',open:'1:23.52'},lcm:{13:'1:37.91',14:'1:33.01',15:'1:29.76',16:'1:27.51',open:'1:26.20'}},female:{scm:{13:'1:35.03',14:'1:35.03',15:'1:33.60',16:'1:32.67',open:'1:32.67'},lcm:{13:'1:40.74',14:'1:37.72',15:'1:36.25',16:'1:35.29',open:'1:35.29'}}},
+  '200 Breast': {male:{scm:{13:'3:16.43',14:'3:09.55',15:'3:04.82',16:'3:02.04',open:'3:02.04'},lcm:{13:'3:33.20',14:'3:22.54',15:'3:15.45',16:'3:10.56',open:'3:07.71'}},female:{scm:{13:'3:25.71',14:'3:25.71',15:'3:22.62',16:'3:20.60',open:'3:20.60'},lcm:{13:'3:37.98',14:'3:31.44',15:'3:28.27',16:'3:26.19',open:'3:26.19'}}},
+  '50 Fly': {male:{scm:{13:'35.71',14:'34.46',15:'33.60',16:'33.10',open:'33.10'},lcm:{13:'37.80',14:'35.91',15:'34.66',16:'33.79',open:'33.28'}},female:{scm:{13:'37.40',14:'37.40',15:'36.84',16:'36.47',open:'36.47'},lcm:{13:'38.81',14:'37.65',15:'37.08',16:'36.71',open:'36.71'}}},
+  '100 Fly': {male:{scm:{13:'1:18.92',14:'1:16.16',15:'1:14.26',16:'1:13.14',open:'1:13.14'},lcm:{13:'1:23.98',14:'1:19.78',15:'1:16.99',16:'1:15.06',open:'1:13.94'}},female:{scm:{13:'1:23.35',14:'1:23.35',15:'1:22.10',16:'1:21.28',open:'1:21.28'},lcm:{13:'1:26.95',14:'1:24.34',15:'1:23.07',16:'1:22.24',open:'1:22.24'}}},
+  '200 Fly': {male:{scm:{13:'2:56.66',14:'2:50.48',15:'2:46.22',16:'2:43.72',open:'2:43.72'},lcm:{13:'3:11.40',14:'3:01.83',15:'2:55.47',16:'2:51.08',open:'2:48.51'}},female:{scm:{13:'3:08.53',14:'3:08.53',15:'3:05.70',16:'3:03.84',open:'3:03.84'},lcm:{13:'3:19.45',14:'3:13.47',15:'3:10.57',16:'3:08.66',open:'3:08.66'}}},
+  '200 IM': {male:{scm:{13:'2:54.80',14:'2:48.68',15:'2:44.47',16:'2:42.00',open:'2:42.00'},lcm:{13:'3:08.75',14:'2:59.31',15:'2:53.03',16:'2:48.71',open:'2:46.18'}},female:{scm:{13:'3:04.01',14:'3:04.01',15:'3:01.25',16:'2:59.44',open:'2:59.44'},lcm:{13:'3:15.24',14:'3:09.38',15:'3:06.54',16:'3:04.67',open:'3:04.67'}}},
+  '400 IM': {male:{scm:{13:'6:14.27',14:'6:01.17',15:'5:52.14',16:'5:46.86',open:'5:46.86'},lcm:{13:'6:46.99',14:'6:26.64',15:'6:13.10',16:'6:03.78',open:'5:58.32'}},female:{scm:{13:'6:31.26',14:'6:31.26',15:'6:25.39',16:'6:21.54',open:'6:21.54'},lcm:{13:'6:54.04',14:'6:41.62',15:'6:35.59',16:'6:31.64',open:'6:31.64'}}},
+};
+
+// ── Ontario Age Group (OAG) 2024-2025 (Swim Ontario) ──
+// Source: SwimON_2024-2025_Age_Group_Standards.pdf
+// Note: 50m Back/Breast/Fly not offered in OAG — those cells return null
+const STD_ON_OAG={
+  '50 Free': {male:{scm:{13:'28.32',14:'26.49',15:'25.80',16:'25.27',open:'23.93'},lcm:{13:'28.90',14:'27.04',15:'26.33',16:'25.79',open:'24.42'}},female:{scm:{13:'29.71',14:'28.75',15:'28.47',16:'28.13',open:'27.35'},lcm:{13:'30.31',14:'29.34',15:'28.95',16:'28.71',open:'27.91'}}},
+  '100 Free': {male:{scm:{13:'1:02.15',14:'58.22',15:'56.36',16:'55.20',open:'52.35'},lcm:{13:'1:03.42',14:'59.41',15:'57.52',16:'56.42',open:'53.42'}},female:{scm:{13:'1:05.00',14:'1:02.90',15:'1:01.77',16:'1:00.76',open:'59.57'},lcm:{13:'1:06.33',14:'1:04.19',15:'1:03.04',16:'1:02.00',open:'1:00.79'}}},
+  '200 Free': {male:{scm:{13:'2:17.69',14:'2:09.00',15:'2:04.89',16:'2:02.43',open:'1:55.63'},lcm:{13:'2:20.51',14:'2:11.64',15:'2:07.44',16:'2:04.93',open:'1:57.99'}},female:{scm:{13:'2:23.65',14:'2:17.08',15:'2:15.63',16:'2:13.98',open:'2:10.34'},lcm:{13:'2:26.59',14:'2:19.88',15:'2:18.40',16:'2:16.71',open:'2:13.00'}}},
+  '400 Free': {male:{scm:{13:'4:56.39',14:'4:34.70',15:'4:28.04',16:'4:25.10',open:'4:17.92'},lcm:{13:'5:02.44',14:'4:40.30',15:'4:33.52',16:'4:30.51',open:'4:23.18'}},female:{scm:{13:'5:05.83',14:'4:54.26',15:'4:50.01',16:'4:46.69',open:'4:36.85'},lcm:{13:'5:12.08',14:'5:00.27',15:'4:55.93',16:'4:52.54',open:'4:42.50'}}},
+  '800 Free': {male:{scm:{13:'10:13.87',14:'9:42.76',15:'9:25.46',16:'9:19.46',open:'9:08.76'},lcm:{13:'10:26.39',14:'9:54.63',15:'9:37.00',16:'9:30.88',open:'9:19.96'}},female:{scm:{13:'10:40.13',14:'10:12.72',15:'10:06.60',16:'9:59.20',open:'9:47.06'},lcm:{13:'10:53.20',14:'10:25.23',15:'10:18.98',16:'10:11.43',open:'9:59.05'}}},
+  '1500 Free': {male:{scm:{13:'19:31.30',14:'19:00.02',15:'18:48.34',16:'18:21.93',open:'17:59.98'},lcm:{13:'19:11.37',14:'18:44.42',15:'18:33.18',16:'18:22.03',open:'18:22.03'}},female:{scm:{13:'20:22.58',14:'20:10.47',15:'19:58.37',16:'19:46.47',open:'19:22.75'},lcm:{13:'20:22.83',14:'20:10.59',15:'19:58.48',16:'19:46.48',open:'19:22.75'}}},
+  '50 Back': {male:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}},female:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}}},
+  '100 Back': {male:{scm:{13:'1:11.97',14:'1:06.55',15:'1:05.65',16:'1:02.77',open:'1:01.48'},lcm:{13:'1:13.44',14:'1:07.91',15:'1:06.99',16:'1:04.06',open:'1:02.74'}},female:{scm:{13:'1:15.76',14:'1:11.88',15:'1:10.53',16:'1:09.09',open:'1:06.33'},lcm:{13:'1:17.31',14:'1:13.35',15:'1:11.97',16:'1:10.50',open:'1:07.69'}}},
+  '200 Back': {male:{scm:{13:'2:37.53',14:'2:26.76',15:'2:21.99',16:'2:19.30',open:'2:13.66'},lcm:{13:'2:40.75',14:'2:29.76',15:'2:24.89',16:'2:22.14',open:'2:16.39'}},female:{scm:{13:'2:43.47',14:'2:35.73',15:'2:32.96',16:'2:30.72',open:'2:25.12'},lcm:{13:'2:46.81',14:'2:38.91',15:'2:36.09',16:'2:33.80',open:'2:28.09'}}},
+  '50 Breast': {male:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}},female:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}}},
+  '100 Breast': {male:{scm:{13:'1:21.97',14:'1:15.81',15:'1:12.25',16:'1:11.20',open:'1:06.40'},lcm:{13:'1:23.65',14:'1:17.36',15:'1:13.73',16:'1:12.66',open:'1:07.76'}},female:{scm:{13:'1:25.75',14:'1:22.06',15:'1:20.25',16:'1:19.45',open:'1:17.88'},lcm:{13:'1:27.51',14:'1:23.74',15:'1:21.89',16:'1:21.07',open:'1:19.47'}}},
+  '200 Breast': {male:{scm:{13:'2:58.73',14:'2:48.51',15:'2:39.94',16:'2:37.71',open:'2:25.14'},lcm:{13:'3:02.38',14:'2:51.95',15:'2:42.19',16:'2:40.93',open:'2:28.10'}},female:{scm:{13:'3:06.92',14:'2:59.10',15:'2:57.83',16:'2:56.42',open:'2:51.39'},lcm:{13:'3:10.56',14:'3:02.76',15:'3:01.46',16:'3:00.03',open:'2:54.89'}}},
+  '50 Fly': {male:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}},female:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:null,14:null,15:null,16:null,open:null}}},
+  '100 Fly': {male:{scm:{13:'1:10.59',14:'1:04.97',15:'1:02.20',16:'1:00.40',open:'56.87'},lcm:{13:'1:12.04',14:'1:06.29',15:'1:03.47',16:'1:01.64',open:'58.04'}},female:{scm:{13:'1:13.37',14:'1:09.91',15:'1:08.17',16:'1:07.58',open:'1:05.38'},lcm:{13:'1:14.87',14:'1:11.34',15:'1:09.57',16:'1:08.96',open:'1:06.72'}}},
+  '200 Fly': {male:{scm:{13:'2:51.19',14:'2:30.71',15:'2:24.74',16:'2:18.46',open:'2:13.38'},lcm:{13:'2:54.69',14:'2:33.79',15:'2:27.70',16:'2:21.28',open:'2:16.10'}},female:{scm:{13:'3:05.04',14:'2:42.60',15:'2:39.11',16:'2:38.11',open:'2:27.17'},lcm:{13:'3:08.82',14:'2:45.92',15:'2:42.36',16:'2:41.34',open:'2:30.18'}}},
+  '200 IM': {male:{scm:{13:'2:36.08',14:'2:25.85',15:'2:21.73',16:'2:18.12',open:'2:12.39'},lcm:{13:'2:39.27',14:'2:28.83',15:'2:24.60',16:'2:20.94',open:'2:15.10'}},female:{scm:{13:'2:42.19',14:'2:36.21',15:'2:35.40',16:'2:31.36',open:'2:28.84'},lcm:{13:'2:45.50',14:'2:39.40',15:'2:38.58',16:'2:34.45',open:'2:31.88'}}},
+  '400 IM': {male:{scm:{13:'5:40.61',14:'5:16.34',15:'5:06.44',16:'5:00.60',open:'4:52.45'},lcm:{13:'5:47.57',14:'5:22.80',15:'5:12.70',16:'5:06.74',open:'4:58.42'}},female:{scm:{13:'5:58.57',14:'5:39.61',15:'5:36.76',16:'5:30.01',open:'5:23.35'},lcm:{13:'6:05.89',14:'5:46.55',15:'5:43.49',16:'5:36.75',open:'5:29.95'}}},
+};
+
+// ── Ontario Junior International (OJI) 2024 ──
+// Source: 2024_OJI_Standards.pdf — single qualifying time, no age differentiation
+const STD_ON_OJI={
+  '50 Free': {male:{scm:{13:'24.06',14:'24.06',15:'24.06',16:'24.06',open:'24.06'},lcm:{13:'24.84',14:'24.84',15:'24.84',16:'24.84',open:'24.84'}},female:{scm:{13:'26.78',14:'26.78',15:'26.78',16:'26.78',open:'26.78'},lcm:{13:'27.68',14:'27.68',15:'27.68',16:'27.68',open:'27.68'}}},
+  '100 Free': {male:{scm:{13:'52.36',14:'52.36',15:'52.36',16:'52.36',open:'52.36'},lcm:{13:'53.71',14:'53.71',15:'53.71',16:'53.71',open:'53.71'}},female:{scm:{13:'57.79',14:'57.79',15:'57.79',16:'57.79',open:'57.79'},lcm:{13:'58.96',14:'58.96',15:'58.96',16:'58.96',open:'58.96'}}},
+  '200 Free': {male:{scm:{13:'1:54.56',14:'1:54.56',15:'1:54.56',16:'1:54.56',open:'1:54.56'},lcm:{13:'1:58.27',14:'1:58.27',15:'1:58.27',16:'1:58.27',open:'1:58.27'}},female:{scm:{13:'2:04.66',14:'2:04.66',15:'2:04.66',16:'2:04.66',open:'2:04.66'},lcm:{13:'2:08.23',14:'2:08.23',15:'2:08.23',16:'2:08.23',open:'2:08.23'}}},
+  '400 Free': {male:{scm:{13:'4:04.99',14:'4:04.99',15:'4:04.99',16:'4:04.99',open:'4:04.99'},lcm:{13:'4:13.64',14:'4:13.64',15:'4:13.64',16:'4:13.64',open:'4:13.64'}},female:{scm:{13:'4:24.04',14:'4:24.04',15:'4:24.04',16:'4:24.04',open:'4:24.04'},lcm:{13:'4:31.20',14:'4:31.20',15:'4:31.20',16:'4:31.20',open:'4:31.20'}}},
+  '800 Free': {male:{scm:{13:'8:32.36',14:'8:32.36',15:'8:32.36',16:'8:32.36',open:'8:32.36'},lcm:{13:'8:46.61',14:'8:46.61',15:'8:46.61',16:'8:46.61',open:'8:46.61'}},female:{scm:{13:'9:12.70',14:'9:12.70',15:'9:12.70',16:'9:12.70',open:'9:12.70'},lcm:{13:'9:26.01',14:'9:26.01',15:'9:26.01',16:'9:26.01',open:'9:26.01'}}},
+  '1500 Free': {male:{scm:{13:'16:09.14',14:'16:09.14',15:'16:09.14',16:'16:09.14',open:'16:09.14'},lcm:{13:'16:28.52',14:'16:28.52',15:'16:28.52',16:'16:28.52',open:'16:28.52'}},female:{scm:{13:'17:37.98',14:'17:37.98',15:'17:37.98',16:'17:37.98',open:'17:37.98'},lcm:{13:'17:59.14',14:'17:59.14',15:'17:59.14',16:'17:59.14',open:'17:59.14'}}},
+  '50 Back': {male:{scm:{13:'27.16',14:'27.16',15:'27.16',16:'27.16',open:'27.16'},lcm:{13:'28.74',14:'28.74',15:'28.74',16:'28.74',open:'28.74'}},female:{scm:{13:'30.07',14:'30.07',15:'30.07',16:'30.07',open:'30.07'},lcm:{13:'31.43',14:'31.43',15:'31.43',16:'31.43',open:'31.43'}}},
+  '100 Back': {male:{scm:{13:'58.30',14:'58.30',15:'58.30',16:'58.30',open:'58.30'},lcm:{13:'1:01.18',14:'1:01.18',15:'1:01.18',16:'1:01.18',open:'1:01.18'}},female:{scm:{13:'1:04.22',14:'1:04.22',15:'1:04.22',16:'1:04.22',open:'1:04.22'},lcm:{13:'1:06.78',14:'1:06.78',15:'1:06.78',16:'1:06.78',open:'1:06.78'}}},
+  '200 Back': {male:{scm:{13:'2:06.21',14:'2:06.21',15:'2:06.21',16:'2:06.21',open:'2:06.21'},lcm:{13:'2:13.01',14:'2:13.01',15:'2:13.01',16:'2:13.01',open:'2:13.01'}},female:{scm:{13:'2:17.75',14:'2:17.75',15:'2:17.75',16:'2:17.75',open:'2:17.75'},lcm:{13:'2:24.60',14:'2:24.60',15:'2:24.60',16:'2:24.60',open:'2:24.60'}}},
+  '50 Breast': {male:{scm:{13:'30.27',14:'30.27',15:'30.27',16:'30.27',open:'30.27'},lcm:{13:'31.15',14:'31.15',15:'31.15',16:'31.15',open:'31.15'}},female:{scm:{13:'33.75',14:'33.75',15:'33.75',16:'33.75',open:'33.75'},lcm:{13:'34.66',14:'34.66',15:'34.66',16:'34.66',open:'34.66'}}},
+  '100 Breast': {male:{scm:{13:'1:05.83',14:'1:05.83',15:'1:05.83',16:'1:05.83',open:'1:05.83'},lcm:{13:'1:08.20',14:'1:08.20',15:'1:08.20',16:'1:08.20',open:'1:08.20'}},female:{scm:{13:'1:13.02',14:'1:13.02',15:'1:13.02',16:'1:13.02',open:'1:13.02'},lcm:{13:'1:15.06',14:'1:15.06',15:'1:15.06',16:'1:15.06',open:'1:15.06'}}},
+  '200 Breast': {male:{scm:{13:'2:22.99',14:'2:22.99',15:'2:22.99',16:'2:22.99',open:'2:22.99'},lcm:{13:'2:28.97',14:'2:28.97',15:'2:28.97',16:'2:28.97',open:'2:28.97'}},female:{scm:{13:'2:37.68',14:'2:37.68',15:'2:37.68',16:'2:37.68',open:'2:37.68'},lcm:{13:'2:42.60',14:'2:42.60',15:'2:42.60',16:'2:42.60',open:'2:42.60'}}},
+  '50 Fly': {male:{scm:{13:'25.99',14:'25.99',15:'25.99',16:'25.99',open:'25.99'},lcm:{13:'26.76',14:'26.76',15:'26.76',16:'26.76',open:'26.76'}},female:{scm:{13:'28.76',14:'28.76',15:'28.76',16:'28.76',open:'28.76'},lcm:{13:'29.27',14:'29.27',15:'29.27',16:'29.27',open:'29.27'}}},
+  '100 Fly': {male:{scm:{13:'57.61',14:'57.61',15:'57.61',16:'57.61',open:'57.61'},lcm:{13:'58.50',14:'58.50',15:'58.50',16:'58.50',open:'58.50'}},female:{scm:{13:'1:04.02',14:'1:04.02',15:'1:04.02',16:'1:04.02',open:'1:04.02'},lcm:{13:'1:04.73',14:'1:04.73',15:'1:04.73',16:'1:04.73',open:'1:04.73'}}},
+  '200 Fly': {male:{scm:{13:'2:08.47',14:'2:08.47',15:'2:08.47',16:'2:08.47',open:'2:08.47'},lcm:{13:'2:12.49',14:'2:12.49',15:'2:12.49',16:'2:12.49',open:'2:12.49'}},female:{scm:{13:'2:21.02',14:'2:21.02',15:'2:21.02',16:'2:21.02',open:'2:21.02'},lcm:{13:'2:25.11',14:'2:25.11',15:'2:25.11',16:'2:25.11',open:'2:25.11'}}},
+  '200 IM': {male:{scm:{13:'2:09.29',14:'2:09.29',15:'2:09.29',16:'2:09.29',open:'2:09.29'},lcm:{13:'2:14.55',14:'2:14.55',15:'2:14.55',16:'2:14.55',open:'2:14.55'}},female:{scm:{13:'2:21.22',14:'2:21.22',15:'2:21.22',16:'2:21.22',open:'2:21.22'},lcm:{13:'2:26.03',14:'2:26.03',15:'2:26.03',16:'2:26.03',open:'2:26.03'}}},
+  '400 IM': {male:{scm:{13:'4:37.44',14:'4:37.44',15:'4:37.44',16:'4:37.44',open:'4:37.44'},lcm:{13:'4:47.54',14:'4:47.54',15:'4:47.54',16:'4:47.54',open:'4:47.54'}},female:{scm:{13:'4:58.81',14:'4:58.81',15:'4:58.81',16:'4:58.81',open:'4:58.81'},lcm:{13:'5:11.29',14:'5:11.29',15:'5:11.29',16:'5:11.29',open:'5:11.29'}}},
+};
+
+// ── Provincial standards lookup by country → province → level ──
+// Each level value is a standards table in same format as STD_PROV_CHAMP
+const PROV_STANDARDS={
+  CA:{
+    AB:{prov:'provchamp',trials:'provtrials',labels:{prov:'AB Prov. Championship',trials:'AB Prov. Trials'}},
+    BC:{prov:'bcprov',labels:{prov:'BC Provincials'}},
+    MB:{prov:'mb_a',trials:'mb_aa',labels:{prov:'MB Prov. "A"',trials:'MB Prov. "AA"'}},
+    SK:{prov:'sk_a',trials:'sk_aa',labels:{prov:'SK Junior Provincials',trials:'ManSask "AA"'}},
+    ON:{prov:'on_oag',trials:'on_oji',labels:{prov:'ON Age Group',trials:'ON Junior Intl'}},
+    QC:{prov:null,labels:{prov:'QC — Coming soon'}},
+    NS:{prov:null,labels:{prov:'NS — Coming soon'}},
+    NB:{prov:null,labels:{prov:'NB — Coming soon'}},
+    NL:{prov:null,labels:{prov:'NL — Coming soon'}},
+    PE:{prov:null,labels:{prov:'PE — Coming soon'}},
+  }
+};
+
+// Map standard key → actual data table
+function getStdTable(key){
+  const map={
+    provchamp:STD_PROV_CHAMP,provtrials:STD_PROV_TRIALS,
+    bcprov:STD_BC_PROV,
+    mb_a:STD_MANSASK_A,mb_aa:STD_MANSASK_AA,
+    sk_a:STD_MANSASK_A,sk_aa:STD_MANSASK_AA,
+    on_oag:STD_ON_OAG,on_oji:STD_ON_OJI,
+    canada:STD_CANADA,canadatrials:STD_CANADA_TRIALS,
+    canadatrials_jr:STD_CANADA_TRIALS_JR,
+  };
+  return map[key]||null;
+}
+
+// Provincial Championship Standards 2025-26 (Alberta) — kept for backward compat
 // Format: {event: {male:{scm:{13u,14,15,16,open}, lcm:{...}}, female:{...}}}
 const STD_PROV_CHAMP={
   '50 Free':    {male:{scm:{13:27.5,14:26.2,15:25.6,16:25.3,open:25.0},lcm:{13:28.1,14:26.7,15:26.2,16:25.8,open:25.5}},female:{scm:{13:28.4,14:27.8,15:27.5,16:27.3,open:27.1},lcm:{13:29.0,14:28.4,15:28.0,16:27.8,open:27.7}}},
@@ -1409,8 +1592,27 @@ const STD_CANADA_TRIALS={
   '400 IM':     {male:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:'4:36.96',14:'4:36.96',15:'4:36.96',16:'4:36.96',open:'4:36.96'}},female:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:'5:00.92',14:'5:00.92',15:'5:00.92',16:'5:00.92',open:'5:00.92'}}},
 };
 
-const STANDARDS={'provchamp':STD_PROV_CHAMP,'provtrials':STD_PROV_TRIALS,'canada':STD_CANADA,'canadatrials':STD_CANADA_TRIALS};
-const STD_LABELS={'provchamp':'Prov. Championship','provtrials':'Prov. Trials','canada':'Canada Open','canadatrials':'Canada Trials'};
+// Flat STANDARDS map — now dynamically extended by province at runtime via getStdTable()
+const STANDARDS={'provchamp':STD_PROV_CHAMP,'provtrials':STD_PROV_TRIALS,'canada':STD_CANADA,'canadatrials':STD_CANADA_TRIALS,'bcprov':STD_BC_PROV,'mb_a':STD_MANSASK_A,'mb_aa':STD_MANSASK_AA,'sk_a':STD_MANSASK_A,'sk_aa':STD_MANSASK_AA,'on_oag':STD_ON_OAG,'on_oji':STD_ON_OJI};
+const STD_LABELS={'provchamp':'AB Prov. Championship','provtrials':'AB Prov. Trials','bcprov':'BC Provincials','mb_a':'MB Prov. "A"','mb_aa':'MB Prov. "AA"','sk_a':'SK Junior Provincials','sk_aa':'ManSask "AA"','on_oag':'ON Age Group','on_oji':'ON Junior Intl','canada':'Canada Open','canadatrials':'Canada Trials'};
+
+// Get the province-specific standard keys for a swimmer based on their profile country/province
+function getProvStandardKeys(){
+  const p=S.profile;
+  const country=(p&&p.country)||'CA';
+  const province=(p&&p.province)||'AB';
+  const provData=(PROV_STANDARDS[country]||{})[province]||{};
+  const keys=[];
+  if(provData.prov)keys.push({key:provData.prov,label:provData.labels&&provData.labels.prov||'Prov. Standard'});
+  if(provData.trials)keys.push({key:provData.trials,label:provData.labels&&provData.labels.trials||'Prov. Trials'});
+  keys.push({key:'canada',label:'Canada Open'});
+  keys.push({key:'canadatrials',label:'Canada Trials'});
+  // Add custom target meets as selectable standards
+  (S.customTargetMeets||[]).forEach(ctm=>{
+    keys.push({key:'ctm_'+ctm.id,label:'🎯 '+ctm.name});
+  });
+  return keys;
+}
 
 // Legacy TRIALS kept for getEmphasis compatibility
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
@@ -1426,7 +1628,7 @@ const APP_VER='v8';
 })();
 
 let S={
-  profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[],longTermGoals:[],preferredStandard:'provchamp',useKgPref:'metric'}
+  profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[],longTermGoals:[],preferredStandard,country,province,primaryStroke,secondaryStroke}
   clubLogo:DB.get('clubLogo',null), // base64 data URL
   swimKmTotal:DB.get('swimKmTotal',0), // cumulative season km
   swimKmLog:DB.get('swimKmLog',[]), // [{date,km}]
@@ -1476,6 +1678,7 @@ let S={
   _activeMeetDayMeetId:null, // tracks which meet the active day belongs to
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
+  customTargetMeets:DB.get('customTargetMeets',[]), // [{id,meetId,name,times:{event:{lcm,scm}}}] — up to 3
 };
 
 // Units
@@ -1813,14 +2016,60 @@ function updatePmDob(){
   }
 }
 function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'intermediate';}
+
+function updateObProvince(){
+  // Future: populate province options based on country selection
+  updateObStdPicker();
+}
+function updateObStdPicker(){
+  const picker=document.getElementById('ob-std-picker');if(!picker)return;
+  const province=(document.getElementById('ob-province')||{}).value||'AB';
+  const country=(document.getElementById('ob-country')||{}).value||'CA';
+  const provData=(PROV_STANDARDS[country]||{})[province]||{};
+  const stdKeys=getProvStandardKeysForProvince(country,province);
+  picker.innerHTML=stdKeys.map((item,i)=>`
+    <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="ob-std" value="${item.key}" ${i===0?'checked':''} style="margin-top:3px;accent-color:var(--accent);">
+      <div><div style="font-size:14px;font-weight:600;">${item.icon} ${item.label}</div><div style="font-size:11px;color:var(--muted);">${item.desc}</div></div>
+    </label>`).join('');
+}
+function getProvStandardKeysForProvince(country,province){
+  country=country||'CA'; province=province||'AB';
+  const provData=(PROV_STANDARDS[country]||{})[province]||{};
+  const labels=provData.labels||{};
+  const keys=[];
+  if(provData.prov){
+    keys.push({key:provData.prov,label:labels.prov||'Provincial Standard',icon:'🏅',
+      desc:'Your provincial qualifying standard — the first major target for competitive club swimmers.'});
+  } else {
+    keys.push({key:'canada',label:'Canadian Open',icon:'🇨🇦',
+      desc:'No provincial standard loaded yet for this province. Using Canadian Open as starting point.'});
+  }
+  if(provData.trials){
+    keys.push({key:provData.trials,label:labels.trials||'Provincial Trials',icon:'🥈',
+      desc:'The higher provincial standard — for swimmers targeting a provincial team or top-level meets.'});
+  }
+  keys.push({key:'canada',label:'Canadian Open',icon:'🇨🇦',desc:'National qualifying standard. For swimmers chasing a national-level meet entry.'});
+  keys.push({key:'canadatrials',label:'Canadian Trials',icon:'🍁',desc:'Olympic Trials standard. The highest target — for elite swimmers aiming for the national team.'});
+  return keys;
+}
 function getStandard(ev,course){
+  // Custom target meet qualifying time
+  if(S.activeStandard&&S.activeStandard.startsWith('ctm_')){
+    const ctmId=S.activeStandard.slice(4);
+    const ctm=(S.customTargetMeets||[]).find(c=>String(c.id)===String(ctmId));
+    if(!ctm||!ctm.times||!ctm.times[ev])return null;
+    const pool=course==='scm'?'scm':'lcm';
+    const t=ctm.times[ev][pool];
+    return t?String(t):null;
+  }
   // Canada Trials: pick Senior (18+) or Junior (<18) based on comp age
   let std;
   if(S.activeStandard==='canadatrials'){
     const compAge=getCompAge();
     std=(compAge!==null&&compAge>=18)?STD_CANADA_TRIALS:STD_CANADA_TRIALS_JR;
   } else {
-    std=STANDARDS[S.activeStandard];
+    std=getStdTable(S.activeStandard)||STANDARDS[S.activeStandard];
   }
   if(!std||!std[ev])return null;
   const g=getGender();const ageKey=getAgeKey();
@@ -1864,7 +2113,9 @@ function saveProfile(fromOnboarding){
     const useKmOb=document.getElementById('ob-dist-miles')&&document.getElementById('ob-dist-miles').style.borderColor==='var(--accent)'?false:true;
     const primaryStrokeOb=document.getElementById('ob-primary-stroke');
     const secondaryStrokeOb=document.getElementById('ob-secondary-stroke');
-    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,trainingLevel:trainingLevelOb,primaryStroke:primaryStrokeOb?primaryStrokeOb.value:'',secondaryStroke:secondaryStrokeOb?secondaryStrokeOb.value:''};
+    const countryOb=(document.getElementById('ob-country')||{}).value||'CA';
+    const provinceOb=(document.getElementById('ob-province')||{}).value||'AB';
+    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,trainingLevel:trainingLevelOb,primaryStroke:primaryStrokeOb?primaryStrokeOb.value:'',secondaryStroke:secondaryStrokeOb?secondaryStrokeOb.value:'',country:countryOb,province:provinceOb};
     S.equipmentMode=equipModeOb;DB.set('equipmentMode',equipModeOb);
     // Apply preferred standard and units immediately
     S.activeStandard=preferredStandard;DB.set('activeStandard',preferredStandard);
@@ -1877,7 +2128,13 @@ function saveProfile(fromOnboarding){
     const trainingLevel=lvlInp?lvlInp.value:'intermediate';
     const pmPrimStroke=document.getElementById('pm-primary-stroke');
     const pmSecStroke=document.getElementById('pm-secondary-stroke');
-    S.profile={...S.profile,name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,trainingLevel,primaryStroke:pmPrimStroke?pmPrimStroke.value:(S.profile.primaryStroke||''),secondaryStroke:pmSecStroke?pmSecStroke.value:(S.profile.secondaryStroke||'')};
+    const pmCountry=(document.getElementById('pm-country')||{}).value||(S.profile.country||'CA');
+    const pmProvince=(document.getElementById('pm-province')||{}).value||(S.profile.province||'AB');
+    S.profile={...S.profile,name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,trainingLevel,primaryStroke:pmPrimStroke?pmPrimStroke.value:(S.profile.primaryStroke||''),secondaryStroke:pmSecStroke?pmSecStroke.value:(S.profile.secondaryStroke||''),country:pmCountry,province:pmProvince};
+    // Update active standard to match new province if it was a provincial standard
+    const provKeys=getProvStandardKeys();
+    const validKeys=provKeys.map(k=>k.key);
+    if(!validKeys.includes(S.activeStandard)){S.activeStandard=provKeys[0]?provKeys[0].key:'provchamp';DB.set('activeStandard',S.activeStandard);}
   }
   DB.set('profile',S.profile);
   if(fromOnboarding){
@@ -1898,7 +2155,7 @@ function renderProfileDisplay(){
   const goals=S.profile.longTermGoals&&S.profile.longTermGoals.length?S.profile.longTermGoals:[];
   el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
     <div><b style="color:var(--text);">${S.profile.name}</b>${S.profile.club?` · <span style="color:var(--muted);">${S.profile.club}</span>`:''}</div>
-    <div style="color:var(--muted);">${S.profile.gender==='male'?'Male':'Female'} · Age ${realAge||'—'}${compNote}</div>
+    <div style="color:var(--muted);">${S.profile.gender==='male'?'Male':'Female'} · Age ${realAge||'—'}${compNote}${S.profile.province?` · ${S.profile.province}`:''}</div>
     ${S.profile.primaryEvents&&S.profile.primaryEvents.length?`<div style="color:var(--muted);font-size:12px;">Events: ${S.profile.primaryEvents.join(', ')}</div>`:''}
     ${S.profile.primaryStroke?`<div style="color:var(--muted);font-size:12px;">Stroke: ${({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.primaryStroke]||S.profile.primaryStroke}${S.profile.secondaryStroke?' · '+({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.secondaryStroke]:''}</div>`:''}
     ${goals.length?`<div style="margin-top:4px;"><div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Long-term goals</div>${goals.map(g=>`<div style="font-size:12px;color:var(--muted);padding:2px 0;">→ ${g}</div>`).join('')}</div>`:''}
@@ -1921,6 +2178,9 @@ function openProfileModal(){
     if(ySel)ySel.value=dobY||'';
   }
   document.getElementById('pm-gender').value=S.profile.gender||'male';
+  const pmC=document.getElementById('pm-country');const pmP=document.getElementById('pm-province');
+  if(pmC)pmC.value=S.profile.country||'CA';
+  if(pmP)pmP.value=S.profile.province||'AB';
   initProfileEventPicker('pm-events',S.profile.primaryEvents||[]);
   setPmLevel(S.profile.trainingLevel||'intermediate');
   const pmPS=document.getElementById('pm-primary-stroke');
@@ -1931,15 +2191,141 @@ function openProfileModal(){
 }
 function setStandard(key){
   S.activeStandard=key;DB.set('activeStandard',key);
-  document.querySelectorAll('[id^="std-btn-"]').forEach(b=>b.classList.remove('active'));
-  const btn=document.getElementById('std-btn-'+key);if(btn)btn.classList.add('active');
-  renderTimesContent();
+  renderStrokeTabs();renderTimesContent();
+  renderCustomTargetMeets();
+}
+
+// ── Custom Target Meet system ──
+function renderCustomTargetMeets(){
+  const el=document.getElementById('custom-target-meets');
+  if(!el)return;
+  const ctms=S.customTargetMeets||[];
+  let html=`<div class="card" style="margin-top:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:0;">🎯 My Target Meets</div>
+      ${ctms.length<3?`<button class="btn btn-primary btn-sm" onclick="openCtmModal()">+ Add</button>`:'<span style="font-size:11px;color:var(--muted);">3 max</span>'}
+    </div>`;
+  if(!ctms.length){
+    html+=`<div style="font-size:13px;color:var(--muted);padding:8px 0 4px;">Add up to 3 target meets and enter their qualifying times. They'll appear as selectable standards above so you can see your gap to qualification.</div>`;
+  } else {
+    html+=ctms.map(ctm=>{
+      const meet=S.meets.find(m=>String(m.id)===String(ctm.meetId));
+      const meetDate=meet?new Date(meet.date).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):'';
+      const evCount=Object.keys(ctm.times||{}).filter(ev=>ctm.times[ev]&&(ctm.times[ev].lcm||ctm.times[ev].scm)).length;
+      const isActive=S.activeStandard==='ctm_'+ctm.id;
+      return`<div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid ${isActive?'var(--accent)':'var(--border)'};">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:${isActive?'var(--accent)':'var(--text)'};">${ctm.name}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${meetDate}${evCount?' · '+evCount+' event'+(evCount!==1?'s':''):' · No qualifying times yet'}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+            <button class="btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="setStandard('ctm_${ctm.id}')${isActive?'':''}">${isActive?'✓ Active':'Use'}</button>
+            <button class="btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="openCtmModal('${ctm.id}')">Edit</button>
+            <button class="btn-ghost" style="padding:5px 10px;font-size:11px;color:var(--red);" onclick="deleteCtm('${ctm.id}')">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+function openCtmModal(ctmId){
+  // Populate meet select from S.meets
+  const today=new Date();today.setHours(0,0,0,0);
+  const sel=document.getElementById('ctm-meet-select');
+  if(!sel)return;
+  const upcoming=S.meets.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!upcoming.length){alert('Add meets to your Schedule first, then designate one as a target meet.');return;}
+  sel.innerHTML=upcoming.map(m=>`<option value="${m.id}">${m.name} (${new Date(m.date).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})})</option>`).join('');
+  // Build event rows: 17 events, LCM + SCM inputs
+  const rows=document.getElementById('ctm-event-rows');
+  const editingInput=document.getElementById('ctm-editing-id');
+  let existingTimes={};
+  let existingMeetId='';
+  if(ctmId){
+    const ctm=(S.customTargetMeets||[]).find(c=>String(c.id)===String(ctmId));
+    if(ctm){existingTimes=ctm.times||{};existingMeetId=String(ctm.meetId);}
+    editingInput.value=ctmId;
+  } else {
+    editingInput.value='';
+  }
+  if(existingMeetId){
+    // Pre-select the right meet
+    for(let i=0;i<sel.options.length;i++){if(String(sel.options[i].value)===existingMeetId){sel.selectedIndex=i;break;}}
+  }
+  if(rows){
+    rows.innerHTML=ALL_EVENTS.map(ev=>{
+      const t=(existingTimes[ev]||{});
+      return`<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">${ev}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">LCM (50m pool)</div>
+            <input type="text" id="ctm-${ev.replace(/ /g,'_')}-lcm" value="${t.lcm||''}" placeholder="e.g. 58.20" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;font-family:var(--font);text-align:center;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">SCM (25m pool)</div>
+            <input type="text" id="ctm-${ev.replace(/ /g,'_')}-scm" value="${t.scm||''}" placeholder="e.g. 57.10" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:8px 10px;font-family:var(--font);text-align:center;">
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  openModal('ctm-modal');
+}
+
+function saveCtmTimes(){
+  const sel=document.getElementById('ctm-meet-select');
+  const editingId=document.getElementById('ctm-editing-id').value;
+  if(!sel||!sel.value)return;
+  const meetId=sel.value;
+  const meet=S.meets.find(m=>String(m.id)===String(meetId));
+  if(!meet){alert('Meet not found.');return;}
+  // Collect times
+  const times={};
+  ALL_EVENTS.forEach(ev=>{
+    const lcmEl=document.getElementById('ctm-'+ev.replace(/ /g,'_')+'-lcm');
+    const scmEl=document.getElementById('ctm-'+ev.replace(/ /g,'_')+'-scm');
+    const lcm=lcmEl?lcmEl.value.trim():'';
+    const scm=scmEl?scmEl.value.trim():'';
+    if(lcm||scm)times[ev]={lcm:lcm||'',scm:scm||''};
+  });
+  if(!S.customTargetMeets)S.customTargetMeets=[];
+  if(editingId){
+    // Update existing
+    const idx=S.customTargetMeets.findIndex(c=>String(c.id)===String(editingId));
+    if(idx>=0)S.customTargetMeets[idx]={...S.customTargetMeets[idx],meetId,name:meet.name,times};
+  } else {
+    // New — enforce 3-max
+    if(S.customTargetMeets.length>=3){alert('You can only have 3 target meets. Remove one first.');return;}
+    S.customTargetMeets.push({id:Date.now(),meetId,name:meet.name,times});
+  }
+  DB.set('customTargetMeets',S.customTargetMeets);
+  closeModal('ctm-modal');
+  renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();
+}
+
+function deleteCtm(ctmId){
+  if(!confirm('Remove this target meet?'))return;
+  S.customTargetMeets=(S.customTargetMeets||[]).filter(c=>String(c.id)!==String(ctmId));
+  DB.set('customTargetMeets',S.customTargetMeets);
+  // If this was the active standard, switch back to first available
+  if(S.activeStandard==='ctm_'+ctmId){
+    const provKeys=getProvStandardKeys();
+    S.activeStandard=provKeys[0]?provKeys[0].key:'provchamp';
+    DB.set('activeStandard',S.activeStandard);
+  }
+  renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();
 }
 function checkOnboarding(){
   if(!S.profile){
     document.getElementById('section-onboarding').style.display='block';
     initProfileEventPicker('ob-events',[]);
     initGoalsPicker('ob-goals',[]);
+    setTimeout(updateObStdPicker,50); // populate standard picker after DOM ready
   }
 }
 function initGoalsPicker(containerId,selected){
@@ -3276,14 +3662,28 @@ function renderStrokeTabs(){
     const hasPB=S.timeHistory[s]&&S.timeHistory[s].length>0;
     return`<button class="stroke-tab${s===S.activeTStroke?' active':''}" onclick="selStroke('${s}')" style="${hasPB?'border-color:var(--accent);':''}">${s}</button>`;
   }).join('');
-  // Sync standard pill active state to S.activeStandard
-  ['provchamp','provtrials','canada','canadatrials'].forEach(k=>{
-    const btn=document.getElementById('std-btn-'+k);
-    if(btn)btn.classList.toggle('active',k===S.activeStandard);
-  });
+  // Render province-aware standard buttons
+  const stdRow=document.getElementById('std-btn-row');
+  if(stdRow){
+    const provKeys=getProvStandardKeys();
+    const icons={'provchamp':'🏅','provtrials':'🥈','bcprov':'🏅','mb_a':'🏅','mb_aa':'🥈','sk_a':'🏅','sk_aa':'🥈','on_oag':'🏅','on_oji':'🥈','canada':'🇨🇦','canadatrials':'🍁'};
+    stdRow.innerHTML=provKeys.map(item=>{
+      const icon=item.key.startsWith('ctm_')?'🎯':(icons[item.key]||'🏅');
+      const lbl=item.key.startsWith('ctm_')?item.label:icon+' '+item.label;
+      return`<button class="stroke-tab${item.key===S.activeStandard?' active':''}" id="std-btn-${item.key}" onclick="setStandard('${esc(item.key)}')">${lbl}</button>`;
+    }).join('');
+  }
   // Update times sub header
   const sub=document.getElementById('times-sub');
-  if(sub&&S.profile)sub.textContent=`${S.profile.name} · ${STD_LABELS[S.activeStandard]||'Standards'}`;
+  if(sub&&S.profile){
+    let subStdLabel=STD_LABELS[S.activeStandard]||'Standards';
+    if(S.activeStandard&&S.activeStandard.startsWith('ctm_')){
+      const ctmId=S.activeStandard.slice(4);
+      const ctm=(S.customTargetMeets||[]).find(c=>String(c.id)===String(ctmId));
+      subStdLabel=ctm?('🎯 '+ctm.name):subStdLabel;
+    }
+    sub.textContent=`${S.profile.name} · ${subStdLabel}`;
+  }
 }
 function selStroke(s){S.activeTStroke=s;renderStrokeTabs();renderTimesContent();}
 
@@ -3357,6 +3757,10 @@ function renderTimesContent(){
   if(S.activeStandard==='canadatrials'){
     const ca=getCompAge();
     stdLabel='Canada Trials '+(ca!==null&&ca>=18?'Senior':'Junior');
+  } else if(S.activeStandard&&S.activeStandard.startsWith('ctm_')){
+    const ctmId=S.activeStandard.slice(4);
+    const ctm=(S.customTargetMeets||[]).find(c=>String(c.id)===String(ctmId));
+    stdLabel=ctm?('🎯 '+ctm.name+' Qualifying'):'Custom Target';
   }
   const profileNote=S.profile?`${S.profile.name} · ${gender==='male'?'Male':'Female'} · ${ageDisp} · ${stdLabel}`:`Set your profile (More tab) for age-specific standards`;
   let html='';
@@ -7027,7 +7431,7 @@ function showSection(name){
   document.getElementById('nav-'+name).classList.add('active');
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
-  if(name==='times'){renderStrokeTabs();renderTimesContent();}
+  if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
   if(name==='schedule'){
     renderMeetDayBanner(); // drives race mode vs normal mode toggle
     renderCalendar();
@@ -7048,6 +7452,7 @@ checkOnboarding();
 applyClubLogo();
 renderHome();
 maybeShowCheckinSheet();
+renderCustomTargetMeets();
 // Register service worker for offline support
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
