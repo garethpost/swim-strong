@@ -1920,9 +1920,22 @@ function renderHomeCals(){
   const calEl=document.getElementById('stat-cal');
   const lblEl=document.getElementById('stat-cal-lbl');
   const macEl=document.getElementById('stat-macros');
+  const boxEl=document.getElementById('stat-cal-box');
+  // Only show load stats once season template is active
+  const tmpl=S.seasonTemplate||{};
+  const seasonReady=tmpl.start&&tmpl.end&&Object.keys(tmpl.days||{}).length>0;
+  if(!seasonReady){
+    if(calEl)calEl.textContent='—';
+    if(lblEl)lblEl.innerHTML='Set up<br>Schedule';
+    if(macEl)macEl.textContent='';
+    if(boxEl)boxEl.style.opacity='0.4';
+    return;
+  }
+  if(boxEl)boxEl.style.opacity='';
   if(!data){
     if(calEl)calEl.textContent='—';
-    if(macEl)macEl.textContent='Set up Fuel tab';
+    if(lblEl)lblEl.innerHTML='Set up<br>Fuel tab';
+    if(macEl)macEl.textContent='';
     return;
   }
   // Calculate remaining kcal (same logic as Fuel tab countdown)
@@ -3397,6 +3410,16 @@ function delTime(ev,idx){if(!confirm('Delete this entry?'))return;S.timeHistory[
 function renderHomeTodaySummary(){
   const el=document.getElementById('home-today-summary');
   if(!el)return;
+  // Don't show today's schedule until season template is set up
+  const tmplCheck=S.seasonTemplate||{};
+  const seasonReady=tmplCheck.start&&tmplCheck.end&&Object.keys(tmplCheck.days||{}).length>0;
+  if(!seasonReady){
+    el.innerHTML=`<div class="card-title">Today</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6;">
+        Set up your season template in the <strong style="color:var(--accent);">Schedule</strong> tab to see today's training plan here.
+      </div>`;
+    return;
+  }
   const today=new Date();today.setHours(0,0,0,0);
   const key=dKey(today);
   const sch=S.daySchedule[key]||{};
