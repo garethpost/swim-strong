@@ -1134,6 +1134,8 @@ let S={
   meetRaceLog:DB.get('meetRaceLog',[]), // [{id,meetId,raceId,time,coachTags:[],coachNotes,ts}]
   _raceModeDissmissedDate:DB.get('raceModeDissmissedDate',null), // date key when swimmer dismissed race mode
   _raceCardOpen:{}, // {raceId: bool} — persists collapse state across tab switches
+  _activeMeetDay:null, // which day the swimmer is viewing in race mode
+  _activeMeetDayMeetId:null, // tracks which meet the active day belongs to
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
 };
@@ -5810,6 +5812,14 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
   }).join('');
 }
 
+function switchMeetDay(d){
+  S._activeMeetDay=d;
+  renderMeetDayBanner();
+  // Scroll race cards back to top
+  const rm=document.getElementById('schedule-race-mode');
+  if(rm)rm.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function renderMeetDayBanner(){
   const raceMode=document.getElementById('schedule-race-mode');
   const normalMode=document.getElementById('schedule-normal');
@@ -5875,29 +5885,37 @@ function renderMeetDayBanner(){
 
   const ms=localDate(activeMeet.date);
   const meetEndDate=activeMeet.endDate?localDate(activeMeet.endDate):ms;
-  const meetDay=Math.floor((today-ms)/86400000)+1;
+  const realMeetDay=Math.floor((today-ms)/86400000)+1; // today's actual day number
   const totalDays=Math.floor((meetEndDate-ms)/86400000)+1;
 
+  // Active viewed day — defaults to today's real day, swimmer can switch
+  if(!S._activeMeetDay||S._activeMeetDayMeetId!==activeMeet.id){
+    S._activeMeetDay=Math.min(Math.max(realMeetDay,1),totalDays);
+    S._activeMeetDayMeetId=activeMeet.id;
+  }
+  const viewDay=S._activeMeetDay;
+
   const races=S.meetRaces.filter(r=>String(r.meetId)===String(activeMeet.id));
-  const todayRaces=races.filter(r=>String(r.day)===String(meetDay));
-  todayRaces.sort((a,b)=>a.session==='finals'?1:b.session==='finals'?-1:0);
+  const viewRaces=races.filter(r=>String(r.day)===String(viewDay));
+  viewRaces.sort((a,b)=>a.session==='finals'?1:b.session==='finals'?-1:0);
 
   const totalRaces=races.length;
   const loggedRaces=S.meetRaceLog.filter(l=>races.some(r=>String(r.id)===String(l.raceId))).length;
   const progressPct=totalRaces?Math.round(loggedRaces/totalRaces*100):0;
-  const priorityColor=activeMeet.priority==='A'?'var(--gold)':activeMeet.priority==='B'?'var(--accent)':'var(--muted)';
 
-  // Day-switcher tabs (if multi-day meet)
+  // Day-switcher tabs
   const dayTabsHtml=totalDays>1?`
-    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;">
       ${Array.from({length:totalDays},(_,i)=>{
         const d=i+1;
-        const isActive=d===meetDay;
+        const isActive=d===viewDay;
+        const isToday=d===realMeetDay;
         const dRaces=races.filter(r=>String(r.day)===String(d));
         const dLogged=S.meetRaceLog.filter(l=>dRaces.some(r=>String(r.id)===String(l.raceId))).length;
-        return`<div style="flex-shrink:0;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid ${isActive?'var(--gold)':'var(--border)'};background:${isActive?'rgba(245,200,66,0.12)':'var(--surface)'};color:${isActive?'var(--gold)':'var(--muted)'};">
-          Day ${d}${dRaces.length?` · ${dLogged}/${dRaces.length}`:' · no races'}
-        </div>`;
+        const todayDot=isToday?`<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-left:4px;vertical-align:middle;"></span>`:'';
+        return`<button onclick="switchMeetDay(${d})" style="flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid ${isActive?'var(--gold)':'var(--border)'};background:${isActive?'rgba(245,200,66,0.15)':'var(--surface)'};color:${isActive?'var(--gold)':'var(--muted)'};cursor:pointer;font-family:var(--font);">
+          Day ${d}${todayDot}${dRaces.length?` <span style="font-weight:400;opacity:.7;">· ${dLogged}/${dRaces.length}</span>`:' <span style="font-weight:400;opacity:.5;">· empty</span>'}
+        </button>`;
       }).join('')}
     </div>`:'';
 
@@ -5908,16 +5926,16 @@ function renderMeetDayBanner(){
         <div>
           <div style="font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">🏁 Race Mode · ${activeMeet.priority||'A'}-Meet</div>
           <div style="font-size:22px;font-weight:900;color:var(--text);line-height:1.1;">${activeMeet.name}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px;">Day ${meetDay} of ${totalDays}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">Day ${realMeetDay} of ${totalDays} · viewing Day ${viewDay}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <button onclick="openMeetRaceEntry(${activeMeet.id},${meetDay})" style="padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
+          <button onclick="openMeetRaceEntry(${activeMeet.id},${viewDay})" style="padding:8px 14px;border-radius:10px;border:1px solid var(--gold);background:rgba(245,200,66,0.1);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Race</button>
           <button onclick="dismissRaceMode()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">Exit Race Mode</button>
         </div>
       </div>
       ${totalRaces?`
       <div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:10px;color:var(--muted);">Results logged</div>
+        <div style="font-size:10px;color:var(--muted);">Results logged (all days)</div>
         <div style="font-size:11px;font-weight:700;color:${progressPct===100?'var(--green)':'var(--gold)'};">${loggedRaces} / ${totalRaces}</div>
       </div>
       <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
@@ -5928,8 +5946,8 @@ function renderMeetDayBanner(){
     <!-- Day tabs for multi-day meets -->
     ${dayTabsHtml}
 
-    <!-- Race cards -->
-    ${_buildRaceCards(todayRaces,races,activeMeet,meetDay)}
+    <!-- Race cards for selected day -->
+    ${_buildRaceCards(viewRaces,races,activeMeet,viewDay)}
 
     <!-- Meet Day Nutrition -->
     <div class="card" style="margin-top:4px;">
