@@ -357,21 +357,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
       </div>
 
-      <!-- POOL LOAD PHASE -->
-      <div class="card">
-        <div class="card-title">Pool Load Phase</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Update monthly when the coach releases the new block.</p>
-        <select id="swim-phase-select" onchange="saveSwimPhase()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;padding:14px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
-          <option value="base">🏗️ Base Building — High volume, easy pace</option>
-          <option value="threshold">⚡ Threshold / Aerobic — Moderate-hard sets</option>
-          <option value="sprint">🚀 Sprint / Race Prep — Low volume, max intensity</option>
-          <option value="taper">🌊 Swim Taper — Sharpening for meet</option>
-          <option value="rest">😴 Rest / Recovery Week</option>
-        </select>
-        <div style="margin-top:12px;padding:10px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent);">
-          <div id="phase-impact-text" style="font-size:12px;color:var(--muted);line-height:1.6;"></div>
-        </div>
-      </div>
     </div>
 
     <!-- FUEL -->
@@ -389,26 +374,31 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-more" class="section">
       <p class="section-title">More</p>
 
-      <!-- ── PROFILE (always open) ── -->
-      <div style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;padding:4px 2px 6px;">Profile</div>
-      <div class="card">
-        <div class="card-title">Athlete Profile</div>
-        <div id="profile-display" style="margin-bottom:12px;"></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
-          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
-          <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
+      <!-- ── PROFILE (collapsible) ── -->
+      <button onclick="toggleMoreSection('more-profile-body','more-profile-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
+        <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Profile</span>
+        <span id="more-profile-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
+      </button>
+      <div id="more-profile-body" style="display:none;">
+        <div class="card">
+          <div class="card-title">Athlete Profile</div>
+          <div id="profile-display" style="margin-bottom:12px;"></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
+            <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
+          </div>
+          <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
+          <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
+            <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
+          </div>
         </div>
-        <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
-        <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
-          <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
+        <div class="card">
+          <div class="card-title">Body Weight Trend</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Logged each time you save body stats in the Fuel tab. Up to 90 days.</p>
+          <div id="weight-trend-chart" style="width:100%;height:110px;position:relative;"></div>
+          <div id="weight-trend-stats" style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;"></div>
         </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Body Weight Trend</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Logged each time you save body stats in the Fuel tab. Up to 90 days.</p>
-        <div id="weight-trend-chart" style="width:100%;height:110px;position:relative;"></div>
-        <div id="weight-trend-stats" style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;"></div>
       </div>
 
       <!-- ── PROGRAM (collapsible) ── -->
@@ -1682,7 +1672,7 @@ function getDailyCalFromSchedule(){
     const fat=Math.round(wtKg*0.9);
     const carbs=Math.max(100,Math.round((cal-protein*4-fat*9)/4));
     const waterL=(Math.round(wtKg*45+1000)/1000).toFixed(1);
-    return{cal,carbs,protein,fat,waterL,swimCount:2,dryCount:0,mult:2.2,isMeet:true};
+    return{cal,carbs,protein,fat,waterL,swimCount:2,dryCount:0,mult:2.2,isMeet:true,_dl:'Meet Day',_dlColor:'var(--gold)'};
   }
   const key=dKey(today);
   const sch=S.daySchedule[key]||{};
@@ -1713,7 +1703,9 @@ function getDailyCalFromSchedule(){
   const carbs=Math.max(50,Math.round((cal-protein*4-fat*9)/4));
   const waterMl=Math.round(wtKg*40+(swimCount+dryCount)*550);
   const waterL=(waterMl/1000).toFixed(1);
-  return{cal,carbs,protein,fat,waterL,swimCount,dryCount,mult,isMeet:false};
+  const _dl=swimCount>=2?'Double Day':swimCount>=1&&dryCount>=1?'Swim + Dryland':swimCount===1?'Swim Day':dryCount>=1?'Dryland Day':'Rest Day';
+  const _dlColor=swimCount>=2?'var(--orange)':swimCount>=1&&dryCount>=1?'var(--green)':swimCount===1?'var(--accent)':dryCount>=1?'var(--purple)':'var(--muted)';
+  return{cal,carbs,protein,fat,waterL,swimCount,dryCount,mult,isMeet:false,_dl,_dlColor};
 }
 function renderHomeCals(){
   const data=getDailyCalFromSchedule();
@@ -2488,7 +2480,7 @@ function renderWorkoutTab(){
       <p class="section-title">Today's Session</p>
       <p class="section-sub" id="workout-subtitle">—</p>
       ${restBanner}
-      ${!isRestDay?`<button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Today's Workout →</button>`:''}
+      ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Today's Workout →</button>`:''}
       <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
   } else if(!gp){
     // Goal mode — setup card
@@ -2569,7 +2561,7 @@ function renderWorkoutTab(){
         <div style="display:flex;gap:4px;align-items:flex-start;margin-bottom:12px;">${timelineBlocks}</div>
         ${goalsDisplay}
       </div>
-      <button class="btn btn-primary" onclick="startWorkout()" style="margin-bottom:8px;">Generate Goal Workout →</button>
+      <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Goal Workout →</button>
       <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Override today's type</button>
       <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
   }
@@ -2682,9 +2674,21 @@ function generateGoalWorkout(forceType){
     blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString(),isGoal:true};
 }
 
-function startWorkout(){
-  const w=S.workoutMode==='goal'?generateGoalWorkout(null):generateWorkout(null);
-  S.currentWorkout=w;completedSets={};renderWorkout(w);
+function startWorkout(btn){
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='⏳ Generating...';
+    btn.style.opacity='0.7';
+  }
+  // Small delay so the button state renders before the heavy compute
+  setTimeout(()=>{
+    const w=S.workoutMode==='goal'?generateGoalWorkout(null):generateWorkout(null);
+    S.currentWorkout=w;completedSets={};renderWorkout(w);
+    if(btn){btn.disabled=false;btn.textContent=S.workoutMode==='goal'?'Generate Goal Workout →':'Generate Today\'s Workout →';btn.style.opacity='';}
+    // Scroll workout content into view
+    const wc=document.getElementById('workout-content');
+    if(wc)wc.scrollIntoView({behavior:'smooth',block:'start'});
+  },120);
 }
 function forceWorkout(t){closeModal('picker-modal');S.currentWorkout=S.workoutMode==='goal'?generateGoalWorkout(t):generateWorkout(t);completedSets={};showSection('workout');renderWorkout(S.currentWorkout);}
 
@@ -4251,23 +4255,42 @@ function renderMealTracker(){
   const col=(p)=>p>=90?'var(--green)':p>=60?'var(--accent)':'var(--orange)';
 
   // ── Unified calorie countdown header ──
-  const remaining=targets.cal?Math.max(0,Math.round(targets.cal-logCal)):null;
+  const remaining=targets.cal?Math.round(targets.cal-logCal):null;
+  const remainingPos=remaining!==null?Math.max(0,remaining):null;
   const calPct=pct(Math.round(logCal),targets.cal);
   const calColor=col(calPct);
-  const calBar=`<div style="height:6px;background:var(--border);border-radius:4px;margin:8px 0 0;overflow:hidden;"><div style="height:100%;width:${calPct}%;background:${calColor};border-radius:4px;transition:width 0.4s;"></div></div>`;
+  const hit=remaining!==null&&remaining<=0;
+  // Day type label from schedule data
+  const schedData=targets; // getDailyCalFromSchedule() result contains day context
+  const dlLabel=targets._dl||'';
+  const dlColor=targets._dlColor||'var(--accent)';
 
   let html=`<div class="card" style="margin-bottom:12px;">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div class="card-title" style="margin-bottom:0;">Today's Fuel</div>
-      ${remaining!==null?`<div style="text-align:right;"><div style="font-size:20px;font-weight:900;color:${remaining===0?'var(--green)':calColor};">${remaining===0?'✓':remaining}</div><div style="font-size:10px;color:var(--muted);">${remaining===0?'Target hit!':'kcal left'}</div></div>`:''}
+      ${dlLabel?`<span style="font-size:11px;font-weight:700;color:${dlColor};background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px;">${dlLabel}</span>`:''}
     </div>
-    ${targets.cal?calBar:''}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;">
-      ${[['Cal',Math.round(logCal),targets.cal,'kcal'],['Carbs',Math.round(logCarbs),targets.carbs,'g'],['Protein',Math.round(logProtein),targets.protein,'g'],['Fat',Math.round(logFat),targets.fat,'g']].map(([lbl,val,tgt,unit])=>`
+    ${targets.cal?`
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${hit?'🎯 Target reached!':'Remaining today'}</div>
+        <div style="font-size:40px;font-weight:900;color:${hit?'var(--green)':calColor};line-height:1;">${hit?'✓':remainingPos}</div>
+        <div style="font-size:11px;color:var(--muted);">kcal${!hit?' to go':''}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--muted);">eaten</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);">${Math.round(logCal)}</div>
+        <div style="font-size:11px;color:var(--muted);">of ${targets.cal} kcal</div>
+      </div>
+    </div>
+    <div style="height:8px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:12px;"><div style="height:100%;width:${calPct}%;background:${calColor};border-radius:6px;transition:width 0.4s;"></div></div>`:''}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+      ${[['Carbs',Math.round(logCarbs),targets.carbs,'g'],['Protein',Math.round(logProtein),targets.protein,'g'],['Fat',Math.round(logFat),targets.fat,'g']].map(([lbl,val,tgt,unit])=>`
       <div style="background:var(--surface);border-radius:10px;padding:8px 4px;text-align:center;border:1px solid var(--border);">
         <div style="font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.4px;">${lbl}</div>
         <div style="font-size:14px;font-weight:800;color:${col(pct(val,tgt))};">${val}</div>
         <div style="font-size:9px;color:var(--muted);">/ ${tgt}${unit}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="height:100%;width:${pct(val,tgt)}%;background:${col(pct(val,tgt))};border-radius:2px;"></div></div>
       </div>`).join('')}
     </div>
   </div>`;
@@ -4413,20 +4436,6 @@ function renderFuelTodayCard(){
     </div>`).join('');
 
   el.innerHTML=`
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-title" style="margin-bottom:0;">Daily Targets</div>
-      <span style="font-size:11px;font-weight:700;color:${dlColor};background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px;">${dl}</span>
-    </div>
-    <div style="text-align:center;font-size:48px;font-weight:900;color:var(--green);line-height:1;margin-bottom:4px;">${data.cal.toLocaleString()}</div>
-    <div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px;">kcal — updates automatically with your schedule</div>
-    <div class="macro-grid">
-      <div class="macro-box"><div class="macro-val macro-carb">${data.carbs}g</div><div class="macro-lbl">Carbs</div></div>
-      <div class="macro-box"><div class="macro-val macro-prot">${data.protein}g</div><div class="macro-lbl">Protein</div></div>
-      <div class="macro-box"><div class="macro-val macro-fat">${data.fat}g</div><div class="macro-lbl">Fat</div></div>
-    </div>
-  </div>
-
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div class="card-title" style="margin-bottom:0;">💧 Hydration</div>
