@@ -5862,19 +5862,35 @@ function saveMeetRaceResult(){
   };
   S.meetRaceLog.push(entry);
   DB.set('meetRaceLog',S.meetRaceLog);
-  // Auto-sync to Times tab if it's a valid time format
+  // Auto-sync to Times tab + PB detection
+  let pbEv=null,pbTime=null,pbCourse=null,pbMeet=null;
   if(race&&time){
     const ev=race.event;
     const pool=race.pool||'lcm';
     if(!S.timeHistory[ev])S.timeHistory[ev]=[];
-    const timeEntry={date:dKey(new Date()),meet:S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet'};
-    if(pool==='scm')timeEntry.scm=time; else timeEntry.lcm=time;
-    if(pool==='scm')timeEntry.lcm='—'; else timeEntry.scm='—';
+    // Capture previous best BEFORE adding new entry
+    const prevBestLCM=getBest(ev,'lcm');
+    const prevBestSCM=getBest(ev,'scm');
+    const meetName=S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet';
+    const timeEntry={date:dKey(new Date()),meet:meetName};
+    if(pool==='scm'){timeEntry.scm=time;timeEntry.lcm='—';}
+    else{timeEntry.lcm=time;timeEntry.scm='—';}
     S.timeHistory[ev].push(timeEntry);
+    S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
     DB.set('timeHistory',S.timeHistory);
+    // Check if it's a new PB
+    const newBestLCM=getBest(ev,'lcm');
+    const newBestSCM=getBest(ev,'scm');
+    const isNewPbLCM=pool==='lcm'&&newBestLCM&&newBestLCM.lcm===time&&(!prevBestLCM||prevBestLCM.lcm==='—'||tSec(time)<tSec(prevBestLCM.lcm));
+    const isNewPbSCM=pool==='scm'&&newBestSCM&&newBestSCM.scm===time&&(!prevBestSCM||prevBestSCM.scm==='—'||tSec(time)<tSec(prevBestSCM.scm));
+    if(isNewPbLCM||isNewPbSCM){
+      pbEv=ev;pbTime=time;pbCourse=pool==='lcm'?'LCM':'SCM';pbMeet=meetName;
+    }
   }
   closeModal('meet-log-modal');
   renderMeetDayBanner();
+  // Show PB card AFTER modal closes so it renders on top cleanly
+  if(pbEv)setTimeout(()=>showPBCard(pbEv,pbTime,pbCourse,pbMeet),150);
 }
 
 // ── Section routing ──
