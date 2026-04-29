@@ -309,10 +309,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <!-- Pool check-in shortcut — shown on swim days -->
         <div id="schedule-pool-shortcut" style="display:none;margin-bottom:12px;"></div>
 
-        <!-- New-user guide — shown only until a season template is applied -->
-        <div id="schedule-new-user-guide" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.25);border-radius:12px;padding:16px;margin-bottom:14px;">
-          <div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px;">👋 Set up your season in 3 steps</div>
-          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;">
+        <!-- New-user guide — shown until season template applied or manually dismissed -->
+        <div id="schedule-new-user-guide" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.25);border-radius:12px;margin-bottom:14px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0;">
+            <div style="font-size:14px;font-weight:800;color:var(--accent);">👋 Set up your season in 3 steps</div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="dismissScheduleGuide(false)" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-family:var(--font);">Collapse</button>
+              <button onclick="dismissScheduleGuide(true)" style="font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-family:var(--font);">✕ Dismiss</button>
+            </div>
+          </div>
+          <div id="schedule-guide-body" style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted);line-height:1.5;padding:12px 16px 16px;">
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
               <div><strong style="color:var(--text);">Add your meets</strong> — scroll down to "Add a Meet" and enter your key competitions. A-meets get a full taper; B-meets a partial one.</div>
@@ -3890,14 +3896,38 @@ function isTaperDay(dt){
     return dO>0&&dO<=td;
   });
 }
+function dismissScheduleGuide(permanent){
+  if(permanent){
+    DB.set('scheduleGuideDismissed',true);
+    DB.set('scheduleGuideCollapsed',false);
+    const guideEl=document.getElementById('schedule-new-user-guide');
+    if(guideEl) guideEl.style.display='none';
+  } else {
+    const collapsed=!DB.get('scheduleGuideCollapsed',false);
+    DB.set('scheduleGuideCollapsed',collapsed);
+    const body=document.getElementById('schedule-guide-body');
+    if(body) body.style.display=collapsed?'none':'flex';
+    // Update collapse button label
+    const btns=document.querySelectorAll('#schedule-new-user-guide button');
+    if(btns[0]) btns[0].textContent=collapsed?'Expand':'Collapse';
+  }
+}
 function renderCalendar(){
   const yr=S.calYear,mo=S.calMonth;
   document.getElementById('sched-month-label').textContent=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})+' — tap any day to edit';
-  // Show new-user guide until a season template has been applied
+  // Show new-user guide until template applied, collapsed, or dismissed
   const guideEl=document.getElementById('schedule-new-user-guide');
   if(guideEl){
     const hasTemplate=S.seasonTemplate&&S.seasonTemplate.start&&Object.keys(S.daySchedule||{}).length>0;
-    guideEl.style.display=hasTemplate?'none':'block';
+    const guideDismissed=DB.get('scheduleGuideDismissed',false);
+    const guideCollapsed=DB.get('scheduleGuideCollapsed',false);
+    if(hasTemplate||guideDismissed){
+      guideEl.style.display='none';
+    } else {
+      guideEl.style.display='block';
+      const body=document.getElementById('schedule-guide-body');
+      if(body) body.style.display=guideCollapsed?'none':'flex';
+    }
   }
   document.getElementById('month-header').innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="cal-header-cell">${d}</div>`).join('');
   const first=new Date(yr,mo,1).getDay(),days=new Date(yr,mo+1,0).getDate();
