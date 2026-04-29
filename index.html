@@ -233,25 +233,25 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div id="home-nudge-card" style="display:none;margin-bottom:12px;"></div>
-      <div class="card">
-        <div class="card-title">Daily Check-In</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <!-- Load recommendation pill — shown after check-in -->
+      <div id="home-load-pill" style="display:none;margin-bottom:12px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
           <div>
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">😴 Sleep</div>
-            <input type="range" id="sleep-slider" min="4" max="11" value="8" step="0.5" oninput="updateCheckin()">
-            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;"><span>4h</span><span>11h</span></div>
-            <div style="text-align:center;font-size:16px;font-weight:700;color:var(--accent);margin-top:4px;" id="sleep-val">8h</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:2px;">Today's Load</div>
+            <div style="font-size:14px;font-weight:700;" id="load-rec">—</div>
           </div>
-          <div>
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">⚡ Readiness</div>
-            <input type="range" id="readiness-slider" min="1" max="5" value="3" oninput="updateCheckin()">
-            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;"><span>💀</span><span>🔥</span></div>
-            <div style="text-align:center;font-size:16px;font-weight:700;color:var(--accent);margin-top:4px;" id="readiness-val">3/5</div>
+          <div style="text-align:right;font-size:11px;color:var(--muted);">
+            <div>😴 <span id="sleep-val-pill">—</span> · ⚡ <span id="readiness-val-pill">—</span></div>
+            <button onclick="showCheckinSheet()" style="margin-top:4px;background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">Edit check-in</button>
           </div>
         </div>
-        <div style="margin-top:12px;text-align:center;font-size:13px;color:var(--muted);" id="load-rec">—</div>
-        <div style="margin-top:6px;text-align:center;font-size:11px;color:var(--muted);" id="checkin-avg"></div>
       </div>
+      <!-- Hidden slider inputs — still needed for updateCheckin() logic -->
+      <input type="range" id="sleep-slider" min="4" max="11" value="8" step="0.5" style="display:none;" oninput="updateCheckin()">
+      <input type="range" id="readiness-slider" min="1" max="5" value="3" style="display:none;" oninput="updateCheckin()">
+      <span id="sleep-val" style="display:none;"></span>
+      <span id="readiness-val" style="display:none;"></span>
+      <div id="checkin-avg" style="display:none;"></div>
     </div>
 
     <!-- WORKOUT -->
@@ -700,6 +700,43 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 
 <!-- MODALS -->
+
+<!-- ── Daily Check-In Bottom Sheet ── -->
+<div id="checkin-sheet" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.6);" onclick="if(event.target===this)dismissCheckinSheet()">
+  <div id="checkin-sheet-inner" style="position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;padding:28px 24px 48px;max-width:500px;margin:0 auto;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.1,0.64,1);">
+    <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 24px;"></div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:32px;margin-bottom:6px;">👋</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;">Morning check-in</div>
+      <div style="font-size:13px;color:var(--muted);">How are you feeling today? This shapes your workout load.</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">😴 Sleep last night</div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent);" id="sheet-sleep-val">8h</div>
+      </div>
+      <input type="range" id="sheet-sleep-slider" min="4" max="11" value="8" step="0.5"
+        oninput="document.getElementById('sheet-sleep-val').textContent=this.value+'h';document.getElementById('sleep-slider').value=this.value;updateCheckin();"
+        style="width:100%;accent-color:var(--accent);height:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;"><span>4h</span><span>11h</span></div>
+    </div>
+    <div style="margin-bottom:28px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">⚡ How's your body feel?</div>
+        <div style="font-size:18px;font-weight:800;color:var(--accent);" id="sheet-readiness-val">3/5</div>
+      </div>
+      <input type="range" id="sheet-readiness-slider" min="1" max="5" value="3"
+        oninput="document.getElementById('sheet-readiness-val').textContent=this.value+'/5';document.getElementById('readiness-slider').value=this.value;updateCheckin();"
+        style="width:100%;accent-color:var(--accent);height:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;"><span>💀 Dead</span><span>🔥 Flying</span></div>
+    </div>
+    <div style="background:var(--bg);border-radius:12px;padding:12px 16px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Today's training load</div>
+      <div style="font-size:14px;font-weight:700;" id="sheet-load-rec">—</div>
+    </div>
+    <button onclick="submitCheckinSheet()" style="width:100%;padding:16px;border-radius:14px;border:none;background:var(--accent);color:#0D1F3C;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--font);">Let's go 🏊</button>
+  </div>
+</div>
 
 <!-- Pool Session Check-In Modal -->
 <div class="modal-overlay" id="pool-checkin-modal"><div class="modal"><div class="modal-handle"></div>
@@ -3426,6 +3463,7 @@ function renderHome(){
   renderHomeTodaySummary();
   renderHomeMeets();
   renderPostSessionNudge();
+  renderHomLoadPill();
 }
 let checkinSaveTimer=null;
 function updateCheckin(){
@@ -3436,6 +3474,9 @@ function updateCheckin(){
   document.getElementById('readiness-val').textContent=r+'/5';
   const m=getLoadMult(),l=getLoadDesc(m);
   document.getElementById('load-rec').innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
+  // Keep sheet load rec live while open
+  const slr=document.getElementById('sheet-load-rec');
+  if(slr)slr.innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
   // Debounce the log write — commit 800ms after slider settles
   const avgEl=document.getElementById('checkin-avg');
   if(avgEl)avgEl.innerHTML=`<span style="color:var(--muted);font-style:italic;">saving…</span>`;
@@ -3457,6 +3498,76 @@ function updateCheckin(){
   },800);
 }
 document.getElementById('sleep-slider').value=S.sleep;document.getElementById('readiness-slider').value=S.readiness;
+
+// ── Daily Check-In Sheet ──
+function hasCheckedInToday(){
+  const key=dKey(new Date());
+  return S.checkinHistory.some(c=>c.date===key);
+}
+function showCheckinSheet(){
+  const sheet=document.getElementById('checkin-sheet');
+  const inner=document.getElementById('checkin-sheet-inner');
+  if(!sheet||!inner)return;
+  // Pre-fill sliders from stored values
+  const ss=document.getElementById('sheet-sleep-slider');
+  const sr=document.getElementById('sheet-readiness-slider');
+  if(ss){ss.value=S.sleep;document.getElementById('sheet-sleep-val').textContent=S.sleep+'h';}
+  if(sr){sr.value=S.readiness;document.getElementById('sheet-readiness-val').textContent=S.readiness+'/5';}
+  // Update load rec in sheet
+  const m=getLoadMult(),l=getLoadDesc(m);
+  const lr=document.getElementById('sheet-load-rec');
+  if(lr)lr.innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
+  sheet.style.display='block';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{inner.style.transform='translateY(0)';}));
+}
+function dismissCheckinSheet(){
+  const inner=document.getElementById('checkin-sheet-inner');
+  if(inner)inner.style.transform='translateY(100%)';
+  setTimeout(()=>{const s=document.getElementById('checkin-sheet');if(s)s.style.display='none';},350);
+}
+function submitCheckinSheet(){
+  // Sync sheet slider values into the hidden sliders and trigger save
+  const ss=document.getElementById('sheet-sleep-slider');
+  const sr=document.getElementById('sheet-readiness-slider');
+  if(ss)document.getElementById('sleep-slider').value=ss.value;
+  if(sr)document.getElementById('readiness-slider').value=sr.value;
+  updateCheckin();
+  // Force immediate save (don't wait for debounce)
+  const sl=parseFloat(ss?ss.value:S.sleep);
+  const r=parseInt(sr?sr.value:S.readiness);
+  const todayKey=dKey(new Date());
+  const existing=S.checkinHistory.findIndex(c=>c.date===todayKey);
+  const entry={date:todayKey,sleep:sl,readiness:r};
+  if(existing>=0)S.checkinHistory[existing]=entry;
+  else S.checkinHistory.push(entry);
+  S.checkinHistory.sort((a,b)=>a.date.localeCompare(b.date));
+  DB.set('checkinHistory',S.checkinHistory);
+  dismissCheckinSheet();
+  // Show the load pill on home
+  renderHomLoadPill();
+}
+function renderHomLoadPill(){
+  const pill=document.getElementById('home-load-pill');
+  if(!pill)return;
+  if(!hasCheckedInToday()){pill.style.display='none';return;}
+  const m=getLoadMult(),l=getLoadDesc(m);
+  const lr=document.getElementById('load-rec');
+  if(lr)lr.innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
+  const sv=document.getElementById('sleep-val-pill');
+  const rv=document.getElementById('readiness-val-pill');
+  if(sv)sv.textContent=S.sleep+'h sleep';
+  if(rv)rv.textContent=S.readiness+'/5 readiness';
+  pill.style.display='block';
+}
+function maybeShowCheckinSheet(){
+  // Show if: before noon AND not checked in today
+  const h=new Date().getHours();
+  if(h<12&&!hasCheckedInToday()){
+    setTimeout(showCheckinSheet,600); // small delay so home renders first
+  } else {
+    renderHomLoadPill();
+  }
+}
 
 // ── Schedule / Calendar ──
 function goToToday(){S.calYear=new Date().getFullYear();S.calMonth=new Date().getMonth();renderCalendar();}
@@ -5764,6 +5875,7 @@ if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
 checkOnboarding();
 applyClubLogo();
 renderHome();
+maybeShowCheckinSheet();
 </script>
 </body>
 </html>
