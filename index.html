@@ -567,13 +567,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
   </div><!-- content -->
 
-  <nav id="nav">
-    <button class="nav-btn active" id="nav-home" onclick="showSection('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>Home</button>
-    <button class="nav-btn" id="nav-workout" onclick="showSection('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20M2 12h4M18 12h4"/></svg>Workout</button>
-    <button class="nav-btn" id="nav-times" onclick="showSection('times')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Times</button>
-    <button class="nav-btn" id="nav-schedule" onclick="showSection('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule</button>
-    <button class="nav-btn" id="nav-fuel" onclick="showSection('fuel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>Fuel</button>
-    <button class="nav-btn" id="nav-more" onclick="showSection('more')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More</button>
+  <nav id="nav" role="navigation" aria-label="Main navigation">
+    <button class="nav-btn active" id="nav-home" aria-label="Home" onclick="showSection('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>Home</button>
+    <button class="nav-btn" id="nav-workout" aria-label="Workout" onclick="showSection('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20M2 12h4M18 12h4"/></svg>Workout</button>
+    <button class="nav-btn" id="nav-times" aria-label="Swim Times" onclick="showSection('times')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Times</button>
+    <button class="nav-btn" id="nav-schedule" aria-label="Schedule" onclick="showSection('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule</button>
+    <button class="nav-btn" id="nav-fuel" aria-label="Fuel &amp; Nutrition" onclick="showSection('fuel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>Fuel</button>
+    <button class="nav-btn" id="nav-more" aria-label="More options" onclick="showSection('more')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More</button>
   </nav>
 </div>
 
@@ -748,7 +748,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 
 <!-- Pool Session Check-In Modal -->
-<div class="modal-overlay" id="pool-checkin-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="pool-checkin-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Pool Check-In"><div class="modal-handle"></div>
 <div style="text-align:center;margin-bottom:16px;">
   <div style="font-size:36px;margin-bottom:4px;">🏊</div>
   <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;">Pool Check-In</h3>
@@ -794,11 +794,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
 </div>
 <button class="btn btn-primary" onclick="savePoolCheckin()" style="margin-bottom:8px;">Log Session ✓</button>
-<button class="btn-ghost" style="width:100%;" onclick="closeModal('pool-checkin-modal')">Skip</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('pool-checkin-modal')" aria-label="Close dialog">Skip</button>
 </div></div>
 
 <!-- ── Meet Race Entry Modal ── -->
-<div class="modal-overlay" id="meet-race-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="meet-race-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Log Race"><div class="modal-handle"></div>
 <h3 style="font-size:18px;font-weight:800;margin-bottom:4px;">Add Race</h3>
 <p id="meet-race-modal-meet" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
 <div class="form-row"><label>Event</label>
@@ -833,11 +833,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   </div>
 </div>
 <button class="btn btn-primary" onclick="saveMeetRace()" style="margin-bottom:8px;">Add Race ✓</button>
-<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-race-modal')">Cancel</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-race-modal')" aria-label="Close dialog">Cancel</button>
 </div></div>
 
 <!-- ── Race Result Logger Modal ── -->
-<div class="modal-overlay" id="meet-log-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="meet-log-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Log Meet"><div class="modal-handle"></div>
 <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;" id="meet-log-title">Log Race Result</h3>
 <p id="meet-log-sub" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
 <div class="form-row"><label>Your Time</label>
@@ -851,10 +851,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <textarea id="ml-notes" rows="2" placeholder="What did the coach say?" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);resize:none;"></textarea>
 </div>
 <button class="btn btn-primary" onclick="saveMeetRaceResult()" style="margin-bottom:8px;">Save Result ✓</button>
-<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-log-modal')">Cancel</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-log-modal')" aria-label="Close dialog">Cancel</button>
 </div></div>
 
-<div class="modal-overlay" id="session-summary-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="session-summary-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Session Summary"><div class="modal-handle"></div>
 <div style="text-align:center;margin-bottom:16px;">
   <div style="font-size:40px;margin-bottom:6px;">✅</div>
   <h3 style="font-size:19px;font-weight:800;margin-bottom:4px;">Session Complete</h3>
@@ -867,11 +867,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div id="rpe-desc" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center;min-height:16px;"></div>
 </div>
 <button class="btn btn-primary" onclick="confirmSession()">Log Session →</button>
-<button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-summary-modal')">Keep editing</button>
+<button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-summary-modal')" aria-label="Close dialog">Keep editing</button>
 </div></div>
-<div class="modal-overlay" id="ex-modal"><div class="modal"><div class="modal-handle"></div><h3 id="ex-modal-title" style="font-size:17px;margin-bottom:8px;"></h3><p id="ex-modal-desc" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;"></p><p id="ex-modal-cue" style="font-size:13px;color:var(--accent);"></p><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('ex-modal')">Close</button></div></div></div>
-<div class="modal-overlay" id="picker-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')">Cancel</button></div></div></div>
-<div class="modal-overlay" id="day-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="ex-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Exercise Details"><div class="modal-handle"></div><h3 id="ex-modal-title" style="font-size:17px;margin-bottom:8px;"></h3><p id="ex-modal-desc" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;"></p><p id="ex-modal-cue" style="font-size:13px;color:var(--accent);"></p><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('ex-modal')" aria-label="Close dialog">Close</button></div></div></div>
+<div class="modal-overlay" id="picker-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Preview Workout Type"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')" aria-label="Close dialog">Cancel</button></div></div></div>
+<div class="modal-overlay" id="day-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Day Schedule"><div class="modal-handle"></div>
 <h3 id="day-modal-title" style="font-size:17px;margin-bottom:4px;"></h3>
 <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tap to add/remove sessions. Multiple allowed.</p>
 <div class="card-title">Pool Sessions</div>
@@ -881,14 +881,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div id="day-smart-suggest" style="margin-top:12px;padding:10px;background:rgba(0,198,255,0.08);border-radius:8px;border-left:3px solid var(--accent);font-size:12px;color:var(--muted);display:none;"></div>
 <div style="margin-top:16px;display:flex;gap:8px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveDayEdit()">Save</button>
-  <button class="btn-ghost" style="flex:1" onclick="closeModal('day-modal')">Cancel</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('day-modal')" aria-label="Close dialog">Cancel</button>
 </div>
 <div style="margin-top:8px;" id="reset-template-row" style="display:none;">
   <button class="btn btn-secondary" style="width:100%;font-size:13px;" onclick="resetDayToTemplate()">↩ Reset to template</button>
 </div>
 </div></div>
-<div class="modal-overlay" id="wh-modal"><div class="modal"><div class="modal-handle"></div><h3 id="wh-modal-title" style="font-size:17px;margin-bottom:12px;"></h3><div id="wh-modal-content"></div><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('wh-modal')">Close</button></div></div></div>
-<div class="modal-overlay" id="profile-modal"><div class="modal"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:16px;">Edit Profile</h3>
+<div class="modal-overlay" id="wh-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Workout History"><div class="modal-handle"></div><h3 id="wh-modal-title" style="font-size:17px;margin-bottom:12px;"></h3><div id="wh-modal-content"></div><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('wh-modal')" aria-label="Close dialog">Close</button></div></div></div>
+<div class="modal-overlay" id="profile-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Edit Profile"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:16px;">Edit Profile</h3>
 <div class="form-row"><label>First Name</label><input type="text" id="pm-name" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
 <div class="form-row"><label>Club / Team</label><input type="text" id="pm-club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
 <div class="form-row"><label>Date of Birth</label>
@@ -926,9 +926,9 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 <div style="display:flex;gap:8px;margin-top:16px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveProfile(false)">Save</button>
-  <button class="btn-ghost" style="flex:1" onclick="closeModal('profile-modal')">Cancel</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('profile-modal')" aria-label="Close dialog">Cancel</button>
 </div></div></div>
-<div class="modal-overlay" id="add-time-modal"><div class="modal"><div class="modal-handle"></div>
+<div class="modal-overlay" id="add-time-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Add Time Entry"><div class="modal-handle"></div>
 <h3 style="font-size:17px;margin-bottom:12px;">Add Time</h3>
 <div class="form-row"><label>Event</label><select id="at-event" onchange="updateSplitField()" style="font-size:15px;padding:12px 10px;"></select></div>
 <div class="form-grid-2">
@@ -942,7 +942,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 <div style="display:flex;gap:8px;margin-top:4px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save</button>
-  <button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')">Cancel</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('add-time-modal')" aria-label="Close dialog">Cancel</button>
 </div>
 </div></div>
 <script>
@@ -1084,9 +1084,15 @@ const STD_LABELS={'provchamp':'Prov. Championship','provtrials':'Prov. Trials','
 // Legacy TRIALS kept for getEmphasis compatibility
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
 
-// Version gate — runs BEFORE S is built so bodyStats is wiped from localStorage first
-const APP_VER='v7';
-if(DB.get('appVer','')!==APP_VER){DB.set('bodyStats',null);DB.set('appVer',APP_VER);}
+// Version gate — migrate data forward, never wipe user data
+const APP_VER='v8';
+(function(){
+  const prev=DB.get('appVer','');
+  if(prev===APP_VER)return; // already current
+  // v7 → v8: preserve bodyStats (old gate wiped it — we don't do that anymore)
+  // Any future migrations go here as additional if(prev<'vX') blocks
+  DB.set('appVer',APP_VER);
+})();
 
 let S={
   profile:DB.get('profile',null), // {name,club,dob,gender,primaryEvents:[],longTermGoals:[],preferredStandard:'provchamp',useKgPref:'metric'}
@@ -1169,6 +1175,9 @@ function getHeightCm(){
 }
 function applyUnitSettings(){
   document.querySelectorAll('.unit-label').forEach(l=>l.textContent=uL());
+  // Update km input placeholder to reflect current unit
+  const kmInp=document.getElementById('km-amount-input');
+  if(kmInp)kmInp.placeholder=S.useKm?'km today':'miles today';
   renderKmTracker();
   renderHomeCals();
   renderBaseline();
@@ -1203,6 +1212,8 @@ function updateUnitPickers(){
   stylePicker(document.getElementById('dist-mi'),!S.useKm);
 }
 document.getElementById('unit-btn').style.display='none';
+// Legacy toggle stub — unit-btn is permanently hidden; units moved to More > Settings
+function toggleUnits(){setWeightUnit(!S.useKg);}
 
 // Helpers
 function esc(s){return(s||'').replace(/'/g,"\\'");}
@@ -1689,8 +1700,8 @@ function logKm(){
   if(!inp)return;
   let val=parseFloat(inp.value);
   if(!val||val<=0)return;
-  // Convert miles to km if imperial
-  const kmVal=S.useKg?val:val/0.621371;
+  // Convert miles to km if imperial distance setting
+  const kmVal=S.useKm?val:val/0.621371;
   const today=new Date().toISOString().slice(0,10);
   S.swimKmLog=(S.swimKmLog||[]);
   S.swimKmLog.push({date:today,km:kmVal});
@@ -3103,6 +3114,11 @@ function openAddTime(ev){
   updateSplitField();
   openModal('add-time-modal');
 }
+function _validTime(t){
+  if(!t||t==='—'||t==='')return true; // empty is fine — just means that pool wasn't entered
+  // Accept: ss.xx  or  m:ss.xx  or  mm:ss.xx  (e.g. 24.50, 1:02.34, 4:15.99)
+  return /^\d{1,2}(:\d{2}(\.\d{1,2})?|\.\d{1,2})$/.test(t.trim());
+}
 function saveTimeEntry(){
   const ev=document.getElementById('at-event').value;
   const meet=document.getElementById('at-meet').value.trim()||'—';
@@ -3111,6 +3127,9 @@ function saveTimeEntry(){
   const lcm=document.getElementById('at-time-lcm').value.trim();
   const split=document.getElementById('at-split').value.trim();
   if(!date||((!scm||scm==='—')&&(!lcm||lcm==='—')))return alert('Enter at least one time (SCM or LCM) and a date.');
+  if(scm&&!_validTime(scm))return alert('SCM time format should be like 24.50 or 1:02.34');
+  if(lcm&&!_validTime(lcm))return alert('LCM time format should be like 24.90 or 1:02.85');
+  if(split&&!_validTime(split))return alert('Split time format should be like 27.40 or 1:02.50');
   // Check if this is a new PB before saving
   const prevBestLCM=getBest(ev,'lcm');
   const prevBestSCM=getBest(ev,'scm');
@@ -3475,11 +3494,23 @@ function renderHome(){
   const clubStr=S.profile&&S.profile.club?S.profile.club:'';
   document.getElementById('header-sub').textContent=`${clubStr?clubStr+' · ':''}C${cycle} Wk ${S.programWeek} · ${phase.name}`;
   const hist=S.history;
-  document.getElementById('stat-total').textContent=hist.length;
+  // Total sessions = dryland + pool check-ins (deduplicated by day to avoid double-counting double-day)
+  const drylandDays=new Set(hist.map(h=>{const d=new Date(h.date);d.setHours(0,0,0,0);return d.getTime();}));
+  const poolDays=new Set((S.poolLog||[]).map(e=>{const d=localDate(e.date);return d.getTime();}));
+  const allActiveDays=new Set([...drylandDays,...poolDays]);
+  document.getElementById('stat-total').textContent=hist.length+(S.poolLog||[]).length;
   renderHomeCals();
   renderKmTracker();
-  let streak=0;const t2=new Date();t2.setHours(0,0,0,0);
-  for(let i=0;i<hist.length;i++){const d=new Date(hist[hist.length-1-i].date);d.setHours(0,0,0,0);const df=Math.round((t2-d)/86400000);if(df===i||df===i+1)streak++;else break;}
+  // Streak: any day with at least one logged session (dryland OR pool) counts
+  // Start from yesterday if today has nothing yet, otherwise from today
+  const t2=new Date();t2.setHours(0,0,0,0);
+  let streak=0;
+  const startOffset=allActiveDays.has(t2.getTime())?0:1;
+  for(let i=startOffset;i<365;i++){
+    const check=new Date(t2);check.setDate(t2.getDate()-i);
+    if(allActiveDays.has(check.getTime()))streak++;
+    else break;
+  }
   document.getElementById('stat-streak').textContent=streak;
   const az=document.getElementById('alert-zone');az.innerHTML='';
   const tp=isTaperWeek();
@@ -4200,7 +4231,9 @@ function logHydration(delta){
 function renderMealComplianceCard(today,hasSwim,hasDry,isDouble,isMeet){
   // Auto-clear previous days (only keep today)
   const keys=Object.keys(S.mealCompliance);
-  keys.forEach(k=>{if(k!==today){delete S.mealCompliance[k];}});
+  let changed=false;
+  keys.forEach(k=>{if(k!==today){delete S.mealCompliance[k];changed=true;}});
+  if(changed)DB.set('mealCompliance',S.mealCompliance);
   const mc=S.mealCompliance[today]||{};
   // Build context-appropriate checkboxes
   let checks=[];
@@ -4293,6 +4326,43 @@ const SWIMMER_FOODS=[
   {id:'bagel_honey',name:'Bagel + honey',cal:310,carbs:65,protein:9,fat:1,cat:'Race day'},
   {id:'white_rice_banana',name:'White rice + banana',cal:330,carbs:72,protein:5,fat:1,cat:'Race day'},
   {id:'gel',name:'Energy gel',cal:100,carbs:25,protein:0,fat:0,cat:'Race day'},
+  {id:'sports_chews',name:'Sports chews (packet)',cal:90,carbs:23,protein:0,fat:0,cat:'Race day'},
+  {id:'white_toast_honey',name:'White toast + honey ×2',cal:260,carbs:58,protein:6,fat:1,cat:'Race day'},
+  {id:'race_drink',name:'Race day sports drink',cal:140,carbs:35,protein:0,fat:0,cat:'Race day'},
+  {id:'banana_race',name:'Banana (pre-race)',cal:105,carbs:27,protein:1,fat:0,cat:'Race day'},
+  // Breakfast extras
+  {id:'porridge_berries',name:'Porridge + berries',cal:300,carbs:52,protein:9,fat:5,cat:'Breakfast'},
+  {id:'eggs_3',name:'Eggs ×3 (any style)',cal:270,carbs:2,protein:21,fat:18,cat:'Breakfast'},
+  {id:'avocado_toast',name:'Avocado toast ×2 slices',cal:280,carbs:28,protein:7,fat:15,cat:'Breakfast'},
+  {id:'smoothie_protein',name:'Protein smoothie (banana+milk+whey)',cal:340,carbs:45,protein:28,fat:4,cat:'Breakfast'},
+  {id:'granola_yogurt',name:'Granola + Greek yogurt (250g)',cal:380,carbs:48,protein:18,fat:10,cat:'Breakfast'},
+  {id:'cereal_milk',name:'Cereal + milk (bowl)',cal:310,carbs:55,protein:10,fat:5,cat:'Breakfast'},
+  {id:'pancakes',name:'Pancakes ×3 (plain)',cal:350,carbs:55,protein:9,fat:9,cat:'Breakfast'},
+  // Pre-training extras
+  {id:'dates',name:'Dates ×4',cal:110,carbs:30,protein:1,fat:0,cat:'Pre-training'},
+  {id:'mango',name:'Mango (200g)',cal:120,carbs:30,protein:2,fat:0,cat:'Pre-training'},
+  {id:'oat_bar',name:'Oat bar (40g)',cal:170,carbs:26,protein:4,fat:5,cat:'Pre-training'},
+  {id:'toast_jam',name:'White toast + jam ×2',cal:220,carbs:46,protein:5,fat:1,cat:'Pre-training'},
+  // Post-training extras
+  {id:'eggs_toast',name:'Eggs ×3 + wholegrain toast',cal:390,carbs:32,protein:27,fat:16,cat:'Post-training'},
+  {id:'greek_yogurt_fruit',name:'Greek yogurt + fruit (250g)',cal:200,carbs:22,protein:18,fat:3,cat:'Post-training'},
+  {id:'cottage_cheese_crackers',name:'Cottage cheese + crackers',cal:220,carbs:18,protein:22,fat:5,cat:'Post-training'},
+  {id:'beef_noodles',name:'Beef + noodles (300g)',cal:490,carbs:52,protein:38,fat:12,cat:'Post-training'},
+  {id:'tofu_rice',name:'Tofu + rice (350g)',cal:430,carbs:58,protein:22,fat:10,cat:'Post-training'},
+  // Snacks extras
+  {id:'cheese_crackers',name:'Cheese + crackers',cal:200,carbs:18,protein:8,fat:11,cat:'Snacks'},
+  {id:'peanut_butter',name:'Peanut butter (2 tbsp)',cal:190,carbs:6,protein:8,fat:16,cat:'Snacks'},
+  {id:'trail_mix',name:'Trail mix (40g)',cal:190,carbs:20,protein:5,fat:10,cat:'Snacks'},
+  {id:'edamame',name:'Edamame (100g)',cal:120,carbs:9,protein:11,fat:5,cat:'Snacks'},
+  {id:'rice_cake_jam',name:'Rice cake + jam ×2',cal:150,carbs:34,protein:2,fat:0,cat:'Snacks'},
+  // Lunch/Dinner extras
+  {id:'turkey_sandwich',name:'Turkey sandwich (brown)',cal:420,carbs:42,protein:35,fat:10,cat:'Lunch/Dinner'},
+  {id:'lentil_soup',name:'Lentil soup + bread',cal:380,carbs:58,protein:20,fat:5,cat:'Lunch/Dinner'},
+  {id:'tuna_potato',name:'Tuna + jacket potato',cal:450,carbs:55,protein:38,fat:5,cat:'Lunch/Dinner'},
+  {id:'egg_fried_rice',name:'Egg fried rice (300g)',cal:480,carbs:68,protein:18,fat:12,cat:'Lunch/Dinner'},
+  {id:'grilled_fish_veg',name:'Grilled fish + veg + potato',cal:420,carbs:40,protein:38,fat:8,cat:'Lunch/Dinner'},
+  {id:'chicken_wrap',name:'Chicken & salad wrap',cal:390,carbs:38,protein:32,fat:9,cat:'Lunch/Dinner'},
+  {id:'veggie_curry',name:'Vegetable curry + rice',cal:480,carbs:72,protein:14,fat:10,cat:'Lunch/Dinner'},
 ];
 
 S.mealLog=S.mealLog||DB.get('mealLog',{});
@@ -4337,6 +4407,22 @@ function toggleMealCat(cat){
   if(chev)chev.style.transform=S._mealCatOpen[cat]?'rotate(0deg)':'rotate(-90deg)';
 }
 
+function _foodRow(food,showFat){
+  // Each food row has a qty stepper (1–5) + Add button
+  const qtyId=`fq-${food.id}`;
+  return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;white-space:normal;line-height:1.3;">${food.name}</div>
+      <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P${showFat?' · '+food.fat+'g F':''}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+      <button onclick="var i=document.getElementById('${qtyId}');if(i&&i.value>1)i.value=parseInt(i.value)-1;" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+      <input id="${qtyId}" type="number" min="1" max="10" value="1" style="width:30px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-weight:700;padding:4px 2px;font-family:var(--font);">
+      <button onclick="var i=document.getElementById('${qtyId}');if(i&&i.value<10)i.value=parseInt(i.value)+1;" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+      <button onclick="addMealEntry('${food.id}',parseInt(document.getElementById('${qtyId}').value)||1)" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Add</button>
+    </div>
+  </div>`;
+}
 function _buildMealFoodResults(){
   const q=(S._mealSearch||'').toLowerCase();
   const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
@@ -4344,16 +4430,8 @@ function _buildMealFoodResults(){
   let html='';
   if(q){
     if(filtered.length){
-      html+=`<div style="max-height:280px;overflow-y:auto;">`;
-      filtered.forEach(food=>{
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px;font-weight:600;">${food.name}</div>
-            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P · ${food.fat}g F</div>
-          </div>
-          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
-        </div>`;
-      });
+      html+=`<div style="max-height:300px;overflow-y:auto;">`;
+      filtered.forEach(food=>{html+=_foodRow(food,true);});
       html+=`</div>`;
     } else {
       html+=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No matches — try a different search</div>`;
@@ -4362,15 +4440,7 @@ function _buildMealFoodResults(){
     cats.forEach(cat=>{
       const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
       html+=`<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px;">${cat}</div>`;
-      catFoods.forEach(food=>{
-        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
-          <div>
-            <div style="font-size:13px;font-weight:600;">${food.name}</div>
-            <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P</div>
-          </div>
-          <button onclick="addMealEntry('${food.id}')" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">+ Add</button>
-        </div>`;
-      });
+      catFoods.forEach(food=>{html+=_foodRow(food,false);});
     });
   }
   return html;
@@ -4452,6 +4522,17 @@ function renderMealTracker(){
   const meals=getTodayMeals();
   const targets=getDailyCalFromSchedule();
   const today=dKey(new Date());
+
+  // Guard: no body stats entered yet — show prompt instead of broken zeros
+  if(!targets){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:24px 16px;">
+      <div style="font-size:40px;margin-bottom:12px;">📊</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px;">Set up your body stats first</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;">Your calorie and macro targets are calculated from your weight, height, age, and training load. Enter them above to unlock your personalised fuel plan.</div>
+      <button onclick="expandBodyStats();document.getElementById('body-stats-card').scrollIntoView({behavior:'smooth'})" class="btn btn-primary" style="max-width:260px;margin:0 auto;">Enter Body Stats →</button>
+    </div>`;
+    return;
+  }
 
   // Sum today's logged macros
   let logCal=0,logCarbs=0,logProtein=0,logFat=0;
@@ -4815,6 +4896,13 @@ function exportData(){
     seasonKmTarget:S.seasonKmTarget,
     mobilityLog:S.mobilityLog,
     mealCompliance:S.mealCompliance,
+    mealLog:S.mealLog||DB.get('mealLog',{}),
+    useKm:S.useKm,
+    shortTermGoals:S.shortTermGoals,
+    workoutMode:S.workoutMode,
+    goalProgram:S.goalProgram,
+    swimKmLog:S.swimKmLog,
+    swimKmTotal:S.swimKmTotal,
     meetRaces:S.meetRaces,
     meetRaceLog:S.meetRaceLog,
   };
@@ -4860,8 +4948,16 @@ function importData(event){
       if(data.seasonKmTarget)DB.set('seasonKmTarget',data.seasonKmTarget);
       if(data.mobilityLog)DB.set('mobilityLog',data.mobilityLog);
       if(data.mealCompliance)DB.set('mealCompliance',data.mealCompliance);
+      if(data.mealLog)DB.set('mealLog',data.mealLog);
+      if(typeof data.useKm!=='undefined')DB.set('useKm',data.useKm);
+      if(data.shortTermGoals)DB.set('shortTermGoals',data.shortTermGoals);
+      if(data.workoutMode)DB.set('workoutMode',data.workoutMode);
+      if(data.goalProgram)DB.set('goalProgram',data.goalProgram);
+      if(data.swimKmLog)DB.set('swimKmLog',data.swimKmLog);
+      if(typeof data.swimKmTotal!=='undefined')DB.set('swimKmTotal',data.swimKmTotal);
       if(data.meetRaces)DB.set('meetRaces',data.meetRaces);
       if(data.meetRaceLog)DB.set('meetRaceLog',data.meetRaceLog);
+      if(data.seasonTemplate)DB.set('seasonTemplate',data.seasonTemplate);
       alert('✅ Backup restored! Reloading app...');
       location.reload();
     }catch(err){
@@ -6095,6 +6191,10 @@ checkOnboarding();
 applyClubLogo();
 renderHome();
 maybeShowCheckinSheet();
+// Register service worker for offline support
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
