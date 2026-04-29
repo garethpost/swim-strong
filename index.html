@@ -329,6 +329,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
             </div>
           </div>
         </div>
+        <!-- Season Snapshot Strip -->
+        <div id="season-snapshot" style="display:none;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
           <button class="btn-ghost" onclick="changeMonth(-1)">← Prev</button>
           <button class="btn-ghost" onclick="changeMonth(1)">Next →</button>
@@ -4149,9 +4151,105 @@ function isTaperDay(dt){
   });
 }
 // Schedule guide visibility is handled entirely by renderCalendar — no manual dismiss needed
+
+function renderSeasonSnapshot(){
+  const el=document.getElementById('season-snapshot');
+  if(!el)return;
+  const tmpl=S.seasonTemplate||{};
+  const today=new Date();today.setHours(0,0,0,0);
+  const osPh=getCurrentOffSeasonPhase();
+  const osActive=S.offSeason&&S.offSeason.active;
+
+  // Off-season snapshot
+  if(osActive&&osPh){
+    const osStart=new Date(osPh.start+'T00:00:00');
+    const osEnd=new Date(osPh.end+'T00:00:00');
+    const weekNum=Math.max(1,Math.floor((today-osStart)/(7*86400000))+1);
+    const daysLeft=Math.round((osEnd-today)/86400000);
+    const nextSeason=S.offSeason.nextSeasonStart||'—';
+    const phaseColour=osPh.name==='Transition'?'var(--purple)':osPh.name==='GPP'?'var(--accent)':'var(--orange)';
+    el.style.display='block';
+    el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">❄️ Off-Season Progress</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+        <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+          <div style="font-size:18px;font-weight:900;color:${phaseColour};">${osPh.name.split(' ')[0]}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Phase</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+          <div style="font-size:18px;font-weight:900;color:var(--accent);">${weekNum}<span style="font-size:11px;font-weight:600;color:var(--muted);">/${osPh.weeks}</span></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Week</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+          <div style="font-size:18px;font-weight:900;color:var(--text);">${Math.max(0,daysLeft)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Days left</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+          <div style="font-size:13px;font-weight:800;color:var(--green);">${nextSeason!=='—'?nextSeason.slice(5).replace('-','/'):'—'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">New season</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // In-season snapshot
+  const hasStart=tmpl.start&&tmpl.start!=='';
+  const hasEnd=tmpl.end&&tmpl.end!=='';
+  const hasDays=Object.keys(tmpl.days||{}).length>0;
+  if(!hasStart||!hasEnd||!hasDays){el.style.display='none';return;}
+
+  const seasonStart=new Date(tmpl.start+'T00:00:00');
+  const seasonEnd=new Date(tmpl.end+'T00:00:00');
+  const seasonActive=seasonStart<=today&&seasonEnd>=today;
+  if(!seasonActive){el.style.display='none';return;}
+
+  // Week number
+  const weekNum=Math.max(1,Math.floor((today-seasonStart)/(7*86400000))+1);
+  const totalWeeks=Math.ceil((seasonEnd-seasonStart)/(7*86400000));
+
+  // Next meet
+  const upcoming=S.meets.filter(m=>localDate(m.date)>=today).sort((a,b)=>localDate(a.date)-localDate(b.date));
+  const nextMeet=upcoming[0];
+  const nextMeetDays=nextMeet?Math.round((localDate(nextMeet.date)-today)/86400000):null;
+
+  // Today's focus
+  const sessToday=(S.daySchedule[dKey(today)]||{}).sessions||(tmpl.days[today.getDay()]||[]);
+  const hasSwim=sessToday.some(s=>s.startsWith('swim'));
+  const hasDry=sessToday.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
+  const todayFocus=isMeetDay(today)?'Meet Day':hasSwim&&hasDry?'Full Day':hasSwim?'Swim':hasDry?'Dryland':'Rest';
+
+  // Taper check
+  const taperInfo=isTaperWeek();
+  const taperDays=taperInfo.yes?taperInfo.daysOut:null;
+
+  el.style.display='block';
+  el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;">
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">📅 Season Progress</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+      <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+        <div style="font-size:18px;font-weight:900;color:var(--accent);">${weekNum}<span style="font-size:11px;font-weight:600;color:var(--muted);">/${totalWeeks}</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Week</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+        <div style="font-size:13px;font-weight:800;color:${nextMeet?'var(--gold)':'var(--muted)'};">${nextMeet?nextMeetDays+'d':'—'}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${nextMeet?nextMeet.name.split(' ')[0]:'No meet'}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+        <div style="font-size:12px;font-weight:800;color:${todayFocus==='Rest'?'var(--muted)':todayFocus==='Meet Day'?'var(--gold)':'var(--green)'};">${todayFocus}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Today</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
+        <div style="font-size:18px;font-weight:900;color:${taperDays!==null?'var(--orange)':'var(--muted)'};">${taperDays!==null?taperDays+'d':'—'}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">To taper</div>
+      </div>
+    </div>
+  </div>`;
+}
 function renderCalendar(){
   const yr=S.calYear,mo=S.calMonth;
   document.getElementById('sched-month-label').textContent=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})+' — tap any day to edit';
+  renderSeasonSnapshot();
   // Show setup guide when: no season template set, or season has ended
   // Hide when: season template active and today is within season dates
   const guideEl=document.getElementById('schedule-new-user-guide');
