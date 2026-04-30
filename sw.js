@@ -1,5 +1,5 @@
 // SwimFitPro Service Worker
-const CACHE_NAME = 'swimfitpro-v16';
+const CACHE_NAME = 'swimfitpro-v17';
 const CACHE_URLS = [
   './index.html',
   './icons/Icon-513.jpeg',

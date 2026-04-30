@@ -4138,12 +4138,17 @@ function renderHomeTodaySummary(){
   const META={
     swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)'},
     swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)'},
-    dry_lower:{icon:'🦵',label:'Weights\nLower',color:'var(--green)'},
-    dry_upper:{icon:'💪',label:'Weights\nUpper',color:'var(--green)'},
-    dry_power:{icon:'⚡',label:'Power\nPlyo',color:'var(--orange)'},
+    dry_lower:{icon:'🦵',label:'Weights Lower',color:'var(--green)'},
+    dry_upper:{icon:'💪',label:'Weights Upper',color:'var(--green)'},
+    dry_power:{icon:'⚡',label:'Power / Plyo',color:'var(--orange)'},
     dry_mobility:{icon:'🧘',label:'Mobility',color:'var(--purple)'},
     dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
     dry_rest:{icon:'😴',label:'Rest',color:'var(--muted)'},
+    oos_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
+    oos_mobility:{icon:'🧘',label:'Mobility',color:'var(--purple)'},
+    oos_strength:{icon:'💪',label:'Strength',color:'var(--green)'},
+    oos_rest:{icon:'😴',label:'Rest',color:'var(--muted)'},
+    oos_swim:{icon:'🏊',label:'Swim',color:'var(--accent)'},
   };
   const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
   const dryCount=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest').length;
@@ -4179,8 +4184,8 @@ function renderHomeTodaySummary(){
   // Session description line
   const sessionDesc = sessions.length === 0 ? '' :
     sessions.map(id => {
-      const m = META[id]||{label:id};
-      return m.label.replace('\n',' ');
+      const m = META[id]||{label:id.replace(/_/g,' ')};
+      return m.label;
     }).join(' + ');
   // Kcal target
   const calData = getDailyCalFromSchedule();
@@ -4193,10 +4198,10 @@ function renderHomeTodaySummary(){
     ${calLine?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${calLine}</div>`:''}
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:${rows?'8px':'0'};">
       ${sessions.map(id=>{
-        const m=META[id]||{icon:'📌',label:id,color:'var(--muted)'};
+        const m=META[id]||{icon:'📌',label:id.replace(/_/g,' '),color:'var(--muted)'};
         return`<div style="display:flex;align-items:center;gap:5px;background:var(--surface);border-radius:8px;padding:5px 10px;">
           <span style="font-size:14px;">${m.icon}</span>
-          <span style="font-size:11px;font-weight:700;color:${m.color};">${m.label.replace('\n',' ')}</span>
+          <span style="font-size:11px;font-weight:700;color:${m.color};">${m.label}</span>
         </div>`;
       }).join('')}
       ${sessions.length===0?`<div style="display:flex;align-items:center;gap:5px;"><span style="font-size:18px;">😴</span><span style="font-size:11px;color:var(--muted);">Rest day</span></div>`:''}
@@ -4402,18 +4407,18 @@ function renderHomeFuelRings(){
   ];
   function ring(r){
     const pct=r.target>0?Math.min(1,r.val/r.target):0;
-    const R=28,C=2*Math.PI*R,dash=pct*C;
+    const R=32,C=2*Math.PI*R,dash=pct*C;
     const valDisplay=r.label==='Cal'?Math.round(r.val).toLocaleString():Math.round(r.val);
     const tgtDisplay=r.label==='Cal'?Math.round(r.target).toLocaleString():Math.round(r.target);
     return`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
-      <div style="position:relative;width:72px;height:72px;">
-        <svg width="72" height="72" viewBox="0 0 72 72" style="transform:rotate(-90deg)">
-          <circle cx="36" cy="36" r="${R}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
-          <circle cx="36" cy="36" r="${R}" fill="none" stroke="${r.color}" stroke-width="7"
+      <div style="position:relative;width:80px;height:80px;">
+        <svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg)">
+          <circle cx="40" cy="40" r="${R}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+          <circle cx="40" cy="40" r="${R}" fill="none" stroke="${r.color}" stroke-width="8"
             stroke-dasharray="${dash} ${C}" stroke-linecap="round"/>
         </svg>
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;">
-          <div style="font-size:12px;font-weight:800;color:${r.color};">${valDisplay}${r.unit}</div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;">
+          <div style="font-size:11px;font-weight:800;color:${r.color};">${valDisplay}${r.unit}</div>
           <div style="font-size:8px;color:var(--muted);">/${tgtDisplay}${r.unit}</div>
         </div>
       </div>
@@ -4486,7 +4491,7 @@ function renderHomeWeekProgress(){
     ${bar('Sessions',doneSessions,Math.max(1,schSessions),'var(--accent)','')}
     ${bar('Pool km',weekKm.toFixed(1),Math.max(0.1,schKm.toFixed(1)),'var(--green)','')}
     ${bar('Cal target hit',calHits,daysElapsed,'var(--orange)',' days')}
-    ${bar('Recovery check',Math.min(daysElapsed,readinessChecks),daysElapsed,'var(--purple)',' / '+daysElapsed)}`;
+    ${bar('Recovery check',Math.min(daysElapsed,readinessChecks),daysElapsed,'var(--purple)','')}` ;
 }
 
 function renderHome(){
