@@ -5889,7 +5889,7 @@ async function offSearch(query){
     if(!resp.ok)throw new Error('Network error');
     const data=await resp.json();
     // Helper: detect if a string is "mostly Latin/ASCII" (i.e. readable in English)
-    const isReadable=s=>s&&(s.replace(/[^ -]/g,'').length/s.length)>0.75;
+    const isReadable=s=>s&&(s.replace(/[\u0080-\uFFFF]/g,'').length/s.length)>0.75;
     const products=(data.products||[]).filter(p=>{
       const n=p.nutriments||{};
       const hasKcal=n['energy-kcal_100g']||n['energy-kcal']||n['energy_100g'];

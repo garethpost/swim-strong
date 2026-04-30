@@ -1,5 +1,5 @@
 // SwimFitPro Service Worker — cache-first for offline support
-const CACHE_NAME = 'swimfitpro-v4';
+const CACHE_NAME = 'swimfitpro-v5';
 const CACHE_URLS = [
   './index.html',
   './icons/Icon-513.jpeg',
