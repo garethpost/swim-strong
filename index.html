@@ -42,7 +42,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .nav-btn.active{color:var(--accent);}
 .nav-btn svg{width:20px;height:20px;}
 .section{display:none;padding:16px;}
-.section.active{display:block;}
+.section.active{display:block;}.section.active#section-fuel{display:flex;}
 .card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);}
 .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
 .btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font);font-size:16px;font-weight:600;cursor:pointer;transition:all 0.15s;}
@@ -369,15 +369,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     </div>
 
     <!-- FUEL -->
-    <div id="section-fuel" class="section">
-      <p class="section-title">Fuel</p>
-      <p class="section-sub">Nutrition for a competitive swimmer</p>
-      <!-- Meal Tracker (contains Today's Fuel, Hydration, Compliance, Timing, Add Food, Logged Meals) -->
-      <div id="meal-tracker-section"></div>
-      <!-- Body Stats — always last -->
-      <div id="body-stats-card"><!-- rendered by renderNutrition() --></div>
-      <!-- Empty shell, kept for legacy renderFuelTodayCard() stub -->
-      <div id="fuel-today-card" style="display:none;"></div>
+    <div id="section-fuel" class="section" style="padding:0;flex-direction:column;height:calc(100vh - 80px);">
+      <!-- Sticky rings header (populated by renderMealTracker) -->
+      <div id="fuel-sticky-header"></div>
+      <!-- Scrollable content below header -->
+      <div id="fuel-scroll-body" style="flex:1;overflow-y:auto;padding:12px 16px 100px;">
+        <p class="section-title">Fuel</p>
+        <p class="section-sub">Nutrition for a competitive swimmer</p>
+        <div id="meal-tracker-section"></div>
+        <div id="body-stats-card"><!-- rendered by renderNutrition() --></div>
+        <div id="fuel-today-card" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- MORE -->
@@ -6161,44 +6163,49 @@ function renderMealTracker(){
   const pct=(v,t)=>t?Math.min(100,Math.round(v/t*100)):0;
   const col=(p)=>p>=90?'var(--green)':p>=60?'var(--accent)':'var(--orange)';
 
-  // ── 1. Today's Fuel countdown (always open) ──
-  const remaining=targets.cal?Math.round(targets.cal-logCal):null;
-  const remainingPos=remaining!==null?Math.max(0,remaining):null;
-  const calPct=pct(Math.round(logCal),targets.cal);
-  const calColor=col(calPct);
-  const hit=remaining!==null&&remaining<=0;
-  const dlLabel=targets._dl||'';
-  const dlColor=targets._dlColor||'var(--accent)';
+  // ── 1. Today's Fuel — 4-ring sticky header ──
+  const dlLabel=targets._dl||''
+  const dlColor=targets._dlColor||'var(--accent)'
 
-  let html=`<div class="card" style="margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div class="card-title" style="margin-bottom:0;">Today's Fuel</div>
-      ${dlLabel?`<span style="font-size:11px;font-weight:700;color:${dlColor};background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:10px;">${dlLabel}</span>`:''}
-    </div>
-    ${targets.cal?`
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px;">
-      <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${hit?'🎯 Target reached!':'Remaining today'}</div>
-        <div style="font-size:40px;font-weight:900;color:${hit?'var(--green)':calColor};line-height:1;">${hit?'✓':remainingPos}</div>
-        <div style="font-size:11px;color:var(--muted);">kcal${!hit?' to go':''}</div>
+  // Ring helper: returns SVG circle ring markup
+  function makeRing(val,tgt,color,label,unit,r){
+    const radius=36;
+    const circ=2*Math.PI*radius;
+    const rawPct=tgt?Math.min(1,val/tgt):0;
+    const dash=rawPct*circ;
+    const pctLabel=tgt?Math.round(rawPct*100):0;
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <svg width="88" height="88" viewBox="0 0 88 88">
+        <circle cx="44" cy="44" r="${radius}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+        <circle cx="44" cy="44" r="${radius}" fill="none" stroke="${color}" stroke-width="7"
+          stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}"
+          stroke-linecap="round" transform="rotate(-90 44 44)" style="transition:stroke-dashoffset 0.5s;"/>
+        <text x="44" y="38" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="system-ui,sans-serif">${r?Math.round(val):Math.round(val)}</text>
+        <text x="44" y="52" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9" font-family="system-ui,sans-serif">/${tgt}${unit}</text>
+      </svg>
+      <div style="font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.5px;">${label}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.4);">${pctLabel}% eaten</div>
+    </div>`;
+  }
+
+  // Render sticky header
+  const stickyEl=document.getElementById('fuel-sticky-header');
+  if(stickyEl){
+    stickyEl.innerHTML=`<div style="background:linear-gradient(160deg,#0a1628 0%,#0d2240 100%);border-bottom:1px solid rgba(255,255,255,0.08);padding:14px 16px 10px;position:sticky;top:0;z-index:50;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.5);">Today's Fuel</div>
+        ${dlLabel?`<span style="font-size:10px;font-weight:700;color:${dlColor};background:rgba(255,255,255,0.06);border:1px solid ${dlColor};padding:2px 8px;border-radius:10px;">${dlLabel}</span>`:''}
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:11px;color:var(--muted);">eaten</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text);">${Math.round(logCal)}</div>
-        <div style="font-size:11px;color:var(--muted);">of ${targets.cal} kcal</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;justify-items:center;">
+        ${makeRing(Math.round(logCal),targets.cal,'#1ABCBF','Calories','kcal')}
+        ${makeRing(Math.round(logCarbs),targets.carbs,'#4A9EFF','Carbs','g')}
+        ${makeRing(Math.round(logProtein),targets.protein,'#F59E0B','Protein','g')}
+        ${makeRing(Math.round(logFat),targets.fat,'#EC4899','Fat','g')}
       </div>
-    </div>
-    <div style="height:8px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:12px;"><div style="height:100%;width:${calPct}%;background:${calColor};border-radius:6px;transition:width 0.4s;"></div></div>`:''}
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-      ${[['Carbs',Math.round(logCarbs),targets.carbs,'g'],['Protein',Math.round(logProtein),targets.protein,'g'],['Fat',Math.round(logFat),targets.fat,'g']].map(([lbl,val,tgt,unit])=>`
-      <div style="background:var(--surface);border-radius:10px;padding:8px 4px;text-align:center;border:1px solid var(--border);">
-        <div style="font-size:9px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.4px;">${lbl}</div>
-        <div style="font-size:14px;font-weight:800;color:${col(pct(val,tgt))};">${val}</div>
-        <div style="font-size:9px;color:var(--muted);">/ ${tgt}${unit}</div>
-        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;"><div style="height:100%;width:${pct(val,tgt)}%;background:${col(pct(val,tgt))};border-radius:2px;"></div></div>
-      </div>`).join('')}
-    </div>
-  </div>`;
+    </div>`;
+  }
+
+  let html='';
 
   // ── 2. Hydration (always open) ──
   const hydCount=S.hydrationLog[today]||0;
@@ -6238,23 +6245,7 @@ function renderMealTracker(){
     </div>
   </div>`;
 
-  // ── 5. Add Food — collapsible, starts collapsed ──
-  const addOpen=S._fuelSectOpen['addfood']===true;
-  html+=`<div class="card" style="margin-bottom:12px;">
-    <button onclick="_toggleFuelSection('addfood')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font);">
-      <div class="card-title" style="margin-bottom:0;">➕ Add Food</div>
-      <span id="fuel-sect-chev-addfood" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:${addOpen?'rotate(0deg)':'rotate(-90deg)'};">▼</span>
-    </button>
-    <div id="fuel-sect-body-addfood" style="display:${addOpen?'block':'none'};margin-top:8px;">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Adding to:</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
-        ${MEAL_TYPES.map(t=>`<button class="meal-type-pill" data-type="${t}" onclick="setMealType('${t}')" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid ${(S._mealType||'Breakfast')===t?'var(--accent)':'var(--border)'};background:${(S._mealType||'Breakfast')===t?'rgba(26,188,191,0.15)':'var(--surface)'};color:${(S._mealType||'Breakfast')===t?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">${MEAL_TYPE_ICONS[t]} ${t}</button>`).join('')}
-      </div>
-      <div id="meal-food-results">${_buildFoodTabContent()}</div>
-    </div>
-  </div>`;
-
-  // ── 6. Logged Meals — collapsible, starts collapsed ──
+  // ── 5. Logged Meals — collapsible, starts collapsed ──
   const logOpen=S._fuelSectOpen['loggedmeals']===true;
   const loggedCount=meals.length;
   html+=`<div class="card" style="margin-bottom:12px;">
@@ -6266,6 +6257,11 @@ function renderMealTracker(){
       <span id="fuel-sect-chev-loggedmeals" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:${logOpen?'rotate(0deg)':'rotate(-90deg)'};">▼</span>
     </button>
     <div id="fuel-sect-body-loggedmeals" style="display:${logOpen?'block':'none'};margin-top:8px;">`;
+
+  // NOTE: "No meals logged" text updated below — refers to Add Food below
+  // ── 6. Add Food — collapsible, starts collapsed ──
+  // (variable declaration moved here to allow logged meals section to reference it)
+  const addOpen=S._fuelSectOpen['addfood']===true;
 
   if(meals.length){
     const grouped={};
@@ -6303,9 +6299,24 @@ function renderMealTracker(){
       html+=`</div>`;
     });
   } else {
-    html+=`<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:13px;">No meals logged yet — open "Add Food" above.</div>`;
+    html+=`<div style="text-align:center;padding:16px 0;color:var(--muted);font-size:13px;">No meals logged yet — open "Add Food" below.</div>`;
   }
   html+=`</div></div>`;
+
+  // ── 6. Add Food — collapsible, starts collapsed ──
+  html+=`<div class="card" style="margin-bottom:12px;">
+    <button onclick="_toggleFuelSection('addfood')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font);">
+      <div class="card-title" style="margin-bottom:0;">➕ Add Food</div>
+      <span id="fuel-sect-chev-addfood" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:${addOpen?'rotate(0deg)':'rotate(-90deg)'};">▼</span>
+    </button>
+    <div id="fuel-sect-body-addfood" style="display:${addOpen?'block':'none'};margin-top:8px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Adding to:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">
+        ${MEAL_TYPES.map(t=>`<button class="meal-type-pill" data-type="${t}" onclick="setMealType('${t}')" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid ${(S._mealType||'Breakfast')===t?'var(--accent)':'var(--border)'};background:${(S._mealType||'Breakfast')===t?'rgba(26,188,191,0.15)':'var(--surface)'};color:${(S._mealType||'Breakfast')===t?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">${MEAL_TYPE_ICONS[t]} ${t}</button>`).join('')}
+      </div>
+      <div id="meal-food-results">${_buildFoodTabContent()}</div>
+    </div>
+  </div>`;
 
   el.innerHTML=html;
 }
