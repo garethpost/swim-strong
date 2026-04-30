@@ -36,13 +36,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
 .unit-picker-btn.active{background:var(--accent);color:#000;}
 #wt-kg.active,#wt-lbs.active,#dist-km.active,#dist-mi.active{background:var(--accent);color:#000;}
-#content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;}
 #nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 20px;z-index:100;}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--muted);font-size:9px;font-family:var(--font);cursor:pointer;padding:6px 0;transition:color 0.2s;}
 .nav-btn.active{color:var(--accent);}
 .nav-btn svg{width:20px;height:20px;}
-.section{display:none;padding:16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;}
-.section.active{display:block;}.section.active#section-fuel,.section.active#section-home,.section.active#section-workout{display:flex;flex-direction:column;padding:0;overflow:hidden;}
+.section{display:none;padding:16px;}
+.section.active{display:block;}.section.active#section-fuel{display:flex;}
 .card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);}
 .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
 .btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font);font-size:16px;font-weight:600;cursor:pointer;transition:all 0.15s;}
@@ -177,101 +177,78 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div id="content">
 
     <!-- HOME -->
-    <div id="section-home" class="section active" style="padding:0;flex-direction:column;">
-      <div id="home-club-logo-wrap" style="display:none;text-align:center;padding-top:8px;"><img id="home-club-logo" src="" alt="" style="height:48px;object-fit:contain;border-radius:8px;"></div>
-
-      <!-- Sticky greeting header -->
-      <div id="home-sticky-header" style="padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
-          <div>
-            <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1.2;" id="greeting">Let's go.</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="phase-info">—</div>
-          </div>
-          <button onclick="showCheckinSheet()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 11px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);flex-shrink:0;">Check-in</button>
+    <div id="section-home" class="section active">
+      <div id="home-club-logo-wrap" style="display:none;text-align:center;margin-bottom:8px;"><img id="home-club-logo" src="" alt="" style="height:56px;object-fit:contain;border-radius:8px;"></div>
+      <p class="section-title" id="greeting">Let's go.</p>
+      <p class="section-sub" id="phase-info">—</p>
+      <div id="alert-zone"></div>
+      <div class="stats-row">
+        <div class="stat-box" id="stat-cal-box" style="cursor:default;">
+          <div class="stat-val" id="stat-cal" style="font-size:18px;">—</div>
+          <div class="stat-lbl" id="stat-cal-lbl">kcal<br>Today</div>
+          <div id="stat-macros" style="font-size:9px;color:var(--muted);margin-top:3px;line-height:1.5;"></div>
         </div>
-        <!-- 3 stat pills -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;" id="stat-cal-box">
-            <div style="font-size:18px;font-weight:800;color:var(--accent);line-height:1;" id="stat-cal">—</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.5px;" id="stat-cal-lbl">kcal today</div>
-            <div id="stat-macros" style="font-size:8px;color:var(--muted);margin-top:2px;line-height:1.4;"></div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;">
-            <div style="font-size:18px;font-weight:800;color:var(--accent);line-height:1;" id="stat-streak">0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.5px;">Day streak</div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;">
-            <div style="font-size:18px;font-weight:800;color:var(--accent);line-height:1;" id="stat-total">0</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.5px;">Total sessions</div>
-          </div>
-        </div>
+        <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Day<br>Streak</div></div>
+        <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
       </div>
+      <!-- Week at a glance strip -->
+      <div class="card" style="margin-bottom:12px;padding:12px 16px;" id="week-strip-card"></div>
 
-      <!-- Scrollable body -->
-      <div id="home-scroll-body" style="flex:1;overflow-y:auto;padding:12px 16px 100px;">
-        <div id="alert-zone"></div>
-
-        <!-- Week strip -->
-        <div id="week-strip-card" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;"></div>
-
-        <!-- Today + Next Meet row -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;" id="home-today-summary"></div>
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Next Meet</div>
-            <div id="home-meets-list"></div>
-          </div>
-        </div>
-
-        <!-- Season KM Tracker -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <!-- KM Tracker — same width as Today/Next Meet grid below -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div class="card" style="margin-bottom:0;padding:12px 16px;grid-column:1/-1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
             <div>
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Season Distance</div>
+              <div class="card-title" style="margin-bottom:2px;">Season Distance</div>
               <div style="display:flex;align-items:baseline;gap:6px;">
-                <div style="font-size:26px;font-weight:900;color:var(--accent);line-height:1;" id="km-display">0.0</div>
+                <div style="font-size:28px;font-weight:900;color:var(--accent);" id="km-display">0.0</div>
                 <div style="font-size:13px;color:var(--muted);" id="km-unit-label">km</div>
               </div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="km-session-label">tap + to log today's distance</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="km-session-label">tap + to log today's distance</div>
             </div>
-            <div style="display:flex;gap:6px;">
-              <button onclick="adjustKm(1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-              <button onclick="adjustKm(-1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:20px;font-weight:700;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button onclick="adjustKm(1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+              <button onclick="adjustKm(-1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:22px;font-weight:700;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
             </div>
           </div>
-          <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;">
-            <div id="km-season-bar" style="background:var(--accent);height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
+          <!-- Season target progress -->
+          <div style="margin-top:10px;">
+            <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;">
+              <div id="km-season-bar" style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);" id="km-season-label">—</div>
           </div>
-          <div style="font-size:10px;color:var(--muted);" id="km-season-label">—</div>
           <div id="km-input-row" style="display:none;margin-top:10px;gap:8px;align-items:center;">
             <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
             <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
             <button onclick="cancelKm()" class="btn-ghost">✕</button>
           </div>
         </div>
-
-        <!-- Load pill (post check-in) -->
-        <div id="home-load-pill" style="display:none;margin-bottom:12px;">
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:2px;">Today's Load</div>
-              <div style="font-size:14px;font-weight:700;" id="load-rec">—</div>
-            </div>
-            <div style="text-align:right;font-size:11px;color:var(--muted);">
-              <div>😴 <span id="sleep-val-pill">—</span> · ⚡ <span id="readiness-val-pill">—</span></div>
-              <button onclick="showCheckinSheet()" style="margin-top:4px;background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">Edit</button>
-            </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div class="card" style="margin-bottom:0;min-height:160px;" id="home-today-summary"></div>
+        <div class="card" style="margin-bottom:0;min-height:160px;">
+          <div class="card-title">Next Meet</div>
+          <div id="home-meets-list"></div>
+        </div>
+      </div>
+      <div id="home-nudge-card" style="display:none;margin-bottom:12px;"></div>
+      <!-- Off-season phase widget — shown during off-season -->
+      <div id="offseason-home-widget" class="card" style="display:none;margin-bottom:12px;padding:12px 16px;"></div>
+      <!-- Load recommendation pill — shown after check-in -->
+      <div id="home-load-pill" style="display:none;margin-bottom:12px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:2px;">Today's Load</div>
+            <div style="font-size:14px;font-weight:700;" id="load-rec">—</div>
+          </div>
+          <div style="text-align:right;font-size:11px;color:var(--muted);">
+            <div>😴 <span id="sleep-val-pill">—</span> · ⚡ <span id="readiness-val-pill">—</span></div>
+            <button onclick="showCheckinSheet()" style="margin-top:4px;background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">Edit check-in</button>
           </div>
         </div>
-
-        <!-- Post-session nudge -->
-        <div id="home-nudge-card" style="display:none;margin-bottom:12px;"></div>
-
-        <!-- Off-season widget -->
-        <div id="offseason-home-widget" class="card" style="display:none;margin-bottom:12px;padding:12px 16px;"></div>
       </div>
-
-      <!-- Hidden inputs for checkin logic -->
+      <!-- Hidden slider inputs — still needed for updateCheckin() logic -->
       <input type="range" id="sleep-slider" min="4" max="11" value="8" step="0.5" style="display:none;" oninput="updateCheckin()">
       <input type="range" id="readiness-slider" min="1" max="5" value="3" style="display:none;" oninput="updateCheckin()">
       <span id="sleep-val" style="display:none;"></span>
@@ -280,55 +257,29 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     </div>
 
     <!-- WORKOUT -->
-    <div id="section-workout" class="section" style="padding:0;flex-direction:column;">
-      <!-- Train tab scroll body -->
-      <div id="train-scroll-body" style="flex:1;overflow-y:auto;padding:16px 16px 100px;">
-        <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:2px;">Train</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Build. Test. Improve.</div>
-        <div id="workout-top"></div>
-        <div id="baseline-card"></div>
-
-        <!-- Pool KM inline logger -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;" id="train-km-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Pool KM</div>
-              <div style="display:flex;align-items:baseline;gap:5px;">
-                <span style="font-size:20px;font-weight:800;color:var(--accent);" id="train-km-display">0.0</span>
-                <span style="font-size:11px;color:var(--muted);" id="train-km-unit">km</span>
-              </div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="train-km-last">Log today's distance</div>
-            </div>
-            <button onclick="showTrainKmInput()" style="height:38px;padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font);">+ Log</button>
+    <div id="section-workout" class="section">
+      <div id="workout-top"></div>
+      <div id="baseline-card"></div>
+      <div id="workout-content"></div>
+      <div id="workout-actions" style="display:none;margin-top:16px;">
+        <div class="card" style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="card-title" style="margin-bottom:0;">Rest Timer</div>
+            <div id="notif-status" style="font-size:10px;color:var(--muted);"></div>
           </div>
-          <div id="train-km-input-row" style="display:none;margin-top:10px;gap:8px;align-items:center;">
-            <input id="train-km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
-            <button onclick="logTrainKm()" class="btn btn-primary btn-sm">Log</button>
-            <button onclick="cancelTrainKm()" class="btn-ghost">✕</button>
+          <div id="notif-explain" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-radius:8px;padding:9px 11px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.5;">
+            🔔 <strong style="color:var(--text);">Enable background alerts</strong> so the timer can ping you when rest is up — even if your phone screen is off.<br>
+            <button onclick="requestNotifPermission()" style="margin-top:6px;padding:5px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-size:12px;font-weight:700;cursor:pointer;">Enable Notifications</button>
+          </div>
+          <div class="timer-display" id="timer-display">1:30</div>
+          <div class="timer-controls">
+            <button class="btn-ghost" onclick="setTimer(60)">60s</button>
+            <button class="btn-ghost" onclick="setTimer(90)">90s</button>
+            <button class="btn-ghost" onclick="setTimer(120)">2m</button>
+            <button class="btn btn-primary btn-sm" onclick="toggleTimer()" id="timer-btn">Start</button>
           </div>
         </div>
-
-        <div id="workout-content"></div>
-        <div id="workout-actions" style="display:none;margin-top:16px;">
-          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Rest Timer</div>
-              <div id="notif-status" style="font-size:10px;color:var(--muted);"></div>
-            </div>
-            <div id="notif-explain" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-radius:8px;padding:9px 11px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.5;">
-              🔔 <strong style="color:var(--text);">Enable background alerts</strong> so the timer can ping you when rest is up — even if your phone screen is off.<br>
-              <button onclick="requestNotifPermission()" style="margin-top:6px;padding:5px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-size:12px;font-weight:700;cursor:pointer;">Enable Notifications</button>
-            </div>
-            <div class="timer-display" id="timer-display">1:30</div>
-            <div class="timer-controls">
-              <button class="btn-ghost" onclick="setTimer(60)">60s</button>
-              <button class="btn-ghost" onclick="setTimer(90)">90s</button>
-              <button class="btn-ghost" onclick="setTimer(120)">2m</button>
-              <button class="btn btn-primary btn-sm" onclick="toggleTimer()" id="timer-btn">Start</button>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="finishWorkout()">Complete Session ✓</button>
-        </div>
+        <button class="btn btn-primary" onclick="finishWorkout()">Complete Session ✓</button>
       </div>
     </div>
 
@@ -1861,7 +1812,7 @@ function updateUnitPickers(){
   stylePicker(document.getElementById('dist-km'), S.useKm);
   stylePicker(document.getElementById('dist-mi'),!S.useKm);
 }
-const _ub=document.getElementById('unit-btn');if(_ub)_ub.style.display='none';
+document.getElementById('unit-btn').style.display='none';
 // Legacy toggle stub — unit-btn is permanently hidden; units moved to More > Settings
 function toggleUnits(){setWeightUnit(!S.useKg);}
 
@@ -2567,53 +2518,6 @@ function logKm(){
 function cancelKm(){
   const ir=document.getElementById('km-input-row');
   if(ir)ir.style.display='none';
-}
-function showTrainKmInput(){
-  const ir=document.getElementById('train-km-input-row');
-  if(ir){ir.style.display='flex';const inp=document.getElementById('train-km-amount-input');if(inp)inp.focus();}
-}
-function logTrainKm(){
-  const inp=document.getElementById('train-km-amount-input');
-  if(!inp)return;
-  let val=parseFloat(inp.value);
-  if(!val||val<=0)return;
-  const kmVal=S.useKm?val:val/0.621371;
-  const today=new Date().toISOString().slice(0,10);
-  S.swimKmLog=(S.swimKmLog||[]);
-  S.swimKmLog.push({date:today,km:kmVal});
-  S.swimKmTotal=(S.swimKmTotal||0)+kmVal;
-  DB.set('swimKmTotal',S.swimKmTotal);DB.set('swimKmLog',S.swimKmLog);
-  inp.value='';
-  const ir=document.getElementById('train-km-input-row');
-  if(ir)ir.style.display='none';
-  renderTrainKmCard();
-  renderKmTracker();
-}
-function cancelTrainKm(){
-  const ir=document.getElementById('train-km-input-row');
-  if(ir)ir.style.display='none';
-}
-function renderTrainKmCard(){
-  const total=S.swimKmTotal||0;
-  const disp=S.useKm?total.toFixed(1):(total*0.621371).toFixed(1);
-  const unit=S.useKm?'km':'mi';
-  const el=document.getElementById('train-km-display');
-  const ul=document.getElementById('train-km-unit');
-  if(el)el.textContent=disp;
-  if(ul)ul.textContent=unit;
-  const log=S.swimKmLog||[];
-  const lbl=document.getElementById('train-km-last');
-  if(lbl){
-    if(log.length){
-      const last=log[log.length-1];
-      const d=new Date(last.date);
-      const dStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
-      const lastDisp=S.useKm?last.km.toFixed(1)+'km':(last.km*0.621371).toFixed(1)+'mi';
-      lbl.textContent='Last: '+lastDisp+' on '+dStr;
-    } else {
-      lbl.textContent='Log today's distance';
-    }
-  }
 }
 
 // ── Dynamic daily calories ──
@@ -3450,15 +3354,18 @@ function renderWorkoutTab(){
 
   // ── Mode toggle ──
   const toggleHtml=`
-    <div style="display:flex;background:rgba(255,255,255,0.05);border-radius:12px;padding:3px;margin-bottom:16px;">
-      <button onclick="setWorkoutMode('standard')" style="flex:1;padding:10px 8px;border-radius:10px;border:none;background:${!isGoal?'var(--accent)':'transparent'};color:${!isGoal?'#000':'var(--muted)'};font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s;">
-        Standard
-      </button>
-      <button onclick="setWorkoutMode('goal')" style="flex:1;padding:10px 8px;border-radius:10px;border:none;background:${isGoal?'var(--purple)':'transparent'};color:${isGoal?'#000':'var(--muted)'};font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s;">
-        Goal Program
-      </button>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;">${isGoal?'Workouts biased toward your target meet and selected goals.':'Adaptive dryland based on your schedule, phase, and readiness.'}</div>`;
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Training Mode</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+          📋<br><span style="font-size:11px;">Standard</span>
+        </button>
+        <button onclick="setWorkoutMode('goal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+          🎯<br><span style="font-size:11px;">Goal Program</span>
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">${isGoal?'Workouts are biased toward your target meet and selected goals.':'Adaptive dryland based on your schedule, phase, and readiness.'}</div>
+    </div>`;
 
   let modeHtml='';
   if(!isGoal){
@@ -3466,24 +3373,22 @@ function renderWorkoutTab(){
     const todayDayType=getTodayDrylandType();
     const isRestDay=todayDayType==='rest';
     const restBanner=isRestDay?`
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;margin-bottom:12px;text-align:center;">
-        <div style="font-size:32px;margin-bottom:8px;">😴</div>
-        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;">Rest Day</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">No dryland scheduled. Recovery is training.</div>
+      <div class="card" style="margin-bottom:12px;text-align:center;padding:20px 16px;">
+        <div style="font-size:36px;margin-bottom:8px;">😴</div>
+        <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Rest Day</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">No dryland scheduled today. Recovery is training.</div>
         <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:12px;text-align:left;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery</div>
-          <div style="font-size:12px;color:var(--text);line-height:1.8;">🚶 20min easy walk<br>🧘 10min breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9hrs sleep tonight</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery Options</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;">🚶 20min easy walk<br>🧘 10min breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9hrs sleep tonight</div>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Optional: do a mobility session anyway</button>
       </div>`:''
     modeHtml=`
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Today's Session</div>
-        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;" id="workout-subtitle">—</div>
-      </div>
+      <p class="section-title">Today's Session</p>
+      <p class="section-sub" id="workout-subtitle">—</p>
       ${restBanner}
-      ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;width:100%;">Generate Today's Workout →</button>`:''}
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:12px;">Preview any workout type</button>`;
+      ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Today's Workout →</button>`:''}
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
   } else if(!gp){
     // Goal mode — setup card
     const abMeets=S.meets.filter(m=>{
@@ -3508,10 +3413,10 @@ function renderWorkoutTab(){
           </label>`).join('');
 
     modeHtml=`
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px;">Goal Program</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Pick your target meet and the areas to focus on.</div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Target Meet</div>
+      <p class="section-title">Goal Program</p>
+      <p class="section-sub">Pick the areas your coach wants you to focus on before your next target meet.</p>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">Target Meet</div>
         <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
           ${meetOptions}
         </select>
@@ -3546,9 +3451,8 @@ function renderWorkoutTab(){
       </div>`;
     }).join('');
     modeHtml=`
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px;">Goal Program Active</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Your workouts are biased toward your target meet.</div>
-      <div style="background:var(--card);border:1px solid ${phaseColor};border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <p class="section-title">Goal Program Active</p>
+      <div class="card" style="border:1px solid ${phaseColor};margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">This Week</div>
@@ -3569,7 +3473,6 @@ function renderWorkoutTab(){
       <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
   }
   el.innerHTML=toggleHtml+modeHtml;
-  renderTrainKmCard();
 }
 
 function setWorkoutMode(mode){
@@ -4263,8 +4166,8 @@ function renderHomeTodaySummary(){
   ):'';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Today</div>
-      <span style="font-size:9px;font-weight:700;color:var(--bg);background:${loadColor};padding:2px 8px;border-radius:20px;">${loadLabel}</span>
+      <div class="card-title" style="margin-bottom:0;">Today</div>
+      <span style="font-size:9px;font-weight:700;color:var(--bg);background:${loadColor};padding:2px 7px;border-radius:6px;">${loadLabel}</span>
     </div>
     ${rows}${poolCheckinHtml}`;
 }
@@ -4283,7 +4186,7 @@ function renderHomeMeets(){
     }catch(e){return false;}
   });
   if(!next){
-    el.innerHTML=`<div style="font-size:20px;margin-bottom:6px;">🏊</div><div style="font-size:11px;color:var(--muted);line-height:1.5;">${S.meets.length?'All meets completed.':'No meets added yet.<br>Add one in Schedule.'}</div>`;
+    el.innerHTML=`<div style="font-size:22px;margin-bottom:6px;">🏊</div><div style="font-size:11px;color:var(--muted);">${S.meets.length?'All meets completed.':'No meets added yet.'}</div>`;
     return;
   }
   const ms=localDate(next.date);
@@ -4298,10 +4201,12 @@ function renderHomeMeets(){
   else{const w=Math.floor(dO/7),d=dO%7;countdown=(w?w+'w ':'')+(d?d+'d':'');cdColor=dO<=14?'var(--orange)':'var(--green)';}
   const pri=next.priority==='A'?{bg:'var(--gold)',c:'var(--bg)'}:next.priority==='B'?{bg:'var(--muted)',c:'var(--bg)'}:{bg:'var(--border)',c:'var(--text)'};
   el.innerHTML=`
-  <div style="display:inline-block;font-size:8px;font-weight:800;background:${pri.bg};color:${pri.c};padding:2px 7px;border-radius:20px;margin-bottom:6px;">${next.priority === 'A' ? 'A MEET' : next.priority === 'B' ? 'B MEET' : 'C MEET'}</div>
-  <div style="font-size:13px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:3px;">${next.name}</div>
+  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+    <span style="font-size:9px;font-weight:800;background:${pri.bg};color:${pri.c};padding:2px 6px;border-radius:5px;">${next.priority}</span>
+  </div>
+  <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;">${next.name}</div>
   <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">${startStr}${endStr}</div>
-  <div style="font-size:18px;font-weight:800;color:${cdColor};line-height:1;">${countdown}</div>`;
+  <div style="font-size:16px;font-weight:800;color:${cdColor};">${countdown}</div>`;
 }
 
 // ── Week Strip ──
@@ -4456,7 +4361,6 @@ function renderHome(){
   document.getElementById('stat-total').textContent=hist.length+(S.poolLog||[]).length;
   renderHomeCals();
   renderKmTracker();
-  renderTrainKmCard();
   // Streak: any day with at least one logged session (dryland OR pool) counts
   // Start from yesterday if today has nothing yet, otherwise from today
   const t2=new Date();t2.setHours(0,0,0,0);
@@ -4473,13 +4377,13 @@ function renderHome(){
   if(tp.yes)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   const td=new Date();td.setHours(0,0,0,0);
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
-  try{updateCheckin();}catch(e){console.error('updateCheckin',e);}
-  try{renderWeekStrip();}catch(e){console.error('renderWeekStrip',e);const el=document.getElementById('week-strip-card');if(el)el.innerHTML='<div style="color:#ff5252;font-size:11px;">Week strip error: '+e.message+'</div>';}
-  try{renderHomeTodaySummary();}catch(e){console.error('renderHomeTodaySummary',e);}
-  try{renderHomeMeets();}catch(e){console.error('renderHomeMeets',e);}
-  try{renderPostSessionNudge();}catch(e){console.error('renderPostSessionNudge',e);}
-  try{renderHomLoadPill();}catch(e){console.error('renderHomLoadPill',e);}
-  try{renderOffSeasonHomeWidget();}catch(e){console.error('renderOffSeasonHomeWidget',e);}
+  updateCheckin();
+  renderWeekStrip();
+  renderHomeTodaySummary();
+  renderHomeMeets();
+  renderPostSessionNudge();
+  renderHomLoadPill();
+  renderOffSeasonHomeWidget();
   // Update phase-info to show off-season phase if active
   const osPh=getCurrentOffSeasonPhase();
   const osActive=S.offSeason&&S.offSeason.active;
@@ -4529,7 +4433,7 @@ function updateCheckin(){
     if(avgEl)avgEl.innerHTML=`Saved ${hh}:${mm} &nbsp;·&nbsp; 7-day avg: <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--accent)">${avgR}/5 readiness</b>`;
   },800);
 }
-const _ss=document.getElementById('sleep-slider');if(_ss)_ss.value=S.sleep;const _rs=document.getElementById('readiness-slider');if(_rs)_rs.value=S.readiness;
+document.getElementById('sleep-slider').value=S.sleep;document.getElementById('readiness-slider').value=S.readiness;
 
 // ── Daily Check-In Sheet ──
 function hasCheckedInToday(){
@@ -7905,12 +7809,10 @@ function saveMeetRaceResult(){
 
 // ── Section routing ──
 function showSection(name){
-  document.querySelectorAll('.section').forEach(s=>{s.classList.remove('active');});
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const _sec=document.getElementById('section-'+name);
-  if(_sec)_sec.classList.add('active');
-  const _nav=document.getElementById('nav-'+name);
-  if(_nav)_nav.classList.add('active');
+  document.getElementById('section-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
@@ -7922,25 +7824,20 @@ function showSection(name){
     if(phaseEl)phaseEl.value=S.swimPhase;
     updatePhaseImpact();
   }
-  if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();renderTrainKmCard();}
+  if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();}
 
 }
 
 // INIT
-try{
-  if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
-  checkOnboarding();
-  applyClubLogo();
-  renderHome();
-  maybeShowCheckinSheet();
-  renderCustomTargetMeets();
-}catch(e){
-  document.getElementById('header-sub').textContent='Error: '+e.message;
-  const _pi=document.getElementById('phase-info');if(_pi)_pi.textContent='ERR: '+e.message;
-  const _sb=document.getElementById('home-scroll-body');if(_sb)_sb.innerHTML='<div style="padding:20px;color:#ff5252;font-size:13px;line-height:1.6;"><b>App error:</b><br>'+e.message+'<br><br><pre style="font-size:10px;white-space:pre-wrap;color:#ff9800;">'+e.stack+'</pre></div>';
-}
+if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
+checkOnboarding();
+applyClubLogo();
+renderHome();
+maybeShowCheckinSheet();
+renderCustomTargetMeets();
+// Register service worker for offline support
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
