@@ -5738,6 +5738,19 @@ function removeMealEntry(idx){
   renderMealTracker();
   renderHomeCals();
 }
+// Meal type → food library categories mapping
+const MEAL_TYPE_CATS={
+  'Breakfast':    ['Breakfast'],
+  'Pre-Training': ['Pre-training'],
+  'Lunch':        ['Lunch/Dinner'],
+  'Post-Training':['Post-training'],
+  'Dinner':       ['Lunch/Dinner'],
+  'Snacks':       ['Snacks','Race day'],
+};
+function getLibraryCatsForMealType(){
+  return MEAL_TYPE_CATS[S._mealType||'Breakfast']||null;
+}
+
 function setMealType(t){
   S._mealType=t;
   document.querySelectorAll('.meal-type-pill').forEach(b=>{
@@ -5745,6 +5758,8 @@ function setMealType(t){
     b.style.background=b.dataset.type===t?'rgba(26,188,191,0.15)':'var(--surface)';
     b.style.color=b.dataset.type===t?'var(--accent)':'var(--muted)';
   });
+  // Refresh library to show foods relevant to this meal type
+  _updateFoodPanelContent();
 }
 function toggleMealCat(cat){
   S._mealCatOpen[cat]=!S._mealCatOpen[cat];
@@ -5819,18 +5834,20 @@ function _buildFoodPanel(){
     }
   }
 
-  // Library rows — filtered if searching
+  // Library rows — filtered by meal type when not searching
   let libraryHtml='';
+  const activeCats=getLibraryCatsForMealType();
   if(!q){
-    // Show full categorised library
-    const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
-    libraryHtml=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library</div>`+
-      cats.map(cat=>{
-        const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
-        return`<div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;">${cat}</div>`+catFoods.map(f=>_foodRow(f)).join('');
-      }).join('');
+    const filteredFoods=activeCats?SWIMMER_FOODS.filter(f=>activeCats.includes(f.cat)):SWIMMER_FOODS;
+    const cats=[...new Set(filteredFoods.map(f=>f.cat))];
+    const mealLabel=S._mealType||'Breakfast';
+    libraryHtml=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">${mealLabel} foods</div>`+
+      (cats.length?cats.map(cat=>{
+        const catFoods=filteredFoods.filter(f=>f.cat===cat);
+        return catFoods.map(f=>_foodRow(f)).join('');
+      }).join(''):`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No library foods for this meal type. Try searching above.</div>`);
   } else {
-    // Local library matches first
+    // When searching, search across ALL library foods regardless of meal type
     const localMatches=SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
     if(localMatches.length){
       libraryHtml=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library matches</div>`+localMatches.map(f=>_foodRow(f)).join('');
@@ -5900,16 +5917,17 @@ function _updateFoodPanelContent(){
     }
   }
 
-  // Update library rows
+  // Update library rows — filter by active meal type when not searching
   const libEl=document.getElementById('food-library-rows');
   if(libEl){
+    const activeCats=getLibraryCatsForMealType();
     if(!q){
-      const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
-      libEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library</div>`+
-        cats.map(cat=>{
-          const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
-          return`<div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;">${cat}</div>`+catFoods.map(f=>_foodRow(f)).join('');
-        }).join('');
+      const filteredFoods=activeCats?SWIMMER_FOODS.filter(f=>activeCats.includes(f.cat)):SWIMMER_FOODS;
+      const cats=[...new Set(filteredFoods.map(f=>f.cat))];
+      const mealLabel=S._mealType||'Breakfast';
+      libEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">${mealLabel} foods</div>`+
+        (cats.length?cats.map(cat=>filteredFoods.filter(f=>f.cat===cat).map(f=>_foodRow(f)).join('')).join('')
+        :`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No library foods for this meal type. Try searching above.</div>`);
     } else {
       const localMatches=SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
       libEl.innerHTML=localMatches.length
