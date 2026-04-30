@@ -4473,13 +4473,13 @@ function renderHome(){
   if(tp.yes)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   const td=new Date();td.setHours(0,0,0,0);
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
-  updateCheckin();
-  renderWeekStrip();
-  renderHomeTodaySummary();
-  renderHomeMeets();
-  renderPostSessionNudge();
-  renderHomLoadPill();
-  renderOffSeasonHomeWidget();
+  try{updateCheckin();}catch(e){console.error('updateCheckin',e);}
+  try{renderWeekStrip();}catch(e){console.error('renderWeekStrip',e);const el=document.getElementById('week-strip-card');if(el)el.innerHTML='<div style="color:#ff5252;font-size:11px;">Week strip error: '+e.message+'</div>';}
+  try{renderHomeTodaySummary();}catch(e){console.error('renderHomeTodaySummary',e);}
+  try{renderHomeMeets();}catch(e){console.error('renderHomeMeets',e);}
+  try{renderPostSessionNudge();}catch(e){console.error('renderPostSessionNudge',e);}
+  try{renderHomLoadPill();}catch(e){console.error('renderHomLoadPill',e);}
+  try{renderOffSeasonHomeWidget();}catch(e){console.error('renderOffSeasonHomeWidget',e);}
   // Update phase-info to show off-season phase if active
   const osPh=getCurrentOffSeasonPhase();
   const osActive=S.offSeason&&S.offSeason.active;
@@ -7905,10 +7905,12 @@ function saveMeetRaceResult(){
 
 // ── Section routing ──
 function showSection(name){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>{s.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('section-'+name).classList.add('active');
-  document.getElementById('nav-'+name).classList.add('active');
+  const _sec=document.getElementById('section-'+name);
+  if(_sec)_sec.classList.add('active');
+  const _nav=document.getElementById('nav-'+name);
+  if(_nav)_nav.classList.add('active');
   document.getElementById('unit-btn').style.display='none'; // Unit toggle moved to More tab Settings
   if(name==='home')renderHome();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
@@ -7936,7 +7938,8 @@ try{
   renderCustomTargetMeets();
 }catch(e){
   document.getElementById('header-sub').textContent='Error: '+e.message;
-  document.getElementById('content').innerHTML='<div style="padding:20px;color:#ff5252;font-size:13px;line-height:1.6;"><b>App error:</b><br>'+e.message+'<br><br><pre style="font-size:10px;white-space:pre-wrap;">'+e.stack+'</pre></div>';
+  const _pi=document.getElementById('phase-info');if(_pi)_pi.textContent='ERR: '+e.message;
+  const _sb=document.getElementById('home-scroll-body');if(_sb)_sb.innerHTML='<div style="padding:20px;color:#ff5252;font-size:13px;line-height:1.6;"><b>App error:</b><br>'+e.message+'<br><br><pre style="font-size:10px;white-space:pre-wrap;color:#ff9800;">'+e.stack+'</pre></div>';
 }
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
