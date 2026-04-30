@@ -7927,13 +7927,17 @@ function showSection(name){
 }
 
 // INIT
-if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
-checkOnboarding();
-applyClubLogo();
-renderHome();
-maybeShowCheckinSheet();
-renderCustomTargetMeets();
-// Register service worker for offline support
+try{
+  if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
+  checkOnboarding();
+  applyClubLogo();
+  renderHome();
+  maybeShowCheckinSheet();
+  renderCustomTargetMeets();
+}catch(e){
+  document.getElementById('header-sub').textContent='Error: '+e.message;
+  document.getElementById('content').innerHTML='<div style="padding:20px;color:#ff5252;font-size:13px;line-height:1.6;"><b>App error:</b><br>'+e.message+'<br><br><pre style="font-size:10px;white-space:pre-wrap;">'+e.stack+'</pre></div>';
+}
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
