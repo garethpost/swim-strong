@@ -5766,7 +5766,7 @@ function _foodRow(food,opts){
     <button onclick="toggleFoodFav('${esc(food.id)}')" style="background:none;border:none;font-size:16px;color:${isFav?'var(--gold)':'var(--muted)'};cursor:pointer;padding:0 2px;flex-shrink:0;">${favIcon}</button>
     <div style="flex:1;min-width:0;">
       <div style="font-size:13px;font-weight:600;white-space:normal;line-height:1.3;">${food.name}</div>
-      <div style="font-size:11px;color:var(--muted);">${food.cal} kcal · ${food.carbs}g C · ${food.protein}g P · ${food.fat}g F <span style="color:var(--border);">(${per100})</span></div>
+      <div style="font-size:11px;color:var(--muted);">${food.cal} kcal \xb7 ${food.carbs}g C \xb7 ${food.protein}g P \xb7 ${food.fat}g F <span style="color:var(--border);">(${per100})</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
       <button onclick="var i=document.getElementById('${qtyId}');if(i&&parseInt(i.value)>1)i.value=parseInt(i.value)-1;" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
@@ -5787,110 +5787,108 @@ function toggleFoodFav(foodId){
     else S.foodFavourites.push(foodId);
   }
   DB.set('foodFavourites',S.foodFavourites);
-  // Refresh the current tab display
-  const res=document.getElementById('meal-food-results');
-  if(res)res.innerHTML=_buildFoodTabContent();
+  _refreshFoodPanel();
 }
 
-// Build food tab pill row
-function _foodTabPills(){
-  const tabs=[['library','📚 Library'],['recents','🕐 Recent'],['favourites','★ Favs'],['search','🔍 Search']];
-  return`<div style="display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;">
-    ${tabs.map(([id,lbl])=>`<button onclick="setFoodTab('${id}')" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid ${S._foodTab===id?'var(--accent)':'var(--border)'};background:${S._foodTab===id?'rgba(26,188,191,0.15)':'var(--surface)'};color:${S._foodTab===id?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">${lbl}</button>`).join('')}
-  </div>`;
-}
-
-function setFoodTab(tab){
-  S._foodTab=tab;
-  const res=document.getElementById('meal-food-results');
-  if(res)res.innerHTML=_buildFoodTabContent();
-  // Focus search input if switching to search tab
-  if(tab==='search'){setTimeout(()=>{const el=document.getElementById('off-search-input');if(el)el.focus();},50);}
-}
-
-function _buildFoodTabContent(){
-  const pills=_foodTabPills();
-  switch(S._foodTab){
-    case 'library': return pills+_buildLibraryTab();
-    case 'recents': return pills+_buildRecentsTab();
-    case 'favourites': return pills+_buildFavsTab();
-    case 'search': return pills+_buildSearchTab();
-    default: return pills+_buildLibraryTab();
-  }
-}
-
-function _buildLibraryTab(){
-  const q=(S._mealSearch||'').toLowerCase();
-  const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
-  const filtered=q?SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q)):null;
-  let html=`<input type="text" id="lib-search-input" placeholder="Filter library..." value="${esc(S._mealSearch||'')}"
-    oninput="S._mealSearch=this.value;const r=document.getElementById('lib-results');if(r)r.innerHTML=_buildLibraryRows();"
-    style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:9px 12px;font-family:var(--font);margin-bottom:8px;">
-  <div id="lib-results" style="max-height:340px;overflow-y:auto;">${_buildLibraryRows()}</div>`;
-  return html;
-}
-function _buildLibraryRows(){
-  const q=(S._mealSearch||'').toLowerCase();
-  const filtered=q?SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q)):SWIMMER_FOODS;
-  if(!filtered.length)return`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No matches</div>`;
-  if(q)return filtered.map(f=>_foodRow(f)).join('');
-  const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
-  return cats.map(cat=>{
-    const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
-    return`<div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;padding-top:4px;">${cat}</div>`+catFoods.map(f=>_foodRow(f)).join('');
-  }).join('');
-}
-
-function _buildRecentsTab(){
+// Unified food panel — single view, no tabs
+function _buildFoodPanel(){
+  const q=(S._mealSearch||'').trim();
   const recents=S.foodRecents||[];
-  if(!recents.length)return`<div style="text-align:center;padding:24px 16px;color:var(--muted);font-size:13px;">No recent foods yet. Log something and it'll appear here.</div>`;
-  return`<div style="max-height:360px;overflow-y:auto;">${recents.map(f=>_foodRow(f)).join('')}</div>`;
-}
-
-function _buildFavsTab(){
   const favIds=S.foodFavourites||[];
-  if(!favIds.length)return`<div style="text-align:center;padding:24px 16px;color:var(--muted);font-size:13px;">Tap ☆ on any food to add it to your favourites.</div>`;
-  const foods=favIds.map(id=>resolveFood(id)).filter(Boolean);
-  return`<div style="max-height:360px;overflow-y:auto;">${foods.map(f=>_foodRow(f)).join('')}</div>`;
-}
 
-function _buildSearchTab(){
-  return`<div>
-    <input type="text" id="off-search-input" placeholder="Search 3M+ foods (e.g. chicken breast, quest bar, cheerios)..."
-      oninput="offSearchDebounce(this.value)"
-      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:9px 12px;font-family:var(--font);margin-bottom:8px;">
-    <div style="display:flex;gap:6px;margin-bottom:10px;">
-      <button class="btn-ghost" style="flex:1;font-size:12px;padding:7px 0;" onclick="openCustomFoodModal()">+ Custom food</button>
-    </div>
-    <div id="off-search-results" style="max-height:340px;overflow-y:auto;">
-      <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Type to search Open Food Facts database</div>
-    </div>
-  </div>`;
-}
-
-// Open Food Facts search with debounce
-function offSearchDebounce(val){
-  clearTimeout(S._offSearchTimer);
-  if(!val||val.length<2){
-    const r=document.getElementById('off-search-results');
-    if(r)r.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Type to search Open Food Facts database</div>`;
-    return;
+  // Recents strip (horizontal chips) — only show when not searching
+  let recentsHtml='';
+  if(!q&&recents.length){
+    const chips=recents.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+    recentsHtml=`<div style="margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div>
+      <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
+    </div>`;
   }
-  const r=document.getElementById('off-search-results');
-  if(r)r.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">🔍 Searching...</div>`;
-  S._offSearchTimer=setTimeout(()=>offSearch(val),500);
+
+  // Favs strip — only show when not searching and there are favs
+  let favsHtml='';
+  if(!q&&favIds.length){
+    const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
+    if(favFoods.length){
+      const chips=favFoods.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      favsHtml=`<div style="margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div>
+        <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
+      </div>`;
+    }
+  }
+
+  // Library rows — filtered if searching
+  let libraryHtml='';
+  if(!q){
+    // Show full categorised library
+    const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
+    libraryHtml=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library</div>`+
+      cats.map(cat=>{
+        const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
+        return`<div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;">${cat}</div>`+catFoods.map(f=>_foodRow(f)).join('');
+      }).join('');
+  } else {
+    // Local library matches first
+    const localMatches=SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
+    if(localMatches.length){
+      libraryHtml=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library matches</div>`+localMatches.map(f=>_foodRow(f)).join('');
+    }
+  }
+
+  // API search results area (only shown when searching)
+  let apiHtml='';
+  if(q){
+    apiHtml=`<div id="food-api-results" style="margin-top:8px;">
+      <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>
+    </div>`;
+  }
+
+  return`
+    <input type="text" id="food-search-input"
+      placeholder="Search foods (e.g. banana, chicken, quest bar)..."
+      value="${esc(q)}"
+      oninput="onFoodSearch(this.value)"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:9px 12px;font-family:var(--font);margin-bottom:8px;box-sizing:border-box;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="openCustomFoodModal()">+ Custom food</button>
+    </div>
+    ${recentsHtml}${favsHtml}
+    <div id="food-library-rows">${libraryHtml}</div>
+    ${apiHtml}`;
 }
 
-async function offSearch(query){
-  const r=document.getElementById('off-search-results');
+function _refreshFoodPanel(){
+  const res=document.getElementById('meal-food-results');
+  if(res)res.innerHTML=_buildFoodPanel();
+}
+
+// Unified search handler
+function onFoodSearch(val){
+  S._mealSearch=val;
+  clearTimeout(S._offSearchTimer);
+  // Rebuild panel immediately for local results
+  _refreshFoodPanel();
+  // Trigger API search if query long enough
+  if(val&&val.trim().length>=2){
+    const r=document.getElementById('food-api-results');
+    if(r)r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>`;
+    S._offSearchTimer=setTimeout(()=>foodApiSearch(val.trim()),600);
+  }
+}
+
+// API search — try USDA first, fall back to Open Food Facts
+async function foodApiSearch(query){
+  const r=document.getElementById('food-api-results');
+  if(!r)return;
   try{
-    // USDA FoodData Central — English only, branded + SR Legacy foods
+    // Try USDA FoodData Central first
     const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=DEMO_KEY`;
-    const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});
-    if(!resp.ok)throw new Error('Network error');
+    const resp=await fetch(url,{signal:AbortSignal.timeout(6000)});
+    if(!resp.ok)throw new Error('USDA error');
     const data=await resp.json();
     const foods=(data.foods||[]);
-    // USDA nutrient IDs: 1008=Energy(kcal), 1005=Carbs, 1003=Protein, 1004=Fat
     function getNutrient(nutrients,id){
       const n=(nutrients||[]).find(n=>n.nutrientId===id||n.nutrientNumber===String(id));
       return n?Math.round(n.value*10)/10:0;
@@ -5901,7 +5899,7 @@ async function offSearch(query){
       const key=f.description.toLowerCase().trim();
       if(seen.has(key))return false;
       seen.add(key);return true;
-    }).slice(0,20).map(f=>{
+    }).slice(0,15).map(f=>{
       const cal=getNutrient(f.foodNutrients,1008);
       if(!cal)return '';
       const carbs=getNutrient(f.foodNutrients,1005);
@@ -5912,12 +5910,54 @@ async function offSearch(query){
       const food={id:'usda_'+f.fdcId,name,cal,carbs,protein,fat,per100g:true};
       return _foodRow(food);
     }).filter(Boolean).join('');
-    if(!rows){if(r)r.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No results for "<b>${esc(query)}</b>". Try a different name or add a custom food.</div>`;return;}
-    if(r)r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Per 100g · Powered by USDA FoodData Central</div>`+rows;
-  } catch(e){
-    if(r)r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable offline. Try the Library tab or add a Custom food.</div>`;
+    if(!rows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
+    r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">More results \xb7 per 100g \xb7 USDA FoodData Central</div>`+rows;
+  } catch(usdaErr){
+    // Fallback to Open Food Facts
+    try{
+      const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&lc=en&fields=product_name,product_name_en,brands,nutriments,_id,lang`;
+      const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});
+      if(!resp.ok)throw new Error('OFF error');
+      const data=await resp.json();
+      function getBestName(p){
+        if(p.product_name_en&&p.product_name_en.trim())return p.product_name_en.trim();
+        if((p.lang==='en'||!p.lang)&&p.product_name&&p.product_name.trim())return p.product_name.trim();
+        return null;
+      }
+      const seen=new Set();
+      const rows=(data.products||[]).filter(p=>{
+        const n=p.nutriments||{};
+        const hasKcal=n['energy-kcal_100g']||n['energy-kcal']||n['energy_100g'];
+        if(!hasKcal)return false;
+        const name=getBestName(p);
+        if(!name)return false;
+        const key=name.toLowerCase().trim();
+        if(seen.has(key))return false;
+        seen.add(key);return true;
+      }).slice(0,15).map(p=>{
+        const n=p.nutriments||{};
+        const cal=Math.round(n['energy-kcal_100g']||n['energy-kcal_serving']||((n['energy_100g']||0)/4.184));
+        const carbs=Math.round((n['carbohydrates_100g']||0)*10)/10;
+        const protein=Math.round((n['proteins_100g']||0)*10)/10;
+        const fat=Math.round((n['fat_100g']||0)*10)/10;
+        const brand=p.brands?` (${p.brands.split(',')[0].trim()})`: '';
+        const name=(getBestName(p)||'Unknown')+brand;
+        const food={id:'off_'+p._id,name:name.slice(0,60),cal,carbs,protein,fat,per100g:true};
+        return _foodRow(food);
+      }).filter(Boolean).join('');
+      if(!rows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
+      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">More results \xb7 per 100g \xb7 Open Food Facts</div>`+rows;
+    } catch(offErr){
+      r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable right now. Check your connection or add a Custom food.</div>`;
+    }
   }
 }
+
+// Keep these for compatibility
+function offSearchDebounce(val){onFoodSearch(val);}
+async function offSearch(query){await foodApiSearch(query);}
+function setFoodTab(tab){}
+function _buildFoodTabContent(){return _buildFoodPanel();}
 
 // Custom food modal
 function openCustomFoodModal(){
@@ -5944,10 +5984,10 @@ function saveCustomFood(){
   closeModal('custom-food-modal');
 }
 
-function _buildMealFoodResults(){return _buildFoodTabContent();}
+function _buildMealFoodResults(){return _buildFoodPanel();}
 function updateMealSearchResults(){
   const res=document.getElementById('meal-food-results');
-  if(res)res.innerHTML=_buildFoodTabContent();
+  if(res)res.innerHTML=_buildFoodPanel();
 }
 function _buildMealTimingRows(data){
   const hasSwim=data.swimCount>=1;
