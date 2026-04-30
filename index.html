@@ -4383,7 +4383,7 @@ function renderHomeFuelRings(){
   if(!el)return;
   const data=getDailyCalFromSchedule();
   if(!data){
-    el.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Today's Fuel</div><div style="font-size:11px;color:var(--muted);">Set up Fuel tab to see nutrition progress.</div>';
+    el.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Today's Fuel</div><div style="font-size:11px;color:var(--muted);">Set up Fuel tab to see nutrition progress.</div>`;
     return;
   }
   S.mealLog=S.mealLog||DB.get('mealLog',{});
