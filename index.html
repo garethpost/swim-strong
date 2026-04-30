@@ -5711,6 +5711,13 @@ S._offSearchTimer=null;
 function resolveFood(foodId){
   return SWIMMER_FOODS.find(f=>f.id===foodId)||S.foodCache[foodId]||null;
 }
+// Lookup food by ID from library or cache, then log it
+function addFoodById(foodId,qty){
+  const food=resolveFood(foodId);
+  if(!food){console.warn('addFoodById: food not found',foodId);return;}
+  addApiFood(food,qty||1);
+}
+
 function addMealEntry(foodId,qty){
   const food=resolveFood(foodId);if(!food)return;
   const key=getMealLogKey();
@@ -5774,6 +5781,11 @@ function toggleMealCat(cat){
 // ── Food row renderer — works for local and API foods ──
 function _foodRow(food,opts){
   opts=opts||{};
+  // Cache API foods so addFoodById can resolve them by ID
+  if(food.id&&!SWIMMER_FOODS.find(f=>f.id===food.id)){
+    if(!S.foodCache)S.foodCache={};
+    S.foodCache[food.id]=food;
+  }
   const safeId=food.id.replace(/[^a-zA-Z0-9_-]/g,'_');
   const qtyId='fq-'+safeId;
   const isFav=(S.foodFavourites||[]).includes(food.id);
@@ -5789,7 +5801,7 @@ function _foodRow(food,opts){
       <button onclick="var i=document.getElementById('${qtyId}');if(i&&parseInt(i.value)>1)i.value=parseInt(i.value)-1;" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
       <input id="${qtyId}" type="number" min="1" max="20" value="1" style="width:28px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-weight:700;padding:3px 1px;font-family:var(--font);">
       <button onclick="var i=document.getElementById('${qtyId}');if(i&&parseInt(i.value)<20)i.value=parseInt(i.value)+1;" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-      <button onclick="addApiFood(${JSON.stringify(food)},parseInt(document.getElementById('${qtyId}').value)||1)" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:700;cursor:pointer;">Add</button>
+      <button onclick="addFoodById('${esc(food.id)}',parseInt(document.getElementById('${qtyId}').value)||1)" style="background:var(--accent);color:#0D1F3C;border:none;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:700;cursor:pointer;">Add</button>
     </div>
   </div>`;
 }
@@ -5816,7 +5828,7 @@ function _buildFoodPanel(){
   // Recents strip (horizontal chips) — only show when not searching
   let recentsHtml='';
   if(!q&&recents.length){
-    const chips=recents.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+    const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
     recentsHtml=`<div style="margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div>
       <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
@@ -5828,7 +5840,7 @@ function _buildFoodPanel(){
   if(!q&&favIds.length){
     const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
     if(favFoods.length){
-      const chips=favFoods.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
       favsHtml=`<div style="margin-bottom:8px;">
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div>
         <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
@@ -5896,7 +5908,7 @@ function _updateFoodPanelContent(){
   const recentsEl=document.getElementById('food-recents-strip');
   if(recentsEl){
     if(!q&&recents.length){
-      const chips=recents.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
       recentsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
       recentsEl.style.display='';
     } else {
@@ -5910,7 +5922,7 @@ function _updateFoodPanelContent(){
     if(!q&&favIds.length){
       const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
       if(favFoods.length){
-        const chips=favFoods.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+        const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
         favsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
         favsEl.style.display='';
       }
