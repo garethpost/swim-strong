@@ -36,13 +36,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
 .unit-picker-btn.active{background:var(--accent);color:#000;}
 #wt-kg.active,#wt-lbs.active,#dist-km.active,#dist-mi.active{background:var(--accent);color:#000;}
-#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;}
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 #nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 20px;z-index:100;}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--muted);font-size:9px;font-family:var(--font);cursor:pointer;padding:6px 0;transition:color 0.2s;}
 .nav-btn.active{color:var(--accent);}
 .nav-btn svg{width:20px;height:20px;}
-.section{display:none;padding:16px;}
-.section.active{display:block;}.section.active#section-fuel,.section.active#section-home,.section.active#section-workout{display:flex;flex-direction:column;height:calc(100vh - 80px);}
+.section{display:none;padding:16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;}
+.section.active{display:block;}.section.active#section-fuel,.section.active#section-home,.section.active#section-workout{display:flex;flex-direction:column;padding:0;overflow:hidden;}
 .card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);}
 .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
 .btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font);font-size:16px;font-weight:600;cursor:pointer;transition:all 0.15s;}
