@@ -5854,26 +5854,84 @@ function _buildFoodPanel(){
     <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
       <button class="btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="openCustomFoodModal()">+ Custom food</button>
     </div>
-    ${recentsHtml}${favsHtml}
+    <div id="food-recents-strip" style="${!q&&recentsHtml?'':'display:none'}">${recentsHtml}</div>
+    <div id="food-favs-strip" style="${!q&&favsHtml?'':'display:none'}">${favsHtml}</div>
     <div id="food-library-rows">${libraryHtml}</div>
-    ${apiHtml}`;
+    <div id="food-api-results" style="${q?'margin-top:8px;':'display:none'}">${q?'<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>':''}</div>`;
 }
 
 function _refreshFoodPanel(){
   const res=document.getElementById('meal-food-results');
   if(res)res.innerHTML=_buildFoodPanel();
+  // After full rebuild, restore focus to search input without triggering keyboard dismiss
+  setTimeout(()=>{const el=document.getElementById('food-search-input');if(el&&document.activeElement!==el){}},0);
 }
 
-// Unified search handler
+// Update only the dynamic parts — never destroy the input element (kills keyboard on iOS)
+function _updateFoodPanelContent(){
+  const q=(S._mealSearch||'').trim();
+  const recents=S.foodRecents||[];
+  const favIds=S.foodFavourites||[];
+
+  // Update recents strip
+  const recentsEl=document.getElementById('food-recents-strip');
+  if(recentsEl){
+    if(!q&&recents.length){
+      const chips=recents.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      recentsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
+      recentsEl.style.display='';
+    } else {
+      recentsEl.style.display='none';
+    }
+  }
+
+  // Update favs strip
+  const favsEl=document.getElementById('food-favs-strip');
+  if(favsEl){
+    if(!q&&favIds.length){
+      const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
+      if(favFoods.length){
+        const chips=favFoods.slice(0,8).map(f=>`<button onclick="addApiFood(${JSON.stringify(f)},1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+        favsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
+        favsEl.style.display='';
+      }
+    } else {
+      favsEl.style.display='none';
+    }
+  }
+
+  // Update library rows
+  const libEl=document.getElementById('food-library-rows');
+  if(libEl){
+    if(!q){
+      const cats=[...new Set(SWIMMER_FOODS.map(f=>f.cat))];
+      libEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library</div>`+
+        cats.map(cat=>{
+          const catFoods=SWIMMER_FOODS.filter(f=>f.cat===cat);
+          return`<div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;">${cat}</div>`+catFoods.map(f=>_foodRow(f)).join('');
+        }).join('');
+    } else {
+      const localMatches=SWIMMER_FOODS.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()));
+      libEl.innerHTML=localMatches.length
+        ?`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Library matches</div>`+localMatches.map(f=>_foodRow(f)).join('')
+        :'';
+    }
+  }
+
+  // Show/hide API results container
+  const apiEl=document.getElementById('food-api-results');
+  if(apiEl){
+    apiEl.style.display=q?'':'none';
+    if(q)apiEl.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>`;
+  }
+}
+
+// Unified search handler — never rebuilds the input, so keyboard stays up on iOS
 function onFoodSearch(val){
   S._mealSearch=val;
   clearTimeout(S._offSearchTimer);
-  // Rebuild panel immediately for local results
-  _refreshFoodPanel();
-  // Trigger API search if query long enough
+  _updateFoodPanelContent();
   if(val&&val.trim().length>=2){
-    const r=document.getElementById('food-api-results');
-    if(r)r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>`;
     S._offSearchTimer=setTimeout(()=>foodApiSearch(val.trim()),600);
   }
 }
