@@ -5884,46 +5884,36 @@ function offSearchDebounce(val){
 async function offSearch(query){
   const r=document.getElementById('off-search-results');
   try{
-    const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=40&lc=en&fields=product_name,product_name_en,brands,nutriments,serving_size,_id,lang`;
+    // USDA FoodData Central — English only, branded + SR Legacy foods
+    const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=DEMO_KEY`;
     const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});
     if(!resp.ok)throw new Error('Network error');
     const data=await resp.json();
-    // Pick the best English name for a product
-    function getBestName(p){
-      if(p.product_name_en&&p.product_name_en.trim())return p.product_name_en.trim();
-      // Fall back to product_name only if lang is English or unset
-      if((p.lang==='en'||!p.lang)&&p.product_name&&p.product_name.trim())return p.product_name.trim();
-      return null;
+    const foods=(data.foods||[]);
+    // USDA nutrient IDs: 1008=Energy(kcal), 1005=Carbs, 1003=Protein, 1004=Fat
+    function getNutrient(nutrients,id){
+      const n=(nutrients||[]).find(n=>n.nutrientId===id||n.nutrientNumber===String(id));
+      return n?Math.round(n.value*10)/10:0;
     }
-    // Reject names with non-Latin script characters (Cyrillic, Arabic, CJK, etc.)
-    function hasNonLatin(s){return /[\u0400-\u04FF\u0600-\u06FF\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]/.test(s);}
-    const products=(data.products||[]).filter(p=>{
-      const n=p.nutriments||{};
-      const hasKcal=n['energy-kcal_100g']||n['energy-kcal']||n['energy_100g'];
-      if(!hasKcal)return false;
-      const name=getBestName(p);
-      return name&&!hasNonLatin(name);
-    });
-    if(!products.length){if(r)r.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No results for "<b>${esc(query)}</b>". Try a different name or add a custom food.</div>`;return;}
-    // De-duplicate by resolved name (keep first occurrence)
     const seen=new Set();
-    const rows=products.filter(p=>{
-      const name=getBestName(p)||'';
-      const key=name.toLowerCase().trim();
+    const rows=foods.filter(f=>{
+      if(!f.description)return false;
+      const key=f.description.toLowerCase().trim();
       if(seen.has(key))return false;
       seen.add(key);return true;
-    }).slice(0,20).map(p=>{
-      const n=p.nutriments||{};
-      const cal=Math.round(n['energy-kcal_100g']||n['energy-kcal_serving']||((n['energy_100g']||0)/4.184));
-      const carbs=Math.round((n['carbohydrates_100g']||0)*10)/10;
-      const protein=Math.round((n['proteins_100g']||0)*10)/10;
-      const fat=Math.round((n['fat_100g']||0)*10)/10;
-      const brand=p.brands?` (${p.brands.split(',')[0].trim()})`: '';
-      const name=(getBestName(p)||'Unknown')+brand;
-      const food={id:'off_'+p._id,name:name.slice(0,60),cal,carbs,protein,fat,per100g:true};
+    }).slice(0,20).map(f=>{
+      const cal=getNutrient(f.foodNutrients,1008);
+      if(!cal)return '';
+      const carbs=getNutrient(f.foodNutrients,1005);
+      const protein=getNutrient(f.foodNutrients,1003);
+      const fat=getNutrient(f.foodNutrients,1004);
+      const brand=f.brandOwner?` (${f.brandOwner.split(' ').slice(0,2).join(' ')})`:f.brandName?` (${f.brandName})`:'';
+      const name=(f.description+brand).slice(0,60);
+      const food={id:'usda_'+f.fdcId,name,cal,carbs,protein,fat,per100g:true};
       return _foodRow(food);
-    }).join('');
-    if(r)r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Per 100g · Powered by Open Food Facts</div>`+rows;
+    }).filter(Boolean).join('');
+    if(!rows){if(r)r.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">No results for "<b>${esc(query)}</b>". Try a different name or add a custom food.</div>`;return;}
+    if(r)r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Per 100g · Powered by USDA FoodData Central</div>`+rows;
   } catch(e){
     if(r)r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable offline. Try the Library tab or add a Custom food.</div>`;
   }
