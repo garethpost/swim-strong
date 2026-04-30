@@ -179,9 +179,19 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- HOME -->
     <div id="section-home" class="section active">
       <div id="home-club-logo-wrap" style="display:none;text-align:center;margin-bottom:8px;"><img id="home-club-logo" src="" alt="" style="height:56px;object-fit:contain;border-radius:8px;"></div>
-      <p class="section-title" id="greeting">Let's go.</p>
-      <p class="section-sub" id="phase-info">—</p>
+
+      <!-- Greeting + check-in -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <p class="section-title" id="greeting" style="margin-bottom:2px;">Let's go.</p>
+          <p class="section-sub" id="phase-info" style="margin-bottom:0;">—</p>
+        </div>
+        <button onclick="showCheckinSheet()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 12px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);flex-shrink:0;margin-top:4px;">Check-in</button>
+      </div>
+
       <div id="alert-zone"></div>
+
+      <!-- Stats row — keep existing stat-box class, just tighten labels -->
       <div class="stats-row">
         <div class="stat-box" id="stat-cal-box" style="cursor:default;">
           <div class="stat-val" id="stat-cal" style="font-size:18px;">—</div>
@@ -191,44 +201,42 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div class="stat-box"><div class="stat-val" id="stat-streak">0</div><div class="stat-lbl">Day<br>Streak</div></div>
         <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total<br>Sessions</div></div>
       </div>
-      <!-- Week at a glance strip -->
+
+      <!-- Week strip -->
       <div class="card" style="margin-bottom:12px;padding:12px 16px;" id="week-strip-card"></div>
 
-      <!-- KM Tracker — same width as Today/Next Meet grid below -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div class="card" style="margin-bottom:0;padding:12px 16px;grid-column:1/-1;">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div class="card-title" style="margin-bottom:2px;">Season Distance</div>
-              <div style="display:flex;align-items:baseline;gap:6px;">
-                <div style="font-size:28px;font-weight:900;color:var(--accent);" id="km-display">0.0</div>
-                <div style="font-size:13px;color:var(--muted);" id="km-unit-label">km</div>
-              </div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="km-session-label">tap + to log today's distance</div>
+      <!-- KM Tracker -->
+      <div class="card" style="padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Season Distance</div>
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <div style="font-size:26px;font-weight:900;color:var(--accent);" id="km-display">0.0</div>
+              <div style="font-size:13px;color:var(--muted);" id="km-unit-label">km</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-              <button onclick="adjustKm(1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
-              <button onclick="adjustKm(-1)" style="width:44px;height:44px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:22px;font-weight:700;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
-            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="km-session-label">tap + to log today's distance</div>
           </div>
-          <!-- Season target progress -->
-          <div style="margin-top:10px;">
-            <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;">
-              <div id="km-season-bar" style="background:linear-gradient(90deg,var(--accent2),var(--accent));height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
-            </div>
-            <div style="font-size:10px;color:var(--muted);" id="km-season-label">—</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="adjustKm(1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+            <button onclick="adjustKm(-1)" style="width:40px;height:40px;border-radius:10px;border:none;background:var(--surface);color:var(--text);font-size:20px;cursor:pointer;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;">−</button>
           </div>
-          <div id="km-input-row" style="display:none;margin-top:10px;gap:8px;align-items:center;">
-            <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
-            <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
-            <button onclick="cancelKm()" class="btn-ghost">✕</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;">
+            <div id="km-season-bar" style="background:var(--accent);height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
           </div>
+          <div style="font-size:10px;color:var(--muted);" id="km-season-label">—</div>
+        </div>
+        <div id="km-input-row" style="display:none;margin-top:10px;gap:8px;align-items:center;">
+          <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30" placeholder="km today" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+          <button onclick="logKm()" class="btn btn-primary btn-sm">Log</button>
+          <button onclick="cancelKm()" class="btn-ghost">✕</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        <div class="card" style="margin-bottom:0;min-height:160px;" id="home-today-summary"></div>
-        <div class="card" style="margin-bottom:0;min-height:160px;">
-          <div class="card-title">Next Meet</div>
+        <div class="card" style="margin-bottom:0;min-height:150px;" id="home-today-summary"></div>
+        <div class="card" style="margin-bottom:0;min-height:150px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Next Meet</div>
           <div id="home-meets-list"></div>
         </div>
       </div>
@@ -4166,8 +4174,8 @@ function renderHomeTodaySummary(){
   ):'';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="card-title" style="margin-bottom:0;">Today</div>
-      <span style="font-size:9px;font-weight:700;color:var(--bg);background:${loadColor};padding:2px 7px;border-radius:6px;">${loadLabel}</span>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Today</div>
+      <span style="font-size:9px;font-weight:700;color:#000;background:${loadColor};padding:2px 8px;border-radius:20px;">${loadLabel}</span>
     </div>
     ${rows}${poolCheckinHtml}`;
 }
@@ -4201,12 +4209,10 @@ function renderHomeMeets(){
   else{const w=Math.floor(dO/7),d=dO%7;countdown=(w?w+'w ':'')+(d?d+'d':'');cdColor=dO<=14?'var(--orange)':'var(--green)';}
   const pri=next.priority==='A'?{bg:'var(--gold)',c:'var(--bg)'}:next.priority==='B'?{bg:'var(--muted)',c:'var(--bg)'}:{bg:'var(--border)',c:'var(--text)'};
   el.innerHTML=`
-  <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-    <span style="font-size:9px;font-weight:800;background:${pri.bg};color:${pri.c};padding:2px 6px;border-radius:5px;">${next.priority}</span>
-  </div>
-  <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:4px;">${next.name}</div>
+  <div style="display:inline-block;font-size:8px;font-weight:800;background:${pri.bg};color:${pri.c};padding:2px 8px;border-radius:20px;margin-bottom:6px;">${next.priority==='A'?'A MEET':next.priority==='B'?'B MEET':'C MEET'}</div>
+  <div style="font-size:13px;font-weight:800;color:var(--text);line-height:1.3;margin-bottom:3px;">${next.name}</div>
   <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">${startStr}${endStr}</div>
-  <div style="font-size:16px;font-weight:800;color:${cdColor};">${countdown}</div>`;
+  <div style="font-size:18px;font-weight:800;color:${cdColor};line-height:1;">${countdown}</div>`;
 }
 
 // ── Week Strip ──
