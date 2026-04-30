@@ -1,5 +1,5 @@
-// SwimFitPro Service Worker — cache-first for offline support
-const CACHE_NAME = 'swimfitpro-v5';
+// SwimFitPro Service Worker
+const CACHE_NAME = 'swimfitpro-v6';
 const CACHE_URLS = [
   './index.html',
   './icons/Icon-513.jpeg',
@@ -13,7 +13,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: clean up old caches and immediately take control of all clients
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -23,32 +23,48 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: cache-first, fall back to network, cache new successful responses
+// Fetch strategy:
+// - index.html → network-first (always get latest, fall back to cache if offline)
+// - everything else → cache-first (fast, fall back to network)
 self.addEventListener('fetch', event => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
+  const url = new URL(event.request.url);
+  const isNavigation = event.request.mode === 'navigate' ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('/index.html') ||
+    url.pathname.endsWith('/');
 
-      return fetch(event.request).then(response => {
-        // Cache successful responses for html/js/css/images
+  if (isNavigation) {
+    // Network-first for the app shell — always get fresh HTML
+    event.respondWith(
+      fetch(event.request).then(response => {
         if (response && response.status === 200) {
-          const url = new URL(event.request.url);
-          const ext = url.pathname.split('.').pop().toLowerCase();
-          if (['html','js','css','jpeg','jpg','png','svg','woff','woff2'].includes(ext)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       }).catch(() => {
-        // Offline fallback for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+        // Offline fallback
+        return caches.match('./index.html');
+      })
+    );
+  } else {
+    // Cache-first for all other assets (icons, images, etc.)
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response && response.status === 200) {
+            const ext = url.pathname.split('.').pop().toLowerCase();
+            if (['js','css','jpeg','jpg','png','svg','woff','woff2'].includes(ext)) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            }
+          }
+          return response;
+        }).catch(() => null);
+      })
+    );
+  }
 });
