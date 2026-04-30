@@ -1861,7 +1861,7 @@ function updateUnitPickers(){
   stylePicker(document.getElementById('dist-km'), S.useKm);
   stylePicker(document.getElementById('dist-mi'),!S.useKm);
 }
-document.getElementById('unit-btn').style.display='none';
+const _ub=document.getElementById('unit-btn');if(_ub)_ub.style.display='none';
 // Legacy toggle stub — unit-btn is permanently hidden; units moved to More > Settings
 function toggleUnits(){setWeightUnit(!S.useKg);}
 
@@ -4529,7 +4529,7 @@ function updateCheckin(){
     if(avgEl)avgEl.innerHTML=`Saved ${hh}:${mm} &nbsp;·&nbsp; 7-day avg: <b style="color:var(--accent)">${avgSleep}h sleep</b> · <b style="color:var(--accent)">${avgR}/5 readiness</b>`;
   },800);
 }
-document.getElementById('sleep-slider').value=S.sleep;document.getElementById('readiness-slider').value=S.readiness;
+const _ss=document.getElementById('sleep-slider');if(_ss)_ss.value=S.sleep;const _rs=document.getElementById('readiness-slider');if(_rs)_rs.value=S.readiness;
 
 // ── Daily Check-In Sheet ──
 function hasCheckedInToday(){
