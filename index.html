@@ -8349,9 +8349,6 @@ function openSwimLog(){
   const goalEl=document.getElementById('swim-log-season-goal');
   const unitEls=document.querySelectorAll('#swim-log-unit,#swim-log-goal-unit');
   unitEls.forEach(el=>el.textContent=unit);
-  // Pre-fill today's date
-  const dateEl=document.getElementById('swim-log-date');
-  if(dateEl)dateEl.value=dKey(new Date());
   // Pre-fill current season goal
   if(goalEl){
     const currentGoal=S.kmSeasonTarget||(S.useKm?500:300);
@@ -8372,12 +8369,11 @@ function openSwimLog(){
 }
 function saveSwimLog(){
   const kmEl=document.getElementById('swim-log-km');
-  const dateEl=document.getElementById('swim-log-date');
   const goalEl=document.getElementById('swim-log-season-goal');
-  if(!kmEl||!dateEl)return;
+  if(!kmEl)return;
   const rawDist=parseFloat(kmEl.value);
   if(!rawDist||rawDist<=0){alert('Enter a distance.');return;}
-  const date=dateEl.value||dKey(new Date());
+  const date=dKey(new Date());
   // Convert to km for storage
   const distKm=S.useKm?rawDist:rawDist/0.621371;
   // Save pool log entry
@@ -8438,12 +8434,6 @@ if('serviceWorker' in navigator){
           style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:24px;font-weight:800;padding:12px 14px;font-family:var(--font);text-align:center;">
         <span id="swim-log-unit" style="font-size:16px;font-weight:700;color:var(--muted);">km</span>
       </div>
-    </div>
-
-    <div style="margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Date</div>
-      <input type="date" id="swim-log-date"
-        style="width:100%;max-width:100%;box-sizing:border-box;display:block;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;padding:11px 14px;font-family:var(--font);-webkit-appearance:none;appearance:none;">
     </div>
 
     <div style="margin-bottom:18px;">
