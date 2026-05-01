@@ -94,8 +94,6 @@ input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
 .set-input::placeholder{color:var(--muted);font-size:11px;}
 .set-check{width:26px;height:26px;border-radius:6px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all 0.15s;}
 .set-check.done{background:var(--green);border-color:var(--green);color:#000;font-weight:900;}
-.timer-display{font-size:48px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;color:var(--accent);margin:12px 0;}
-.timer-controls{display:flex;gap:8px;}
 .pb-event{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
 .pb-event:last-child{border-bottom:none;}
 .gap-pill{display:inline-block;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700;}
@@ -241,23 +239,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="workout-content"></div>
       <div id="baseline-card"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
-        <div class="card" style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div class="card-title" style="margin-bottom:0;">Rest Timer</div>
-            <div id="notif-status" style="font-size:10px;color:var(--muted);"></div>
-          </div>
-          <div id="notif-explain" style="display:none;background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-radius:8px;padding:9px 11px;margin-bottom:10px;font-size:12px;color:var(--muted);line-height:1.5;">
-            🔔 <strong style="color:var(--text);">Enable background alerts</strong> so the timer can ping you when rest is up — even if your phone screen is off.<br>
-            <button onclick="requestNotifPermission()" style="margin-top:6px;padding:5px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-size:12px;font-weight:700;cursor:pointer;">Enable Notifications</button>
-          </div>
-          <div class="timer-display" id="timer-display">1:30</div>
-          <div class="timer-controls">
-            <button class="btn-ghost" onclick="setTimer(60)">60s</button>
-            <button class="btn-ghost" onclick="setTimer(90)">90s</button>
-            <button class="btn-ghost" onclick="setTimer(120)">2m</button>
-            <button class="btn btn-primary btn-sm" onclick="toggleTimer()" id="timer-btn">Start</button>
-          </div>
-        </div>
         <button class="btn btn-primary" onclick="finishWorkout()">Complete Session ✓</button>
       </div>
     </div>
@@ -1706,7 +1687,6 @@ let S={
   editingDay:null,
   editSel:{},
   activeTStroke:'50 Free',
-  timerSecs:90,timerRunning:false,timerInterval:null,
   hydrationLog:DB.get('hydrationLog',{}), // {YYYY-MM-DD: count}
   seasonKmTarget:DB.get('seasonKmTarget',500), // km target for the season
   sessionRPELog:DB.get('sessionRPELog',[]), // [{date,rpe,load}]
@@ -7157,107 +7137,6 @@ function importData(event){
   event.target.value='';
 }
 
-// ── Timer ──
-function setTimer(s){S.timerSecs=s;updTimer();}
-function updTimer(){const m=Math.floor(S.timerSecs/60),s=S.timerSecs%60;document.getElementById('timer-display').textContent=`${m}:${s.toString().padStart(2,'0')}`;}
-// Shared AudioContext — created on first user tap so iOS unlocks it
-let _audioCtx=null;
-function getAudioCtx(){
-  if(!_audioCtx)_audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  if(_audioCtx.state==='suspended')_audioCtx.resume();
-  return _audioCtx;
-}
-function playBeeps(freqs,ctx){
-  // freqs: array of {freq,t,dur}
-  freqs.forEach(({freq,t,dur})=>{
-    const osc=ctx.createOscillator();const gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.frequency.value=freq;osc.type='sine';
-    gain.gain.setValueAtTime(0.7,ctx.currentTime+t);
-    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+dur-0.02);
-    osc.start(ctx.currentTime+t);osc.stop(ctx.currentTime+t+dur);
-  });
-}
-function beepWarning(ctx){
-  // Single short beep at 3s warning
-  playBeeps([{freq:660,t:0,dur:0.15}],ctx);
-}
-function beepDone(ctx){
-  // Three ascending beeps — GO!
-  playBeeps([{freq:660,t:0,dur:0.18},{freq:880,t:0.22,dur:0.18},{freq:1100,t:0.44,dur:0.3}],ctx);
-}
-// ── Notifications ──
-function updateNotifStatus(){
-  const el=document.getElementById('notif-status');if(!el)return;
-  const expEl=document.getElementById('notif-explain');
-  if(!('Notification' in window)){el.textContent='';if(expEl)expEl.style.display='none';return;}
-  if(Notification.permission==='granted'){
-    el.textContent='🔔 On';el.style.color='var(--green)';
-    if(expEl)expEl.style.display='none';
-  } else if(Notification.permission==='denied'){
-    el.textContent='🔕 Blocked';el.style.color='var(--red)';
-    if(expEl)expEl.style.display='none';
-  } else {
-    el.textContent='';
-    if(expEl)expEl.style.display='block';
-  }
-}
-function requestNotifPermission(){
-  if(!('Notification' in window))return;
-  if(Notification.permission==='default'){
-    Notification.requestPermission().then(()=>updateNotifStatus());
-  } else {
-    updateNotifStatus();
-  }
-}
-function sendRestNotif(){
-  // Fire a web notification — works in background / other tabs if permission granted
-  if(!('Notification' in window)||Notification.permission!=='granted')return;
-  try{
-    new Notification('Rest over — GO! 💥',{
-      body:'Time to hit your next set. SwimFitPro',
-      icon:'icons/Icon-513.jpeg',
-      badge:'icons/Icon-513.jpeg',
-      silent:false,
-      tag:'rest-timer', // replaces any previous timer notification
-    });
-  }catch(e){}
-}
-
-function timerDone(){
-  try{const ctx=getAudioCtx();beepDone(ctx);}catch(e){}
-  try{navigator.vibrate&&navigator.vibrate([100,80,100,80,300]);}catch(e){}
-  sendRestNotif();
-  const el=document.getElementById('timer-display');
-  const btn=document.getElementById('timer-btn');
-  if(el){
-    el.style.color='var(--green)';
-    el.textContent='GO! ✓';
-    let flashes=0;const flash=setInterval(()=>{
-      el.style.opacity=el.style.opacity==='0.3'?'1':'0.3';
-      if(++flashes>=6){clearInterval(flash);el.style.opacity='1';}
-    },250);
-    setTimeout(()=>{el.style.color='var(--accent)';updTimer();},2000);
-  }
-  if(btn)btn.textContent='Start';
-}
-function toggleTimer(){
-  if(S.timerRunning){
-    clearInterval(S.timerInterval);S.timerRunning=false;
-    document.getElementById('timer-btn').textContent='Start';
-  } else {
-    // Unlock audio + request notification permission on this user gesture
-    try{getAudioCtx();}catch(e){}
-    requestNotifPermission();
-    S.timerRunning=true;
-    document.getElementById('timer-btn').textContent='Stop';
-    S.timerInterval=setInterval(()=>{
-      S.timerSecs--;updTimer();
-      if(S.timerSecs===3){try{beepWarning(getAudioCtx());}catch(e){}}
-      if(S.timerSecs<=0){clearInterval(S.timerInterval);S.timerRunning=false;S.timerSecs=90;timerDone();}
-    },1000);
-  }
-}
 
 // ── 1RM Baseline Card ──
 // Returns HTML string for the inline baseline form (used in off-season Strength Block + first-time setup)
@@ -8434,7 +8313,7 @@ function showSection(name){
     if(phaseEl)phaseEl.value=S.swimPhase;
     updatePhaseImpact();
   }
-  if(name==='workout'){renderWorkoutTab();updateNotifStatus();}
+  if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();}
 
