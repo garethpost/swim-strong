@@ -5630,6 +5630,11 @@ function generateOffSeasonWorkout(forceType){
   const dayType=forceType||getOffSeasonDayType()||'lower';
   const sp=getStrokeProfile();
   const intensity=ph?ph.liftIntensity:'GPP';
+  const _mult=getLoadMult();
+  const _load=getLoadDesc(_mult);
+  const _phaseLabel=ph?ph.name:'Off-Season';
+  const _phase={name:_phaseLabel,label:_phaseLabel,cls:'phase-gpp'};
+  const _schemeBase=getScheme('GPP',_mult);
 
   // Cardio session
   if(dayType==='cardio'||dayType==='oos_cardio'){
@@ -5646,8 +5651,10 @@ function generateOffSeasonWorkout(forceType){
       ?['🚴 Cycling Intervals','🚣 Rowing Intervals','🏃 Track Intervals']
       :['🚴 Steady Cycling','🚣 Steady Rowing','🏃 Easy Run'];
     return{
-      type:'cardio',
-      phase:ph?ph.name:'Off-Season',
+      type:'cardio',phase:_phase,mult:_mult,load:_load,scheme:_schemeBase,
+      emp:'balanced',taperNote:null,doubleDayNote:'',offSeason:true,
+      title:`${_phaseLabel} — Cardio`,subtitle:`${_load.label} · Off-Season Cardio`,
+      schedNote:'Off-Season cardio session',
       blocks:[{
         title:`${ph?ph.name+' — ':''}Cardio`,
         desc:cardioDesc,
@@ -5665,8 +5672,10 @@ function generateOffSeasonWorkout(forceType){
   // Mobility session (Transition phase)
   if(dayType==='mobility'){
     return{
-      type:'mobility',
-      phase:ph?ph.name:'Off-Season',
+      type:'mobility',phase:_phase,mult:_mult,load:_load,scheme:_schemeBase,
+      emp:'balanced',taperNote:null,doubleDayNote:'',offSeason:true,
+      title:`${_phaseLabel} — Mobility`,subtitle:`${_load.label} · Off-Season Mobility`,
+      schedNote:'Off-Season mobility session',
       blocks:[{
         title:'Transition — Mobility & Recovery',
         desc:'Full-body mobility. Focus on shoulder, hip, and thoracic spine.',
@@ -5715,12 +5724,12 @@ function generateOffSeasonWorkout(forceType){
     blocks.push({title:'Specific Prep — Power',desc:'Explosive intent on every rep. Bar speed is the goal.',exercises:exs});
   }
 
+  const dayLabel={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Cardio'}[dayType]||dayType;
   return{
-    type:dayType,
-    phase:ph?ph.name:'Off-Season',
-    offSeason:true,
-    scheme,
-    blocks
+    type:dayType,phase:_phase,mult:_mult,load:_load,scheme,
+    emp:'balanced',taperNote:null,doubleDayNote:'',offSeason:true,
+    title:`${_phaseLabel} — ${dayLabel}`,subtitle:`${_load.label} · ${_phaseLabel}`,
+    schedNote:'Off-Season session',blocks
   };
 }
 
