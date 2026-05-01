@@ -338,11 +338,11 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     </div>
 
     <!-- FUEL -->
-    <div id="section-fuel" class="section" style="padding:0;flex-direction:column;height:calc(100vh - 80px);">
-      <!-- Sticky rings header (populated by renderMealTracker) -->
-      <div id="fuel-sticky-header"></div>
+    <div id="section-fuel" class="section" style="padding:0;flex-direction:column;height:calc(100vh - 80px);overflow:hidden;">
+      <!-- Frozen rings header (populated by renderMealTracker) -->
+      <div id="fuel-sticky-header" style="flex-shrink:0;"></div>
       <!-- Scrollable content below header -->
-      <div id="fuel-scroll-body" style="flex:1;overflow-y:auto;padding:12px 16px 100px;">
+      <div id="fuel-scroll-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 100px;">
         <p class="section-title">Fuel</p>
         <p class="section-sub">Nutrition for a competitive swimmer</p>
         <div id="meal-tracker-section"></div>
@@ -6734,31 +6734,31 @@ function renderMealTracker(){
     const pctLabel=tgt?Math.round(rawPct*100):0;
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
       <svg width="88" height="88" viewBox="0 0 88 88">
-        <circle cx="44" cy="44" r="${radius}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7"/>
+        <circle cx="44" cy="44" r="${radius}" fill="none" stroke="var(--border)" stroke-width="7"/>
         <circle cx="44" cy="44" r="${radius}" fill="none" stroke="${color}" stroke-width="7"
           stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}"
           stroke-linecap="round" transform="rotate(-90 44 44)" style="transition:stroke-dashoffset 0.5s;"/>
-        <text x="44" y="38" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="system-ui,sans-serif">${r?Math.round(val):Math.round(val)}</text>
-        <text x="44" y="52" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9" font-family="system-ui,sans-serif">/${tgt}${unit}</text>
+        <text x="44" y="38" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="800" font-family="system-ui,sans-serif">${Math.round(val)}</text>
+        <text x="44" y="52" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="system-ui,sans-serif">/${tgt}${unit}</text>
       </svg>
       <div style="font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.5px;">${label}</div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.4);">${pctLabel}% eaten</div>
+      <div style="font-size:9px;color:var(--muted);">${pctLabel}%</div>
     </div>`;
   }
 
   // Render sticky header
   const stickyEl=document.getElementById('fuel-sticky-header');
   if(stickyEl){
-    stickyEl.innerHTML=`<div style="background:linear-gradient(160deg,#0a1628 0%,#0d2240 100%);border-bottom:1px solid rgba(255,255,255,0.08);padding:14px 16px 10px;position:sticky;top:0;z-index:50;">
+    stickyEl.innerHTML=`<div style="background:var(--card);border-bottom:1px solid var(--border);padding:14px 16px 10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.5);">Today's Fuel</div>
-        ${dlLabel?`<span style="font-size:10px;font-weight:700;color:${dlColor};background:rgba(255,255,255,0.06);border:1px solid ${dlColor};padding:2px 8px;border-radius:10px;">${dlLabel}</span>`:''}
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">Today's Fuel</div>
+        ${dlLabel?`<span style="font-size:10px;font-weight:700;color:${dlColor};background:rgba(0,0,0,0.08);border:1px solid ${dlColor};padding:2px 8px;border-radius:10px;">${dlLabel}</span>`:''}
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;justify-items:center;">
-        ${makeRing(Math.round(logCal),targets.cal,'#1ABCBF','Calories','kcal')}
-        ${makeRing(Math.round(logCarbs),targets.carbs,'#4A9EFF','Carbs','g')}
-        ${makeRing(Math.round(logProtein),targets.protein,'#F59E0B','Protein','g')}
-        ${makeRing(Math.round(logFat),targets.fat,'#EC4899','Fat','g')}
+        ${makeRing(Math.round(logCal),targets.cal,'var(--accent)','Calories','kcal')}
+        ${makeRing(Math.round(logCarbs),targets.carbs,'var(--green)','Carbs','g')}
+        ${makeRing(Math.round(logProtein),targets.protein,'var(--orange)','Protein','g')}
+        ${makeRing(Math.round(logFat),targets.fat,'var(--purple)','Fat','g')}
       </div>
     </div>`;
   }
