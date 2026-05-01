@@ -248,9 +248,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-times" class="section">
       <p class="section-title">Swim Times</p>
       <p class="section-sub" id="times-sub">Progression tracking for all strokes</p>
-      <!-- Standard toggle — rendered dynamically based on province -->
-      <div id="std-btn-row" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>
-      <div class="stroke-tabs" id="stroke-tabs"></div>
+      <!-- Standard + Event dropdowns -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Standard</label>
+          <select id="std-select" onchange="setStandard(this.value)" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-weight:600;padding:9px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;cursor:pointer;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M6 8L0 0h12z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;"></select>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Race</label>
+          <select id="stroke-select" onchange="selStroke(this.value)" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-weight:600;padding:9px 12px;font-family:var(--font);-webkit-appearance:none;appearance:none;cursor:pointer;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M6 8L0 0h12z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;"></select>
+        </div>
+      </div>
       <div id="times-content"></div>
       <!-- Custom Target Meets — qualifying time standards -->
       <div id="custom-target-meets" style="margin-top:4px;"></div>
@@ -3969,28 +3977,32 @@ function confirmSession(){
 function getBest(ev,pool){const h=S.timeHistory[ev];if(!h||!h.length)return null;const f=pool==='scm'?'scm':'lcm';return h.reduce((b,e)=>tSec(e[f])<tSec(b[f])?e:b,h[0]);}
 
 function renderStrokeTabs(){
-  // Primary events first (from profile), then rest
+  // ── Race dropdown ──
   const primary=(S.profile&&S.profile.primaryEvents&&S.profile.primaryEvents.length)?S.profile.primaryEvents:PRIMARY;
   const rest=ALL_EVENTS.filter(e=>!primary.includes(e));
   const ordered=[...primary,...rest];
-  // Ensure active stroke is valid
   if(!ordered.includes(S.activeTStroke))S.activeTStroke=ordered[0];
-  document.getElementById('stroke-tabs').innerHTML=ordered.map(s=>{
-    const hasPB=S.timeHistory[s]&&S.timeHistory[s].length>0;
-    return`<button class="stroke-tab${s===S.activeTStroke?' active':''}" onclick="selStroke('${s}')" style="${hasPB?'border-color:var(--accent);':''}">${s}</button>`;
-  }).join('');
-  // Render province-aware standard buttons
-  const stdRow=document.getElementById('std-btn-row');
-  if(stdRow){
+  const strokeSel=document.getElementById('stroke-select');
+  if(strokeSel){
+    strokeSel.innerHTML=ordered.map(s=>{
+      const hasPB=S.timeHistory[s]&&S.timeHistory[s].length>0;
+      return`<option value="${s}"${s===S.activeTStroke?' selected':''}>${hasPB?'● ':' '}${s}</option>`;
+    }).join('');
+    strokeSel.value=S.activeTStroke;
+  }
+  // ── Standard dropdown ──
+  const stdSel=document.getElementById('std-select');
+  if(stdSel){
     const provKeys=getProvStandardKeys();
     const icons={'provchamp':'🏅','provtrials':'🥈','bcprov':'🏅','mb_a':'🏅','mb_aa':'🥈','sk_a':'🏅','sk_aa':'🥈','on_oag':'🏅','on_oji':'🥈','qc_espoir':'🏅','qc_champ':'🥈','canada':'🇨🇦','canadatrials':'🍁'};
-    stdRow.innerHTML=provKeys.map(item=>{
+    stdSel.innerHTML=provKeys.map(item=>{
       const icon=item.key.startsWith('ctm_')?'🎯':(icons[item.key]||'🏅');
-      const lbl=item.key.startsWith('ctm_')?item.label:icon+' '+item.label;
-      return`<button class="stroke-tab${item.key===S.activeStandard?' active':''}" id="std-btn-${item.key}" onclick="setStandard('${esc(item.key)}')">${lbl}</button>`;
+      const lbl=item.key.startsWith('ctm_')?('🎯 '+item.label):(icon+' '+item.label);
+      return`<option value="${item.key}"${item.key===S.activeStandard?' selected':''}>${lbl}</option>`;
     }).join('');
+    stdSel.value=S.activeStandard;
   }
-  // Update times sub header
+  // ── Sub-header ──
   const sub=document.getElementById('times-sub');
   if(sub&&S.profile){
     let subStdLabel=STD_LABELS[S.activeStandard]||'Standards';
