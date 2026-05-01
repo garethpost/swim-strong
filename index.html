@@ -194,7 +194,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="stat-meet-name" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Next Meet</div>
         </div>
         <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;cursor:pointer;position:relative;" onclick="openSwimLog()">
-          <div style="position:absolute;top:6px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--green);color:#000;font-size:13px;font-weight:900;line-height:18px;text-align:center;opacity:0.9;">+</div>
+          <button onclick="event.stopPropagation();openSwimLog();" style="position:absolute;top:6px;right:7px;width:20px;height:20px;border-radius:50%;background:var(--green);color:#000;font-size:14px;font-weight:900;line-height:20px;text-align:center;border:none;cursor:pointer;padding:0;">+</button>
           <div id="stat-km" style="font-size:22px;font-weight:900;color:var(--green);line-height:1;">0.0</div>
           <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km</div>
         </div>
@@ -7343,7 +7343,7 @@ function renderSchedulePoolShortcut(){
           <div style="font-size:13px;color:var(--text);">${feelEmojis[todayLog.feel]||''} ${distStr?distStr+' logged':'Logged'}</div>
           ${todayLog.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${todayLog.notes}"</div>`:''}
         </div>
-        <div style="font-size:11px;color:var(--green);font-weight:700;">✓ Logged</div>
+        <button onclick="openPoolCheckinEdit('${key}')" style="font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-family:var(--font);cursor:pointer;">Edit</button>
       </div>
     </div>`;
   } else {
@@ -7389,7 +7389,9 @@ function renderPoolLog(){
 
 // ── Pool Session Check-In ──
 let _pendingPoolFeel=3;
+let _editingPoolDate=null;
 function openPoolCheckin(){
+  _editingPoolDate=null;
   _pendingPoolFeel=3;
   document.getElementById('pool-checkin-date').textContent=new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
   document.getElementById('pool-dist-input').value='';
@@ -7398,6 +7400,22 @@ function openPoolCheckin(){
   document.getElementById('pool-notes-input').value='';
   document.getElementById('pool-dist-unit').textContent=S.useKm?'km':'mi';
   setPoolFeel(3);
+  openModal('pool-checkin-modal');
+}
+function openPoolCheckinEdit(dateKey){
+  const existing=S.poolLog.find(e=>e.date===dateKey);
+  if(!existing){openPoolCheckin();return;}
+  _editingPoolDate=dateKey;
+  _pendingPoolFeel=existing.feel||3;
+  const d=new Date(dateKey+'T00:00:00');
+  document.getElementById('pool-checkin-date').textContent=d.toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
+  const distDisp=existing.distKm?(S.useKm?existing.distKm:(existing.distKm*0.621371)).toFixed(1):'';
+  document.getElementById('pool-dist-input').value=distDisp;
+  document.getElementById('pool-dist-unit').textContent=S.useKm?'km':'mi';
+  document.getElementById('pool-timed-event').value=existing.timedEvent||'';
+  document.getElementById('pool-timed-time').value=existing.timedTime||'';
+  document.getElementById('pool-notes-input').value=existing.notes||'';
+  setPoolFeel(_pendingPoolFeel);
   openModal('pool-checkin-modal');
 }
 function setPoolFeel(n){
@@ -7416,8 +7434,9 @@ function savePoolCheckin(){
   const timedEvent=document.getElementById('pool-timed-event').value.trim();
   const timedTime=document.getElementById('pool-timed-time').value.trim();
   const notes=document.getElementById('pool-notes-input').value.trim();
+  const entryDate=_editingPoolDate||dKey(new Date());
   const entry={
-    date:dKey(new Date()),
+    date:entryDate,
     feel:_pendingPoolFeel,
     distKm,
     timedSwim:!!(timedEvent&&timedTime),
@@ -7425,7 +7444,10 @@ function savePoolCheckin(){
     timedTime:timedTime||null,
     notes:notes||null,
   };
-  S.poolLog.push(entry);
+  const existingIdx=S.poolLog.findIndex(e=>e.date===entryDate);
+  if(existingIdx>=0)S.poolLog[existingIdx]=entry;
+  else S.poolLog.push(entry);
+  _editingPoolDate=null;
   if(S.poolLog.length>90)S.poolLog=S.poolLog.slice(-90);
   DB.set('poolLog',S.poolLog);
   closeModal('pool-checkin-modal');
