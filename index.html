@@ -4796,7 +4796,19 @@ function renderHome(){
   const phase=getPhase(S.programWeek);const cycle=S.programCycle||1;
   const clubStr=S.profile&&S.profile.club?S.profile.club:'';
   const headerSub=document.getElementById('header-sub');
-  if(headerSub)headerSub.textContent=`${clubStr?clubStr+' · ':''}${S.offSeason&&S.offSeason.active?'Off-Season':'C'+cycle+' Wk '+S.programWeek}`;
+  // Build meaningful phase label for header
+  let headerPhaseStr;
+  if(S.offSeason&&S.offSeason.active){
+    const osCur=getCurrentOffSeasonPhase();
+    headerPhaseStr=osCur?'Off-Season · '+osCur.name:'Off-Season';
+  } else {
+    const taperNow=isTaperWeek();
+    const meetNow=S.meets.some(m=>{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;const td=new Date();td.setHours(0,0,0,0);return td>=ms&&td<=me;});
+    if(meetNow) headerPhaseStr='Race Day 🏆';
+    else if(taperNow.yes) headerPhaseStr='Taper · '+taperNow.meet.name.split(' ')[0];
+    else headerPhaseStr=phase.label+' · Wk '+S.programWeek;
+  }
+  if(headerSub)headerSub.textContent=`${clubStr?clubStr+' · ':''}${headerPhaseStr}`;
 
   // Off-season override for subtitle
   const osPh=getCurrentOffSeasonPhase();
