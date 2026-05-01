@@ -3709,7 +3709,36 @@ function generateGoalWorkout(forceType){
     blocks.push({title:'🔩 Core',exercises:core});
     blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(_mobPool,6).map(e=>({...e,sets:2}))});
+    // Goal-biased mobility — stay on recovery day but target goal-relevant tissue
+    const dolphinPowerGoals=['Underwater dolphin power','Explosive power off the block','Turn speed & walls'];
+    const shoulderGoals=['Stroke power & pull strength','Shoulder health & injury prevention'];
+    const hipGoals=['Hip flexibility & kick range','Race endurance & pace control'];
+    const hasDolphin=goals.some(g=>dolphinPowerGoals.includes(g));
+    const hasShoulder=goals.some(g=>shoulderGoals.includes(g));
+    const hasHip=goals.some(g=>hipGoals.includes(g));
+    // Build a prioritised pool based on goals
+    const hipAnkleMob=_mobPool.filter(e=>['Hip','Couch','Pigeon','Ankle'].some(n=>e.name.includes(n)));
+    const shoulderMob=_mobPool.filter(e=>['Shoulder','Doorway','Lat','Thoracic'].some(n=>e.name.includes(n)));
+    let goalMobPool=[];
+    if(hasDolphin||hasHip) goalMobPool=[...goalMobPool,...hipAnkleMob];
+    if(hasShoulder) goalMobPool=[...goalMobPool,...shoulderMob];
+    // Deduplicate, then pad with general pool to reach 6
+    const seen=new Set();
+    goalMobPool=goalMobPool.filter(e=>{if(seen.has(e.name))return false;seen.add(e.name);return true;});
+    const padded=[...goalMobPool,..._mobPool.filter(e=>!seen.has(e.name))].slice(0,6);
+    const finalPool=padded.length>=4?padded:_mobPool;
+    // Descriptive block title and rationale note
+    const mobTitle=hasDolphin?'🧘 Mobility — Dolphin Power Focus'
+      :hasShoulder?'🧘 Mobility — Shoulder & Thoracic Focus'
+      :hasHip?'🧘 Mobility — Hip & Flexibility Focus'
+      :'🧘 Mobility & Recovery';
+    const mobNote=hasDolphin?'Hip flexor and ankle mobility directly drive underwater dolphin kick power and streamline depth.'
+      :hasShoulder?'Shoulder and thoracic mobility protect your rotator cuff and improve stroke efficiency.'
+      :hasHip?'Hip flexibility increases kick range and reduces drag through the water.'
+      :'';
+    const mobExercises=pick(finalPool,6).map(e=>({...e,sets:2}));
+    if(mobNote) mobExercises[0]={...mobExercises[0],note:mobNote};
+    blocks.push({title:mobTitle,exercises:mobExercises});
   } else if(dayType==='cardio'){
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio.filter(e=>equipOk(e.name)),2).map(e=>({...e,sets:8}))});
     blocks.push({title:'🔩 Core',exercises:filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}))});
@@ -3720,9 +3749,7 @@ function generateGoalWorkout(forceType){
     const finPlyos=EX.plyos.filter(e=>equipOk(e.name));
     blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(finPlyos,2).map(e=>({...e,sets:3}))});
   }
-  if(wantsMobility&&dayType==='mobility'){
-    // Already a full mobility day — no extra needed
-  }
+  // wantsMobility on a mobility day is fully handled above — no extra block needed
   blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.warmup,2).map(e=>({...e,sets:1}))});
   const meetNote=meet?`Target: ${meet.name} · ${weeks}w out`:'Goal Program';
   const strokeLabel=sp.stroke.charAt(0).toUpperCase()+sp.stroke.slice(1);
