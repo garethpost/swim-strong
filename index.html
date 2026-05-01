@@ -193,9 +193,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="stat-meet-days" style="font-size:22px;font-weight:900;color:var(--gold);line-height:1;">—</div>
           <div id="stat-meet-name" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Next Meet</div>
         </div>
-        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;cursor:pointer;" onclick="openSwimLog()">
+        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;cursor:pointer;position:relative;" onclick="openSwimLog()">
+          <div style="position:absolute;top:6px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--green);color:#000;font-size:13px;font-weight:900;line-height:18px;text-align:center;opacity:0.9;">+</div>
           <div id="stat-km" style="font-size:22px;font-weight:900;color:var(--green);line-height:1;">0.0</div>
-          <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km ＋</div>
+          <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km</div>
         </div>
       </div>
 
@@ -891,7 +892,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="modal-overlay" id="pool-checkin-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Pool Check-In"><div class="modal-handle"></div>
 <div style="text-align:center;margin-bottom:16px;">
   <div style="font-size:36px;margin-bottom:4px;">🏊</div>
-  <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;">Pool Check-In</h3>
+  <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;">Rate Your Swim</h3>
   <div id="pool-checkin-date" style="font-size:12px;color:var(--muted);"></div>
 </div>
 <!-- Feel -->
@@ -4593,7 +4594,7 @@ function renderPostSessionNudge(){
   const hasSwimToday=sessions.some(s=>s.startsWith('swim'));
   const todayPoolLog=S.poolLog.find(e=>e.date===key);
   const poolPrompt=(hasSwimToday&&!todayPoolLog)
-    ?`<button onclick="openPoolCheckin()" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px dashed var(--accent);background:rgba(0,198,255,0.06);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🏊 Log your pool session too</button>`
+    ?`<button onclick="openPoolCheckin()" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px dashed var(--accent);background:rgba(0,198,255,0.06);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🏊 How did your swim feel? Rate the session →</button>`
     :'';
   // Get tomorrow's sessions
   const tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);
@@ -7349,10 +7350,10 @@ function renderSchedulePoolShortcut(){
     el.innerHTML=`<div class="card" style="margin-bottom:0;border:1px dashed var(--accent);background:rgba(0,198,255,0.04);">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-          <div class="card-title" style="margin-bottom:2px;color:var(--accent);">Pool session today</div>
-          <div style="font-size:12px;color:var(--muted);">Tap to log how it went</div>
+          <div class="card-title" style="margin-bottom:2px;color:var(--accent);">Rate today's swim</div>
+          <div style="font-size:12px;color:var(--muted);">Feel · effort · notes — not km</div>
         </div>
-        <button onclick="openPoolCheckin()" class="btn btn-primary btn-sm">Log session</button>
+        <button onclick="openPoolCheckin()" class="btn btn-primary btn-sm">Rate session</button>
       </div>
     </div>`;
   }
