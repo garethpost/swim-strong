@@ -3127,7 +3127,7 @@ function buildCard(ex,bi,ei,scheme){
       <div class="ex-check" id="check-${id}" onclick="toggleAllSets('${id}',${ns})"></div>
       <div class="ex-title-wrap">
         <div class="ex-name" onclick="showExInfo('${esc(ex.name)}','${esc(ex.desc)}','${esc(ex.cue)}')">${ex.name} <span style="font-size:10px;color:var(--muted)">ⓘ</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${schemeStr} · ${scheme.pct||''}${tempoTag}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${schemeStr}${ex.weighted&&scheme.pct?' · '+scheme.pct:''}${tempoTag}</div>
         ${ex.note?`<div class="ex-note">${ex.note}</div>`:''}
       </div>
       ${hBtn}
@@ -3222,33 +3222,45 @@ function generateWorkout(forceType){
     return exArr.filter(e=>equipOk(e.name));
   }
 
+  // Stroke-specific mobility picks: lower body focus for breaststroke/fly, shoulder for back/free
+  const mobPool=EX.mobility.filter(e=>equipOk(e.name));
+  const lowerMob=mobPool.filter(e=>['Hip Flexor Lunge','Couch Stretch','Pigeon Pose','Hip Circles','90/90 Hip Stretch','Ankle Circles','Lateral Lunge Stretch'].some(n=>e.name.includes(n.split(' ')[0])));
+  const upperMob=mobPool.filter(e=>['Shoulder','Doorway','Thread','Lat','Pec','Thoracic','Band'].some(n=>e.name.includes(n)));
+  const genMob=mobPool;
+
   if(dayType==='lower'){
     const main=filterExercises(ageFilter(EX.lower),'lower',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:isTaper?2:counts.core===3?3:2}));
-    const blockTitle=ag==='youth'?'🦵 Lower Body (Bodyweight)':ag==='teen'?'🦵 Lower Body Strength':'🦵 Lower Body Strength';
+    const mobPick=pick(lowerMob.length>=3?lowerMob:genMob,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
+    const blockTitle=ag==='youth'?'🦵 Lower Body (Bodyweight)':'🦵 Lower Body Strength';
     blocks.push({title:blockTitle,exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
     blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mobPick});
   } else if(dayType==='upper'){
     const main=filterExercises(ageFilter(EX.upper),'upper',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:isTaper?2:2}));
-    const blockTitle=ag==='youth'?'💪 Upper Body (Bodyweight)':ag==='teen'?'💪 Upper Body Strength':'💪 Upper Body Strength';
+    const mobPick=pick(upperMob.length>=3?upperMob:genMob,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
+    const blockTitle=ag==='youth'?'💪 Upper Body (Bodyweight)':'💪 Upper Body Strength';
     blocks.push({title:blockTitle,exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
     blocks.push({title:'🔩 Core Finisher',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mobPick});
   } else if(dayType==='power'){
     const plyos=filterExercises(ageFilter(EX.plyos),'power',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:2}));
+    const mobPick=pick(genMob,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
     const blockTitle=ag==='youth'?'⚡ Agility & Movement':'⚡ Plyometric Power';
     blocks.push({title:blockTitle,exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
     blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mobPick});
   } else if(dayType==='mobility'){
     const mob=EX.mobility.filter(e=>equipOk(e.name));
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(mob,5).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(mob,6).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
     const cardio=EX.cardio.filter(e=>equipOk(e.name));
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(cardio,2).map(e=>({...e,sets:8}))});
@@ -3666,45 +3678,55 @@ function generateGoalWorkout(forceType){
   const todaySch=S.daySchedule[todayKey]||{};
   const isDoubleDay=(todaySch.sessions||[]).filter(s=>s.startsWith('swim')).length>=2;
 
+  const _mobPool=EX.mobility.filter(e=>equipOk(e.name));
+  const _lowerMob=_mobPool.filter(e=>['Hip','Couch','Pigeon','Ankle','Lateral'].some(n=>e.name.includes(n)));
+  const _upperMob=_mobPool.filter(e=>['Shoulder','Doorway','Thread','Lat','Pec','Thoracic','Band'].some(n=>e.name.includes(n)));
+
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
-    // Goal bias: if wantsPower, boost explosive priority; always goes through stroke filter
     const lowerPool=wantsPower
       ?[...EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('hinge'))),...EX.lower.filter(e=>!e.tags||(!e.tags.includes('explosive')&&!e.tags.includes('hinge')))]
       :EX.lower;
     const main=filterExercises(lowerPool,'lower',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    const mob=pick(_lowerMob.length>=3?_lowerMob:_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
     blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
     blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='upper'){
     const upperPool=biases.some(b=>b.upper&&b.upper.includes('pull'))
       ?[...EX.upper.filter(e=>e.tags&&e.tags.includes('pull')),...EX.upper.filter(e=>!e.tags||!e.tags.includes('pull'))]
       :EX.upper;
     const main=filterExercises(upperPool,'upper',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    const mob=pick(_upperMob.length>=3?_upperMob:_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
     blocks.push({title:'💪 Upper Body',exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
     blocks.push({title:'🔩 Core Finisher',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='power'){
     const plyos=filterExercises(EX.plyos,'power',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
+    const mob=pick(_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
     blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
     blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='mobility'){
-    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(EX.mobility.filter(e=>equipOk(e.name)),5).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility & Recovery',exercises:pick(_mobPool,6).map(e=>({...e,sets:2}))});
   } else if(dayType==='cardio'){
     blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio.filter(e=>equipOk(e.name)),2).map(e=>({...e,sets:8}))});
     blocks.push({title:'🔩 Core',exercises:filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🧘 Mobility Finisher',exercises:pick(_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}))});
   }
-  // Goal-specific finisher — equipment-safe, stroke-suppressed
+  // Goal-specific finishers (only if mobility not already added)
   if(wantsPower&&dayType!=='power'&&dayType!=='mobility'){
     const finPlyos=EX.plyos.filter(e=>equipOk(e.name));
     blocks.push({title:'🎯 Goal Finisher — Explosive Power',exercises:pick(finPlyos,2).map(e=>({...e,sets:3}))});
   }
-  if(wantsMobility&&dayType!=='mobility'){
-    blocks.push({title:'🎯 Goal Finisher — Injury Prevention',exercises:pick(EX.mobility,2).map(e=>({...e,sets:2}))});
+  if(wantsMobility&&dayType==='mobility'){
+    // Already a full mobility day — no extra needed
   }
-  blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.mobility,2).map(e=>({...e,sets:1}))});
+  blocks.push({title:'❄️ Cool-Down',exercises:pick(EX.warmup,2).map(e=>({...e,sets:1}))});
   const meetNote=meet?`Target: ${meet.name} · ${weeks}w out`:'Goal Program';
   const strokeLabel=sp.stroke.charAt(0).toUpperCase()+sp.stroke.slice(1);
   return{phase,dayType,mult,load,scheme,emp:'balanced',sp,trainingLevel,taperNote:null,
