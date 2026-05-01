@@ -3408,7 +3408,7 @@ function renderWorkoutTab(){
         <div id="workout-subtitle" style="font-size:18px;font-weight:900;color:var(--accent);margin-bottom:4px;">—</div>
         <div id="workout-schedule-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
         ${restBanner}
-        ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Today's Session →</button>`:''}
+        ${!isRestDay?(()=>{const _hb=Object.keys(S.oneRM).length>0;const _ag=getAgeGroup();const _needsBase=_ag!=='youth'&&!_hb;return _needsBase?`<div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);"><div style="font-size:20px;margin-bottom:6px;">🔒</div><div style="font-size:13px;color:var(--muted);">Complete your strength baseline above to unlock your session.</div></div>`:`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Today's Session →</button>`;})():''}
       </div>`;
   } else if(!gp){
     // Goal mode — setup card
@@ -7026,8 +7026,8 @@ function renderBaselineGate(){
     return;
   }
 
-  // Baseline NOT set (or retest due) — show gate, lock workout area
-  if(workoutTop)workoutTop.style.display='none';
+  // Baseline NOT set (or retest due) — show gate above, keep workout-top visible
+  if(workoutTop)workoutTop.style.display='block';
   if(card)card.innerHTML=''; // baseline-card not used in gate state
 
   const isRetest=needsRetest;
