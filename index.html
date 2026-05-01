@@ -3681,6 +3681,88 @@ function generateGoalWorkout(forceType){
   const _lowerMob=_mobPool.filter(e=>['Hip','Couch','Pigeon','Ankle','Lateral'].some(n=>e.name.includes(n)));
   const _upperMob=_mobPool.filter(e=>['Shoulder','Doorway','Thread','Lat','Pec','Thoracic','Band'].some(n=>e.name.includes(n)));
 
+  // Goal context notes — one line per block type per goal, injected as strokeNote
+  const GOAL_BLOCK_NOTES={
+    'Explosive power off the block':{
+      lower:'Prioritising explosive hip drive and triple extension — the foundation of block power.',
+      upper:'Posterior chain and shoulder stability transfer directly to your block reaction and entry.',
+      power:'Max-effort plyos today. Every rep simulates the force demands of your block start.',
+      cardio:'Short-burst speed work mirrors the neuromuscular demands of explosive starts.',
+      core:'Anti-rotation and bracing strength keep your block drive transferring into the water, not leaking through your core.',
+    },
+    'Underwater dolphin power':{
+      lower:'Hip hinge and single-leg strength drive dolphin kick amplitude and push-off depth.',
+      upper:'Lat and posterior shoulder strength anchor your streamline and pull you through each kick cycle.',
+      power:'Explosive lower-body power converts directly into underwater dolphin kick force.',
+      cardio:'Repeated sprint efforts build the lactate tolerance needed to maintain dolphin kick speed.',
+      core:'Core tension is what connects your kick to your streamline — this is where dolphin power is made.',
+    },
+    'Sprint top-end speed':{
+      lower:'Explosive lower-body power and hip extension drive top-end turnover in the water.',
+      upper:'Upper body pulling strength and shoulder stability determine how much speed you can hold at the surface.',
+      power:'High-velocity plyos train the fast-twitch fibres that fire at maximum sprint speed.',
+      cardio:'High-intensity intervals build the anaerobic capacity to hold top-end speed through a race.',
+      core:'A stiff, stable core transfers sprint power from your arms and legs without energy leaking through your trunk.',
+    },
+    'Race endurance & pace control':{
+      lower:'Hip hinge and posterior chain strength build the fatigue resistance needed to hold pace late in a race.',
+      upper:'Pulling endurance and shoulder health keep your stroke efficient as fatigue accumulates.',
+      power:'Power work maintains neuromuscular sharpness across a long training block.',
+      cardio:'Sustained sprint intervals develop the aerobic power and pace control needed for race distances.',
+      core:'Anti-rotation stability keeps your body position efficient when endurance fatigue sets in.',
+    },
+    'Turn speed & walls':{
+      lower:'Single-leg strength and explosive hip drive power your push-off angle and wall contact.',
+      upper:'Upper body and shoulder stability help you hold tight streamline off every wall.',
+      power:'Reactive plyos train the quick force absorption and re-expression needed at the wall.',
+      cardio:'High-speed cardio intervals sharpen the neuromuscular sharpness you need to attack every turn.',
+      core:'Rotational core strength drives your flip mechanics and keeps your tuck tight through the turn.',
+    },
+    'Stroke power & pull strength':{
+      lower:'Lower body strength provides the stable base your catch and pull power is built on.',
+      upper:'Pull-dominant work today — every rep builds the lat and posterior shoulder strength behind your stroke.',
+      power:'Explosive upper-body power translates directly into stroke rate and pull velocity.',
+      cardio:'High-intensity work maintains the cardiovascular base that sustains stroke power across full race distance.',
+      core:'Rotational core strength is the link between your hip drive and your hand entry — this is your stroke power.',
+    },
+    'Shoulder health & injury prevention':{
+      lower:'Lower body strength takes load off your shoulders in training — balanced athletes stay healthy longer.',
+      upper:'Posterior shoulder and rotator cuff work today. Every rep keeps you training without interruption.',
+      power:'Low-impact explosive work maintains power while keeping shoulder stress in a safe range.',
+      cardio:'Cardio capacity is maintained without putting additional overhead stress on your shoulder.',
+      core:'Shoulder stability starts at your core — a braced trunk reduces compensatory load on your rotator cuff.',
+    },
+    'Core stability & body position':{
+      lower:'Lower body and hip strength anchor the stable base your core stability is built on.',
+      upper:'Upper body control and shoulder stability reinforce the connected body position you hold in the water.',
+      power:'Power work challenges your core to stabilise under dynamic, high-force conditions.',
+      cardio:'High-intensity cardio challenges your ability to maintain body position under fatigue.',
+      core:'Direct anti-rotation, bracing, and rotational work — this is the focus of today\'s session.',
+    },
+    'Hip flexibility & kick range':{
+      lower:'Hip hinge and single-leg strength build the active range your kick needs at race speed.',
+      upper:'Upper body balance and shoulder mobility support the full-body connection behind an effective kick.',
+      power:'Explosive hip and leg power develops the force output behind your kick range.',
+      cardio:'Sprint cardio trains your ability to sustain kick frequency and range under high-intensity fatigue.',
+      core:'Core stability keeps your hips level so your kick range converts to forward propulsion, not drag.',
+    },
+    'General strength base':{
+      lower:'Broad lower body strength development — building the foundation everything else sits on.',
+      upper:'Full upper body strength work — balanced pushing and pulling for long-term athlete development.',
+      power:'Power development across all movement patterns — general athletic capacity.',
+      cardio:'General aerobic and anaerobic conditioning to support all training qualities.',
+      core:'Core strength and stability across all planes — building a durable, resilient foundation.',
+    },
+  };
+  // Get the primary goal note for each block type
+  function getGoalNote(blockType){
+    for(const g of goals){
+      const n=GOAL_BLOCK_NOTES[g];
+      if(n&&n[blockType])return n[blockType];
+    }
+    return null;
+  }
+
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
   if(dayType==='lower'){
@@ -3690,8 +3772,8 @@ function generateGoalWorkout(forceType){
     const main=filterExercises(lowerPool,'lower',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
     const mob=pick(_lowerMob.length>=3?_lowerMob:_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
-    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
-    blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'🦵 Lower Body'+(wantsPower?' — Explosive Focus':''),exercises:main,goalNote:getGoalNote('lower'),strokeNote:getGoalNote('lower')?null:strokeBlockNote(sp,'lower')});
+    blocks.push({title:'🔩 Core',exercises:core,goalNote:getGoalNote('core')});
     blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='upper'){
     const upperPool=biases.some(b=>b.upper&&b.upper.includes('pull'))
@@ -3700,15 +3782,15 @@ function generateGoalWorkout(forceType){
     const main=filterExercises(upperPool,'upper',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
     const mob=pick(_upperMob.length>=3?_upperMob:_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
-    blocks.push({title:'💪 Upper Body',exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
-    blocks.push({title:'🔩 Core Finisher',exercises:core});
+    blocks.push({title:'💪 Upper Body',exercises:main,goalNote:getGoalNote('upper'),strokeNote:getGoalNote('upper')?null:strokeBlockNote(sp,'upper')});
+    blocks.push({title:'🔩 Core Finisher',exercises:core,goalNote:getGoalNote('core')});
     blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='power'){
     const plyos=filterExercises(EX.plyos,'power',sp,trainingLevel,isTaper).map(e=>({...e,sets:effectiveSets}));
     const core=filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}));
     const mob=pick(_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}));
-    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
-    blocks.push({title:'🔩 Core',exercises:core});
+    blocks.push({title:'⚡ Power & Plyos — Goal Focus',exercises:plyos,goalNote:getGoalNote('power'),strokeNote:getGoalNote('power')?null:strokeBlockNote(sp,'power')});
+    blocks.push({title:'🔩 Core',exercises:core,goalNote:getGoalNote('core')});
     blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='mobility'){
     // Goal-biased mobility — stay on recovery day but target goal-relevant tissue
@@ -3740,11 +3822,10 @@ function generateGoalWorkout(forceType){
     const mobTitle=allTitles[0]||'🧘 Mobility & Recovery';
     const mobNote=allNotes[0]||'';
     const mobExercises=pick(finalPool,6).map(e=>({...e,sets:2}));
-    if(mobNote) mobExercises[0]={...mobExercises[0],note:mobNote};
-    blocks.push({title:mobTitle,exercises:mobExercises});
+    blocks.push({title:mobTitle,exercises:mobExercises,goalNote:mobNote||null});
   } else if(dayType==='cardio'){
-    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio.filter(e=>equipOk(e.name)),2).map(e=>({...e,sets:8}))});
-    blocks.push({title:'🔩 Core',exercises:filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2}))});
+    blocks.push({title:'🏃 Sprint / Cardio',exercises:pick(EX.cardio.filter(e=>equipOk(e.name)),2).map(e=>({...e,sets:8})),goalNote:getGoalNote('cardio')});
+    blocks.push({title:'🔩 Core',exercises:filterExercises(EX.core,'core',sp,trainingLevel,isTaper).map(e=>({...e,sets:2})),goalNote:getGoalNote('core')});
     blocks.push({title:'🧘 Mobility Finisher',exercises:pick(_mobPool,3).map(e=>({...e,sets:1,detail:'45–60s hold or 10 reps'}))});
   }
   // Goal-specific finishers (only if mobility not already added)
@@ -3804,7 +3885,8 @@ function renderWorkout(w){
   if(w.doubleDayNote)html+=`<div style="font-size:11px;color:var(--gold);margin-bottom:8px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);">⚡ ${w.doubleDayNote}</div>`;
   w.blocks.forEach((block,bi)=>{
     html+=`<div class="workout-block"><div class="block-header">${block.title}</div>`;
-    if(block.strokeNote)html+=`<div style="font-size:11px;color:var(--accent);margin-bottom:8px;padding:5px 8px;background:rgba(0,198,255,0.06);border-radius:6px;border-left:2px solid var(--accent);">🧬 ${block.strokeNote}</div>`;
+    if(block.goalNote)html+=`<div style="font-size:11px;color:var(--purple);margin-bottom:8px;padding:5px 8px;background:rgba(192,132,252,0.07);border-radius:6px;border-left:2px solid var(--purple);">🎯 ${block.goalNote}</div>`;
+    else if(block.strokeNote)html+=`<div style="font-size:11px;color:var(--accent);margin-bottom:8px;padding:5px 8px;background:rgba(0,198,255,0.06);border-radius:6px;border-left:2px solid var(--accent);">🧬 ${block.strokeNote}</div>`;
     block.exercises.forEach((ex,ei)=>{html+=buildCard(ex,bi,ei,w.scheme);});
     html+=`</div>`;
   });
