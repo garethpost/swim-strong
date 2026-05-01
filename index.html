@@ -5198,6 +5198,16 @@ function renderSeasonSnapshot(){
   // Taper check
   const taperInfo=isTaperWeek();
   const taperDays=taperInfo.yes?taperInfo.daysOut:null;
+  // Days until taper starts for next meet (when not already in taper)
+  let daysToTaperStart=null;
+  let taperMeetName=null;
+  if(!taperInfo.yes&&nextMeet){
+    const taperLen=getTaperDays(nextMeet);
+    if(taperLen>0){
+      daysToTaperStart=Math.max(0,nextMeetDays-taperLen);
+      taperMeetName=nextMeet.name.split(' ')[0];
+    }
+  }
 
   el.style.display='block';
   el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;">
@@ -5216,8 +5226,12 @@ function renderSeasonSnapshot(){
         <div style="font-size:10px;color:var(--muted);margin-top:2px;">Today</div>
       </div>
       <div style="background:var(--bg);border-radius:8px;padding:8px 4px;">
-        <div style="font-size:18px;font-weight:900;color:${taperDays!==null?'var(--orange)':'var(--muted)'};">${taperDays!==null?taperDays+'d':'—'}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px;">To taper</div>
+        ${taperDays!==null
+          ? `<div style="font-size:13px;font-weight:900;color:var(--orange);">🌊 Active</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">${taperDays}d to race</div>`
+          : daysToTaperStart!==null
+            ? `<div style="font-size:18px;font-weight:900;color:var(--accent);">${daysToTaperStart}d</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">To taper</div>`
+            : `<div style="font-size:13px;font-weight:800;color:var(--muted);">—</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">No meet</div>`
+        }
       </div>
     </div>
   </div>`;
