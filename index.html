@@ -4081,7 +4081,11 @@ function renderHomeTodaySummary(){
   const el=document.getElementById('home-today-summary');
   if(!el)return;
   const today=new Date();today.setHours(0,0,0,0);
-  const key=dKey(today);
+  const key=window._homeSelectedKey||dKey(today);
+  const viewDate=new Date(key+'T00:00:00');
+  const isToday=key===dKey(today);
+  const isPast=viewDate<today;
+  const isFuture=viewDate>today;
   const sch=S.daySchedule[key]||{};
   let sessions=sch.sessions||[];
   if(!sch.override&&!sessions.length){
@@ -4148,7 +4152,7 @@ function renderHomeTodaySummary(){
 
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:15px;font-weight:800;color:var(--accent);">Today — ${sessionLabel}</div>
+      <div style="font-size:15px;font-weight:800;color:var(--accent);">${isToday?'Today':isPast?viewDate.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'}):viewDate.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})} — ${sessionLabel}</div>
       <span style="font-size:9px;font-weight:700;color:#000;background:${loadColor};padding:2px 9px;border-radius:20px;white-space:nowrap;">${loadLabel}</span>
     </div>
     ${meetRow}${swimRow}${dryRows}${restRow}`;
@@ -4194,96 +4198,81 @@ function renderWeekStrip(){
   const el=document.getElementById('week-strip-card');
   if(!el)return;
   const today=new Date();today.setHours(0,0,0,0);
-  const dow=today.getDay(); // 0=Sun
-  // Get Mon of this week
+  const dow=today.getDay();
   const monOffset=dow===0?-6:1-dow;
   const mon=new Date(today);mon.setDate(today.getDate()+monOffset);
   const days=['M','T','W','T','F','S','S'];
   const todayKey=dKey(today);
+  // Selected day — default today
+  if(!window._homeSelectedKey)window._homeSelectedKey=todayKey;
+  const selectedKey=window._homeSelectedKey;
   const dots=[];
   for(let i=0;i<7;i++){
     const d=new Date(mon);d.setDate(mon.getDate()+i);
     const key=dKey(d);
-    const isPast=d<today;
     const isToday=key===todayKey;
     const isFuture=d>today;
-    // Get schedule for this day
+    const isSelected=key===selectedKey;
     const sch=S.daySchedule[key]||{};
     let sessions=sch.sessions||[];
     if(!sch.override&&!sessions.length){
       const tmpl=S.seasonTemplate||{};
-      if(tmpl.start&&tmpl.end){
-        const ss=localDate(tmpl.start),se=localDate(tmpl.end);
-        if(d>=ss&&d<=se)sessions=tmpl.days[d.getDay()]||[];
-      }
+      if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(d>=ss&&d<=se)sessions=tmpl.days[d.getDay()]||[];}
     }
     if(sch.removed)sessions=[];
     const hasSwim=sessions.some(s=>s.startsWith('swim'));
     const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
-    const isRest=!hasSwim&&!hasDry;
+    const isRest=!hasSwim&&!hasDry&&!sessions.some(s=>s.startsWith('oos_')&&s!=='oos_rest');
     const isMeet=S.meets.some(m=>{try{const md=localDate(m.date);const me=m.endDate?localDate(m.endDate):md;return d>=md&&d<=me;}catch(e){return false;}});
-    // What was logged on this day?
     const dryDone=S.history.some(h=>{try{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===d.getTime();}catch(e){return false;}});
     const poolDone=S.poolLog.some(e=>e.date===key);
-    // Status
-    let dotBg,dotLabel,dotOpacity='1';
-    if(isMeet){dotBg='var(--gold)';dotLabel='🏁';}
-    else if(isFuture){
-      dotBg=hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--border)';
-      dotOpacity='0.35';dotLabel='';
-    } else if(isToday){
-      dotBg=isRest?'var(--border)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':'var(--purple)';
-      dotOpacity='1';dotLabel='';
-    } else {
-      // Past day
+    let dotBg,dotOpacity='1';
+    if(isMeet){dotBg='var(--gold)';}
+    else if(isFuture){dotBg=hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--border)';dotOpacity='0.4';}
+    else if(isToday){dotBg=isRest?'var(--border)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':'var(--purple)';}
+    else{
       const bothDone=(hasSwim&&poolDone&&hasDry&&dryDone)||(hasSwim&&poolDone&&!hasDry)||(hasDry&&dryDone&&!hasSwim);
       const partDone=(hasSwim&&poolDone&&hasDry&&!dryDone)||(hasDry&&dryDone&&hasSwim&&!poolDone);
-      if(isRest){dotBg='var(--border)';dotLabel='';}
-      else if(bothDone){dotBg='var(--green)';dotLabel='';}
-      else if(partDone){dotBg='var(--orange)';dotLabel='';}
-      else{dotBg='var(--red)';dotOpacity='0.5';dotLabel='';}
+      if(isRest)dotBg='var(--border)';
+      else if(bothDone)dotBg='var(--green)';
+      else if(partDone)dotBg='var(--orange)';
+      else{dotBg='var(--red)';dotOpacity='0.5';}
     }
-    dots.push({label:days[i],dotBg,dotOpacity,dotLabel,isToday,key,hasSwim,hasDry,isMeet,isRest,isFuture,poolDone,dryDone});
+    // Inner label
+    const typeLabel=isMeet?'Meet':isRest?'':hasSwim&&hasDry?'Swim+\nLift':hasSwim?'Swim':hasDry?'Dryland':'';
+    const lines=typeLabel.split('\n');
+    const isDone=!isFuture&&!isToday&&!isRest&&(poolDone||dryDone);
+    dots.push({label:days[i],dotBg,dotOpacity,isToday,isSelected,key,lines,isMeet,isDone,isFuture});
   }
-  // Legend
-  const legend=[
-    {color:'var(--green)',text:'Full day done'},
-    {color:'var(--accent)',text:'Swim'},
-    {color:'var(--purple)',text:'Dryland'},
-    {color:'var(--orange)',text:'Partial'},
-    {color:'var(--gold)',text:'Meet'},
-  ];
+  const rangeStr=`${mon.toLocaleDateString('en-CA',{month:'short',day:'numeric'})} – ${new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6).toLocaleDateString('en-CA',{month:'short',day:'numeric'})}`;
+  // Selected day label
+  const selDate=new Date(selectedKey+'T00:00:00');
+  const selDayName=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][selDate.getDay()];
+  const isViewingToday=selectedKey===todayKey;
+  const selLabel=isViewingToday?'Today':selDate>today?selDayName+' (upcoming)':selDayName+' (history)';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-title" style="margin-bottom:0;">This Week</div>
-      <div style="font-size:10px;color:var(--muted);">${mon.toLocaleDateString('en-CA',{month:'short',day:'numeric'})} – ${new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6).toLocaleDateString('en-CA',{month:'short',day:'numeric'})}</div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">This Week</div>
+      <div style="font-size:10px;color:var(--muted);">${rangeStr}</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;">
-      ${dots.map(d=>{
-        const typeLabel=d.isMeet?'Meet':d.isRest?'':d.hasSwim&&d.hasDry?'Swim+\nLift':d.hasSwim?'Swim':d.hasDry?'Dryland':'';
-        const lines=typeLabel.split('\n');
-        // Determine inner content
-        const isDone=!d.isFuture&&!d.isToday&&!d.isRest&&(d.poolDone||d.dryDone);
-        const innerContent=d.dotLabel
-          ?`<span style="font-size:12px;">${d.dotLabel}</span>`
-          :d.isToday
-            ?`<span style="font-size:14px;font-weight:900;color:#fff;">→</span>`
-            :isDone
-              ?`<span style="font-size:13px;">✓</span>`
-              :lines.filter(l=>l).map(l=>`<span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1.2;">${l}</span>`).join('');
-        return`<div style="text-align:center;">
-          <div style="font-size:9px;color:${d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isToday?'700':'400'};margin-bottom:4px;">${d.label}</div>
-          <div style="width:100%;aspect-ratio:1;border-radius:8px;background:${d.dotBg};opacity:${d.dotOpacity};${d.isToday?'box-shadow:0 0 0 2px var(--accent);':''};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
-            ${innerContent}
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;">
+      ${dots.map(d=>`
+        <div style="text-align:center;cursor:pointer;" onclick="selectHomeDay('${d.key}')">
+          <div style="font-size:9px;color:${d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isSelected||d.isToday?'700':'400'};margin-bottom:4px;">${d.label}</div>
+          <div style="width:100%;aspect-ratio:1;border-radius:8px;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);outline:none;':''};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:box-shadow 0.15s;">
+            ${d.isMeet?'<span style="font-size:12px;">🏁</span>':d.isToday&&d.isSelected?'<span style="font-size:14px;font-weight:900;color:#fff;">→</span>':d.isDone?'<span style="font-size:13px;color:#fff;">✓</span>':d.lines.filter(l=>l).map(l=>`<span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1.2;">${l}</span>`).join('')}
           </div>
-        </div>`;
-      }).join('')}
+        </div>`).join('')}
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      ${legend.map(l=>`<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);"><span style="width:8px;height:8px;border-radius:2px;background:${l.color};display:inline-block;"></span>${l.text}</span>`).join('')}
-    </div>`;
+    ${!isViewingToday?`<div style="font-size:10px;color:var(--accent);font-weight:600;text-align:center;margin-top:2px;cursor:pointer;" onclick="selectHomeDay('${todayKey}')">← Back to today</div>`:''}`;
 }
 
+function selectHomeDay(key){
+  window._homeSelectedKey=key;
+  renderWeekStrip();
+  renderHomeTodaySummary();
+  renderHomeFuelRings();
+}
 // ── Home ──
 function renderPostSessionNudge(){
   const el=document.getElementById('home-nudge-card');
@@ -4346,7 +4335,8 @@ function renderHomeFuelRings(){
     return;
   }
   S.mealLog=S.mealLog||DB.get('mealLog',{});
-  const todayMeals=S.mealLog[dKey(new Date())]||[];
+  const selectedKey=window._homeSelectedKey||dKey(new Date());
+  const todayMeals=S.mealLog[selectedKey]||[];
   let logCal=0,logCarbs=0,logProtein=0,logFat=0;
   todayMeals.forEach(m=>{
     const food=resolveFood(m.foodId);if(!food)return;
