@@ -2607,11 +2607,11 @@ function renderHomeCals(){
 // ── 1RM system ──
 // Key lifts and which exercises they apply to (stored in kg internally)
 const ONE_RM_LIFTS=[
-  {key:'squat',   label:'Back Squat',       exNames:['Back Squat','Goblet Squat','Bulgarian Split Squat'],pcts:{GPP:0.65,Strength:0.85,Power:0.80,Taper:0.75}},
-  {key:'rdl',     label:'Romanian Deadlift',exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
-  {key:'press',   label:'Bench Press',       exNames:['Incline DB Press','Landmine Press'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
-  {key:'pull',    label:'Pull-Ups',          exNames:['Pull-Ups','Lat Pulldown','Seated Cable Row','Single-Arm DB Row','Hollow Body Pull'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72},isPullUp:true},
-  {key:'ohpress', label:'Overhead Press',    exNames:['Tricep Pushdown','Face Pulls','Prone Y-T-W'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
+  {key:'squat',   label:'Back Squat',          exNames:['Back Squat','Goblet Squat','Bulgarian Split Squat'],pcts:{GPP:0.65,Strength:0.85,Power:0.80,Taper:0.75}},
+  {key:'rdl',     label:'Romanian Deadlift',   exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'row',     label:'Bent-Over Row',        exNames:['Seated Cable Row','Single-Arm DB Row','Lat Pulldown','Bent-Over Row'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'pull',    label:'Pull-Ups',             exNames:['Pull-Ups','Hollow Body Pull'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72},isPullUp:true},
+  {key:'ohpress', label:'Overhead Press',       exNames:['Landmine Press','Incline DB Press','Face Pulls','Prone Y-T-W'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
 ];
 // Epley formula: estimate 1RM from a weight × reps set
 function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
@@ -3353,35 +3353,143 @@ function deactivateGoalProgram(){
 
 function renderWorkoutTab(){
   const el=document.getElementById('workout-top');if(!el)return;
-  const isGoal=S.workoutMode==='goal';
-  const gp=S.goalProgram;
   const ag=getAgeGroup();
+  const isOOS=S.offSeason&&S.offSeason.active&&getCurrentOffSeasonPhase();
+  const isGoal=!isOOS&&S.workoutMode==='goal';
+  const gp=S.goalProgram;
 
   // ── Dryland subtitle ──
   const dsub=document.getElementById('dryland-subtitle');
   if(dsub){
     const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const todayN=dayNames[new Date().getDay()];
-    const todayDayTypeForSub=getTodayDrylandType();
-    const sessionTypeLabel=todayDayTypeForSub==='rest'?'Rest day':
-      todayDayTypeForSub==='lower'?'Lower Body':todayDayTypeForSub==='upper'?'Upper Body':
-      todayDayTypeForSub==='power'?'Power & Plyos':todayDayTypeForSub==='mobility'?'Mobility':
-      todayDayTypeForSub==='cardio'?'Sprint Cardio':'Training';
-    dsub.textContent=`${todayN} · ${sessionTypeLabel} · ${getAgeGroupLabel()}`;
+    if(isOOS){
+      const osPh=getCurrentOffSeasonPhase();
+      dsub.textContent=`${todayN} · ${osPh?osPh.name:'Off-Season'} · ${getAgeGroupLabel()}`;
+    } else {
+      const todayDayTypeForSub=getTodayDrylandType();
+      const sessionTypeLabel=todayDayTypeForSub==='rest'?'Rest day':
+        todayDayTypeForSub==='lower'?'Lower Body':todayDayTypeForSub==='upper'?'Upper Body':
+        todayDayTypeForSub==='power'?'Power & Plyos':todayDayTypeForSub==='mobility'?'Mobility':
+        todayDayTypeForSub==='cardio'?'Sprint Cardio':'Training';
+      dsub.textContent=`${todayN} · ${sessionTypeLabel} · ${getAgeGroupLabel()}`;
+    }
   }
 
-  // ── Baseline gate: show at top if not set, else render collapsed at bottom ──
-  renderBaselineGate();
+  // ── Clear baseline gate / baseline card (handled inline now) ──
+  const gate=document.getElementById('baseline-gate');
+  const bcard=document.getElementById('baseline-card');
+  if(gate)gate.innerHTML='';
+  if(bcard)bcard.innerHTML='';
 
-  // ── Mode toggle ──
-  const toggleHtml=`
+  // ─────────────────────────────────────────────
+  // PATH 1: OFF-SEASON ACTIVE
+  // ─────────────────────────────────────────────
+  if(isOOS){
+    const osPh=getCurrentOffSeasonPhase();
+    const phases=S.offSeason.phases||[];
+    const totalWeeks=S.offSeason.totalWeeks||1;
+
+    // Phase timeline bar
+    const phColors={'Transition':'var(--muted)','GPP':'var(--green)','Strength Block':'var(--accent)','Specific Prep':'var(--purple)'};
+    const timelineHtml=phases.map(ph=>{
+      const isCurrent=osPh&&ph.name===osPh.name;
+      const phStart=new Date(ph.start+'T00:00:00');
+      const today2=new Date();today2.setHours(0,0,0,0);
+      const isPast=phStart<today2&&!isCurrent;
+      const col=phColors[ph.name]||'var(--accent)';
+      const pct=Math.round((ph.weeks/totalWeeks)*100);
+      return`<div style="flex:${pct};min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <div style="width:100%;height:${isCurrent?14:8}px;border-radius:4px;background:${isCurrent?col:isPast?'var(--border)':col};opacity:${isPast?0.3:isCurrent?1:0.5};margin-top:${isCurrent?0:3}px;${isCurrent?'box-shadow:0 0 8px '+col+';':''}transition:all 0.2s;"></div>
+        <div style="font-size:9px;color:${isCurrent?col:'var(--muted)'};font-weight:${isCurrent?800:400};opacity:${isPast?0.4:1};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;">${isCurrent?'▲ ':''} ${ph.name.replace(' Block','').replace(' Prep','')}</div>
+      </div>`;
+    }).join('');
+
+    // Phase detail
+    const phCol=phColors[osPh?osPh.name:'GPP']||'var(--accent)';
+    const phaseWeekNum=osPh?Math.floor((new Date()-new Date(osPh.start+'T00:00:00'))/(7*86400000))+1:1;
+
+    // Baseline prompt if this phase needs it and senior hasn't done it
+    const needsBaseline=ag!=='youth'&&osPh&&osPh.baselinePrompt&&Object.keys(S.oneRM).length===0;
+    const baselineCard=needsBaseline?renderBaselineInline():
+      (ag!=='youth'&&osPh&&osPh.baselinePrompt&&Object.keys(S.oneRM).length>0)?`
+      <div class="card" style="margin-bottom:12px;border:1px solid var(--green);">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:24px;">✅</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--green);">Baseline Complete</div>
+            <div style="font-size:11px;color:var(--muted);">Weight prescriptions are personalised to your 1RM.</div>
+          </div>
+          <button onclick="showBaselineForm()" style="margin-left:auto;font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:var(--font);cursor:pointer;">Retest</button>
+        </div>
+      </div>`:'';
+
+    const todayDayType=getTodayDrylandType();
+    const isRestDay=todayDayType==='rest'||todayDayType==='meet';
+    const sessionLabels={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Cardio',oos_cardio:'Cardio'};
+
+    el.innerHTML=`
+      <div class="card" style="margin-bottom:12px;border:1px solid ${phCol};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Off-Season</div>
+            <div style="font-size:22px;font-weight:900;color:${phCol};">${osPh?osPh.name:'—'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Week ${phaseWeekNum} of ${osPh?osPh.weeks:1}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Total</div>
+            <div style="font-size:22px;font-weight:900;color:var(--text);">${totalWeeks}<span style="font-size:12px;color:var(--muted);">w</span></div>
+            <div style="font-size:10px;color:var(--muted);">off-season</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:3px;align-items:flex-end;margin-bottom:10px;">${timelineHtml}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">${osPh?osPh.desc:''}</div>
+      </div>
+      ${baselineCard}
+      ${isRestDay?`
+      <div class="card" style="margin-bottom:12px;text-align:center;padding:20px 16px;">
+        <div style="font-size:36px;margin-bottom:8px;">😴</div>
+        <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Rest Day</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Recovery is part of the program.</div>
+        <div style="background:var(--surface);border-radius:10px;padding:12px;text-align:left;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.8;">🚶 20–30 min easy walk<br>🧘 Breathwork or stretching<br>🛁 Contrast shower or ice bath<br>😴 8–9 hrs sleep tonight</div>
+        </div>
+      </div>`:`
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Today's Session</div>
+        <div style="font-size:20px;font-weight:900;color:var(--accent);margin-bottom:12px;">${sessionLabels[todayDayType]||'Training'}</div>
+        ${needsBaseline?`<div style="font-size:12px;color:var(--muted);padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">Complete your strength baseline above first to get personalised weight prescriptions.</div>`:`
+        <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Off-Season Session →</button>`}
+      </div>`}
+      <button class="btn btn-ghost" onclick="deactivateOffSeason()" style="width:100%;margin-bottom:8px;font-size:12px;">End Off-Season</button>`;
+    return;
+  }
+
+  // ─────────────────────────────────────────────
+  // PATH 2 & 3: IN-SEASON (Standard + Goal Program)
+  // ─────────────────────────────────────────────
+
+  // Baseline prompt — one-time, non-blocking (seniors only, first open)
+  const hasBaseline=Object.keys(S.oneRM).length>0;
+  const baselinePromptHtml=(ag!=='youth'&&!hasBaseline)?`
+    <div class="card" style="margin-bottom:12px;border:1px solid var(--accent);">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px;">One-Time Setup</div>
+      <div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:6px;">Set Your Strength Baseline</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Log a weight and reps you can do comfortably — no maxing out needed. The app uses this to prescribe the right load for every session, forever.</div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="showBaselineForm()">Set Baseline Now →</button>
+      <button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="this.closest('.card').style.display='none'">Skip for now — use bodyweight/RPE</button>
+    </div>`:'';
+
+  // Goal Program toggle card
+  const goalToggleHtml=`
     <div class="card" style="margin-bottom:12px;">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Training Mode</div>
       <div style="display:flex;gap:8px;">
-        <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+        <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(26,188,191,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.4;">
           📋<br><span style="font-size:11px;">Standard</span>
         </button>
-        <button onclick="setWorkoutMode('goal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
+        <button onclick="setWorkoutMode('goal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.4;">
           🎯<br><span style="font-size:11px;">Goal Program</span>
         </button>
       </div>
@@ -3389,124 +3497,114 @@ function renderWorkoutTab(){
     </div>`;
 
   let modeHtml='';
+
   if(!isGoal){
+    // ── Standard mode ──
     const todayDayType=getTodayDrylandType();
     const isRestDay=todayDayType==='rest';
-    const restBanner=isRestDay?`
+    modeHtml=isRestDay?`
       <div class="card" style="margin-bottom:12px;text-align:center;padding:20px 16px;">
         <div style="font-size:36px;margin-bottom:8px;">😴</div>
         <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Rest Day</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">No dryland scheduled today. Recovery is training.</div>
-        <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:12px;text-align:left;">
+        <div style="background:var(--surface);border-radius:10px;padding:12px;text-align:left;">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery Options</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.7;">🚶 20min easy walk<br>🧘 10min breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9hrs sleep tonight</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.8;">🚶 20 min easy walk<br>🧘 Breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9 hrs sleep tonight</div>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Optional: mobility session</button>
-      </div>`:''
-    modeHtml=`
+        <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-top:12px;">Optional: add a mobility session</button>
+      </div>`:`
       <div class="card" style="margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Today's Session</div>
-        <div id="workout-subtitle" style="font-size:18px;font-weight:900;color:var(--accent);margin-bottom:4px;">—</div>
-        <div id="workout-schedule-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
-        ${restBanner}
-        ${!isRestDay?(()=>{const _hb=Object.keys(S.oneRM).length>0;const _ag=getAgeGroup();const _needsBase=_ag!=='youth'&&!_hb;return _needsBase?`<div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);"><div style="font-size:20px;margin-bottom:6px;">🔒</div><div style="font-size:13px;color:var(--muted);">Complete your strength baseline above to unlock your session.</div></div>`:`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Today's Session →</button>`;})():''}
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Today's Session</div>
+        <div id="workout-subtitle" style="font-size:20px;font-weight:900;color:var(--accent);margin-bottom:4px;">—</div>
+        <div id="workout-schedule-note" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+        <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Today's Session →</button>
+        <button class="btn btn-ghost" onclick="openModal('picker-modal')" style="width:100%;margin-top:8px;font-size:12px;">Override session type</button>
       </div>`;
   } else if(!gp){
-    // Goal mode — setup card
+    // ── Goal Program setup ──
     const abMeets=S.meets.filter(m=>{
       const d=localDate(m.date);const now=new Date();now.setHours(0,0,0,0);
       return (m.priority==='A'||m.priority==='B')&&d>=now;
     }).sort((a,b)=>localDate(a.date)-localDate(b.date));
     const trainingFocusOptions=Object.keys(TRAINING_FOCUS);
-
     const meetOptions=abMeets.length
       ?abMeets.map(m=>{
           const dO=Math.round((localDate(m.date)-new Date().setHours(0,0,0,0))/86400000);
           const wks=Math.ceil(dO/7);
-          const badge=m.priority==='A'?'🥇':'🥈';
-          return`<option value="${m.id}">${badge} ${m.name} · ${wks}w away</option>`;
+          return`<option value="${m.id}">${m.priority==='A'?'🥇':'🥈'} ${m.name} · ${wks}w away</option>`;
         }).join('')
       :'<option value="">No upcoming A/B meets — add one first</option>';
-
     const goalsHtml=trainingFocusOptions.map((g,gi)=>`
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-            <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
-            <span style="font-size:13px;">${g}</span>
-          </label>`).join('');
-
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+        <input type="checkbox" id="ggoal-${gi}" value="${g.replace(/"/g,'&quot;')}" style="margin-top:2px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0;">
+        <span style="font-size:13px;">${g}</span>
+      </label>`).join('');
     modeHtml=`
-      <p class="section-title">Goal Program</p>
-      <p class="section-sub">Pick the areas your coach wants you to focus on before your next target meet.</p>
       <div class="card" style="margin-bottom:12px;">
         <div class="card-title">Target Meet</div>
-        <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">
-          ${meetOptions}
-        </select>
+        <select id="goal-meet-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);">${meetOptions}</select>
       </div>
       <div class="card" style="margin-bottom:12px;">
         <div class="card-title">Training Focus — pick 1 to 3</div>
         ${goalsHtml}
       </div>
-      <button class="btn btn-primary" onclick="activateGoalProgramUI()" style="margin-bottom:8px;" ${!abMeets.length?'disabled':''}>Activate Goal Program 🎯</button>
-      <button class="btn btn-secondary btn-sm" onclick="setWorkoutMode('standard')" style="width:100%;">← Back to Standard</button>`;
+      <button class="btn btn-primary" onclick="activateGoalProgramUI()" style="width:100%;margin-bottom:8px;" ${!abMeets.length?'disabled':''}>Activate Goal Program 🎯</button>`;
   } else {
-    // Goal mode — active state
+    // ── Goal Program active ──
     const meet=S.meets.find(m=>String(m.id)===String(gp.meetId));
     const weeks=meet?weeksToMeet(meet):gp.weeksToMeet;
     const totalW=gp.totalWeeks||gp.weeksToMeet||12;
     const phaseObj=goalPhaseFromPosition(totalW,weeks);
     const phaseColor=phaseObj.color;
-    const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">🎯 ${g}</div>`).join('');
-    const pct=Math.min(100,Math.round(((totalW-weeks)/totalW)*100));
-    // Week-by-week timeline with phase labels
+    const goalsDisplay=(gp.goals||[]).map(g=>`<div style="padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);color:var(--text);">🎯 ${g}</div>`).join('');
+    const colors={GPP:'var(--green)',Stimulus:'var(--green)',Strength:'var(--red)',Sharpen:'var(--orange)',Taper:'var(--accent)'};
     const timelineBlocks=Array.from({length:totalW},(_,i)=>{
-      const wkRemaining=totalW-i;
-      const ph=goalPhaseFromPosition(totalW,wkRemaining);
-      const isCurrent=wkRemaining===weeks;
-      const isPast=wkRemaining>weeks;
-      const colors={GPP:'#00e676',Stimulus:'#00e676',Strength:'#ff5252',Sharpen:'#ff9800',Taper:'#1ABCBF'};
-      const bg=isPast?'var(--border)':colors[ph.name]||'var(--border)';
-      const labelColor=isPast?'var(--border)':colors[ph.name]||'var(--muted)';
+      const wkR=totalW-i;
+      const ph=goalPhaseFromPosition(totalW,wkR);
+      const isCur=wkR===weeks;
+      const isPast=wkR>weeks;
+      const col=colors[ph.name]||'var(--border)';
       return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-        <div style="width:100%;height:${isCurrent?'14px':'8px'};border-radius:3px;background:${bg};opacity:${isPast?0.3:1};margin-top:${isCurrent?'0':'3px'};transition:all 0.2s;${isCurrent?'box-shadow:0 0 6px '+bg+';':''}"></div>
-        <div style="font-size:9px;color:${isCurrent?labelColor:'var(--muted)'};font-weight:${isCurrent?'700':'400'};opacity:${isPast?0.4:1};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;">${isCurrent?'▲ '+ph.name:ph.name}</div>
+        <div style="width:100%;height:${isCur?14:8}px;border-radius:3px;background:${isPast?'var(--border)':col};opacity:${isPast?0.3:1};margin-top:${isCur?0:3}px;${isCur?'box-shadow:0 0 6px '+col+';':''}transition:all 0.2s;"></div>
+        <div style="font-size:9px;color:${isCur?col:'var(--muted)'};font-weight:${isCur?700:400};opacity:${isPast?0.4:1};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;">${isCur?'▲ '+ph.name:ph.name}</div>
       </div>`;
     }).join('');
     modeHtml=`
-      <p class="section-title">Goal Program Active</p>
-      <div class="card" style="border:1px solid ${phaseColor};margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+      <div class="card" style="margin-bottom:12px;border:1px solid ${phaseColor};">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">This Week</div>
-            <div style="font-size:20px;font-weight:800;color:${phaseColor};">${phaseObj.name}</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">This Week</div>
+            <div style="font-size:22px;font-weight:900;color:${phaseColor};">${phaseObj.name}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:2px;">${phaseObj.desc}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${meet?meet.name:'Target Meet'}</div>
-            <div style="font-size:20px;font-weight:800;color:var(--gold);">${weeks}w</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">${meet?meet.name:'Target Meet'}</div>
+            <div style="font-size:22px;font-weight:900;color:var(--gold);">${weeks}w</div>
             <div style="font-size:10px;color:var(--muted);">to meet</div>
           </div>
         </div>
-        <div style="display:flex;gap:4px;align-items:flex-start;margin-bottom:12px;">${timelineBlocks}</div>
+        <div style="display:flex;gap:3px;align-items:flex-end;margin-bottom:12px;">${timelineBlocks}</div>
         ${goalsDisplay}
       </div>
-      <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Goal Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Override session type</button>
-      <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
+      <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;margin-bottom:8px;">Generate Goal Workout →</button>
+      <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;font-size:12px;margin-bottom:8px;">Deactivate Goal Program</button>`;
   }
-  el.innerHTML=toggleHtml+modeHtml;
 
-  // Populate Today's Session subtitle after render
+  el.innerHTML=baselinePromptHtml+goalToggleHtml+modeHtml;
+
+  // Populate today's session label
   if(!isGoal){
     const subEl=document.getElementById('workout-subtitle');
     const noteEl=document.getElementById('workout-schedule-note');
-    const todayDayType2=getTodayDrylandType();
-    const labels2={lower:'Lower Body Strength',upper:'Upper Body Strength',power:'Power & Plyos',mobility:'Mobility & Recovery',cardio:'Sprint Cardio',rest:'Rest Day'};
-    if(subEl)subEl.textContent=labels2[todayDayType2]||'Training';
-    if(noteEl){
-      const tk2=dKey(new Date());
-      const hasDayOverride=S.daySchedule[tk2]&&S.daySchedule[tk2].override;
-      noteEl.textContent=hasDayOverride?'Manually scheduled for today':'From your season template · '+getAgeGroupLabel();
+    if(subEl||noteEl){
+      const todayDayType2=getTodayDrylandType();
+      const labels2={lower:'Lower Body Strength',upper:'Upper Body Strength',power:'Power & Plyos',mobility:'Mobility & Recovery',cardio:'Sprint Cardio'};
+      if(subEl)subEl.textContent=labels2[todayDayType2]||'Training';
+      if(noteEl){
+        const tk2=dKey(new Date());
+        const hasDayOverride=S.daySchedule[tk2]&&S.daySchedule[tk2].override;
+        noteEl.textContent=hasDayOverride?'Manually scheduled for today':'From your season template · '+getAgeGroupLabel();
+      }
     }
   }
 }
@@ -3650,9 +3748,9 @@ function renderWorkout(w){
   const goalTag=ltGoals.map(g=>GOAL_TAGS[g]).filter(Boolean)[0];
   if(goalTag)html+=`<div style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.35);color:#f5c842;margin-left:6px;vertical-align:middle;">${goalTag}</div>`;
   if(w.taperNote)html+=`<div class="alert-banner alert-taper">⚡ ${w.taperNote}</div>`;
-  if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Goal Program: ${w.goals.slice(0,2).join(' · ')}</div>`;
-  else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:#1a1a2a;border:1px solid var(--purple);color:var(--purple);">🎯 Adaptive focus: ${w.emp==='fly'?'Butterfly pull & power — closing gap to trials':'Freestyle speed — closing gap to trials'}</div>`;
-  html+=`<div class="alert-banner" style="background:#0a1a2a;border:1px solid var(--accent);color:var(--accent);">📊 <strong>${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?' '+w.scheme.note:''}</div>`;
+  if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Goal Program:</strong> ${w.goals.slice(0,2).join(' · ')}</div>`;
+  else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Adaptive focus:</strong> ${w.emp==='fly'?'Butterfly pull & power':'Freestyle speed'}</div>`;
+  html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--accent);color:var(--text);">📊 <strong style="color:var(--accent);">${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?'<span style="color:var(--muted);"> · '+w.scheme.note+'</span>':''}</div>`;
   if(w.schedNote)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:5px 8px;background:var(--surface);border-radius:6px;">📅 Session type: <b style="color:var(--text);">${w.schedNote}</b></div>`;
   if(w.doubleDayNote)html+=`<div style="font-size:11px;color:var(--gold);margin-bottom:8px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);">⚡ ${w.doubleDayNote}</div>`;
   w.blocks.forEach((block,bi)=>{
@@ -5440,48 +5538,69 @@ function calcOffSeasonPhases(seasonEndStr, nextSeasonStartStr){
   const totalDays = Math.round((next - end) / 86400000);
   const totalWeeks = Math.max(2, Math.round(totalDays / 7));
 
-  // Phase proportions: Transition 15%, GPP 45%, Specific Prep 40%
-  // Minimum 1 week each if enough room; collapse gracefully for short windows
-  let tWeeks, gppWeeks, spWeeks;
-  if(totalWeeks <= 3){
-    tWeeks=1; gppWeeks=1; spWeeks=Math.max(1,totalWeeks-2);
-  } else if(totalWeeks <= 6){
-    tWeeks=1; gppWeeks=Math.round(totalWeeks*0.45); spWeeks=totalWeeks-1-gppWeeks;
+  // 4 phases: Transition → GPP → Strength Block → Specific Prep
+  // Proportions scale to available window — minimum 1 week each
+  let tWeeks, gppWeeks, sbWeeks, spWeeks;
+  if(totalWeeks <= 4){
+    tWeeks=1; gppWeeks=1; sbWeeks=1; spWeeks=Math.max(1,totalWeeks-3);
+  } else if(totalWeeks <= 8){
+    tWeeks=1; gppWeeks=Math.round(totalWeeks*0.25);
+    sbWeeks=Math.round(totalWeeks*0.40);
+    spWeeks=totalWeeks-tWeeks-gppWeeks-sbWeeks;
   } else {
-    tWeeks=Math.max(1,Math.round(totalWeeks*0.15));
-    gppWeeks=Math.round(totalWeeks*0.45);
-    spWeeks=totalWeeks-tWeeks-gppWeeks;
+    tWeeks=Math.max(1,Math.round(totalWeeks*0.12));
+    gppWeeks=Math.max(2,Math.round(totalWeeks*0.28));
+    sbWeeks=Math.max(3,Math.round(totalWeeks*0.38));
+    spWeeks=Math.max(1,totalWeeks-tWeeks-gppWeeks-sbWeeks);
   }
 
   const phases=[];
-  let cursor=new Date(end); // start off-season on season end date itself
+  let cursor=new Date(end);
 
-  const addPhase=(name,weeks,desc,drylandPattern,cardioPerWeek,liftIntensity)=>{
+  const addPhase=(name,weeks,desc,drylandPattern,cardioPerWeek,liftIntensity,baselinePrompt)=>{
     const start=new Date(cursor);
     const end2=new Date(cursor);end2.setDate(end2.getDate()+weeks*7-1);
-    phases.push({name,weeks,start:dKey(start),end:dKey(end2),desc,drylandPattern,cardioPerWeek,liftIntensity});
+    phases.push({name,weeks,start:dKey(start),end:dKey(end2),desc,drylandPattern,cardioPerWeek,liftIntensity,baselinePrompt:!!baselinePrompt});
     cursor.setDate(cursor.getDate()+weeks*7);
   };
 
-  // Transition: bodyweight/mobility only, 2 cardio/wk, very light
+  // Phase 1 — Transition: active recovery, mobility, light cardio only
   addPhase('Transition',tWeeks,
-    'Active recovery. Deload the body, maintain movement quality.',
+    'Active recovery. Deload from the season, restore movement quality.',
     {0:'mobility',1:'cardio',2:'rest',3:'mobility',4:'cardio',5:'rest',6:'rest'},
-    2,'bodyweight');
+    2,'bodyweight',false);
 
-  // GPP: compound lifts 65-70% 1RM, 3 cardio/wk, aerobic base
+  // Phase 2 — GPP: aerobic base, light compound lifts 60-65% 1RM
   addPhase('GPP',gppWeeks,
-    'General Physical Preparation. Build aerobic base and foundational strength.',
+    'General Physical Prep. Build aerobic base and re-establish movement patterns.',
     {0:'lower',1:'cardio',2:'upper',3:'cardio',4:'lower',5:'cardio',6:'rest'},
-    3,'GPP');
+    3,'GPP',false);
 
-  // Specific Prep: heavier lifts 80-85% 1RM, 2 interval cardio/wk, stroke-specific
+  // Phase 3 — Strength Block: baseline testing, progressive overload 80-85% 1RM
+  addPhase('Strength Block',sbWeeks,
+    'Peak strength phase. Baseline test at the start, then progressive overload. This is where you get strong.',
+    {0:'lower',1:'upper',2:'cardio',3:'lower',4:'upper',5:'power',6:'rest'},
+    1,'Strength',true); // baselinePrompt = true
+
+  // Phase 4 — Specific Prep: power, stroke-specific, bridge to season
   addPhase('Specific Prep',spWeeks,
-    'Sport-specific strength and power. Transition back toward in-season loading.',
+    'Sport-specific power and speed. Bridge from off-season strength to in-season performance.',
     {0:'lower',1:'cardio',2:'upper',3:'power',4:'lower',5:'cardio',6:'rest'},
-    2,'Strength');
+    2,'Strength',false);
 
   return{totalWeeks,phases};
+}
+
+// Get next season start: same date next year from seasonTemplate.start, or +1yr from today
+function getDefaultNextSeasonStart(){
+  const tmpl=S.seasonTemplate||{};
+  if(tmpl.start){
+    const d=new Date(tmpl.start+'T00:00:00');
+    d.setFullYear(d.getFullYear()+1);
+    return dKey(d);
+  }
+  const d=new Date();d.setFullYear(d.getFullYear()+1);
+  return dKey(d);
 }
 
 // Determine current off-season phase based on today's date
@@ -5510,8 +5629,8 @@ function getOffSeasonDayType(){
 function activateOffSeason(){
   const tmpl=S.seasonTemplate||{};
   if(!tmpl.end){alert('Set your season end date first.');return;}
-  const nextStart=S.offSeason&&S.offSeason.nextSeasonStart?S.offSeason.nextSeasonStart:tmpl.start;
-  if(!nextStart){alert('Set a next season start date in the Season Template section.');return;}
+  // Use stored next season start, or default to same date next year
+  const nextStart=(S.offSeason&&S.offSeason.nextSeasonStart)||getDefaultNextSeasonStart();
 
   const result=calcOffSeasonPhases(tmpl.end,nextStart);
   S.offSeason={active:true,nextSeasonStart:nextStart,phases:result.phases,totalWeeks:result.totalWeeks};
@@ -7010,89 +7129,55 @@ function toggleTimer(){
 }
 
 // ── 1RM Baseline Card ──
-function renderBaselineGate(){
-  // Called from renderWorkoutTab — shows gate at TOP when baseline not set,
-  // hides gate and renders collapsed strip at BOTTOM when done.
+// Returns HTML string for the inline baseline form (used in off-season Strength Block + first-time setup)
+function renderBaselineInline(){
   const ag=getAgeGroup();
-  const gate=document.getElementById('baseline-gate');
-  const card=document.getElementById('baseline-card');
-  const workoutTop=document.getElementById('workout-top');
-
-  // Youth (under 13): no 1RM baseline needed — bodyweight only
-  if(ag==='youth'){
-    if(gate)gate.innerHTML='';
-    if(card)card.innerHTML='';
-    if(workoutTop)workoutTop.style.display='block';
-    return;
-  }
-
-  const weeks=weeksSinceRM();
-  const needsRetest=weeks!==null&&weeks>=8;
-  const hasAny=Object.keys(S.oneRM).length>0;
-
-  if(hasAny&&!needsRetest){
-    // Baseline done — hide gate, show collapsed strip at bottom, unlock workout
-    if(gate)gate.innerHTML='';
-    if(workoutTop)workoutTop.style.display='block';
-    renderBaseline(); // renders collapsed strip into baseline-card
-    return;
-  }
-
-  // Baseline NOT set (or retest due) — show gate above, keep workout-top visible
-  if(workoutTop)workoutTop.style.display='block';
-  if(card)card.innerHTML=''; // baseline-card not used in gate state
-
-  const isRetest=needsRetest;
   const isTeen=ag==='teen';
-  const title=isRetest?'Time to Retest Your Baselines':'Set Your Strength Baselines First';
-  const intro=isRetest
-    ?`It's been ${weeks} weeks. Retest your baselines so the app can recalculate your training loads accurately.`
-    :isTeen
-    ?`Before your first session, log a weight and reps you can do comfortably. You don't need to max out — the app estimates your 1RM from any weight × reps (e.g. 3 sets of 8). This unlocks personalised loading for every session.`
-    :`Before your first session, log a weight and reps you can do comfortably. The app uses the Epley formula to estimate your 1RM and prescribe the right load for every session. No need to max out.`;
-
+  const intro=isTeen
+    ?`Log a weight and reps you can do comfortably — no maxing out. The app estimates your 1RM so it can prescribe the right load for every session.`
+    :`Log a working weight × reps for each lift. The app uses the Epley formula to estimate your 1RM and personalise every session from here on.`;
   const rows=ONE_RM_LIFTS.map(lift=>{
     const existing=S.oneRM[lift.key];
-    const dispRM=existing?`<span style="color:var(--accent);font-weight:700;">${dW(existing).toFixed(1)} ${uL()} 1RM</span>`:`<span style="color:var(--muted);">Not set</span>`;
-    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <div style="font-size:14px;font-weight:600;">${lift.label}</div>
+    const dispRM=existing?`<span style="color:var(--accent);font-weight:700;">${dW(existing).toFixed(1)} ${uL()} est. 1RM</span>`:`<span style="color:var(--muted);">Not set</span>`;
+    return`<div style="padding:12px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">${lift.label}</div>
         <div style="font-size:12px;">${dispRM}</div>
       </div>
-      ${lift.isPullUp?`
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="number" id="rm-w-${lift.key}" placeholder="Added weight (${uL()}) — 0 if bodyweight" step="2.5" min="0"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
-        <span style="font-size:12px;color:var(--muted);">×</span>
-        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="30"
-          style="width:64px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" id="rm-w-${lift.key}" placeholder="${lift.isPullUp?'Added kg (0 = bodyweight)':'Weight ('+uL()+')'}" step="2.5" min="0"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:9px 10px;font-family:var(--font);">
+        <span style="font-size:13px;color:var(--muted);font-weight:700;">×</span>
+        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="${lift.isPullUp?30:12}"
+          style="width:68px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:9px 8px;font-family:var(--font);">
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Dead hang, chin over bar. Enter reps at bodyweight (added weight = 0) or with a dip belt.</div>`:`
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="number" id="rm-w-${lift.key}" placeholder="Weight (${uL()})" step="2.5" min="0"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
-        <span style="font-size:12px;color:var(--muted);">×</span>
-        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="12"
-          style="width:64px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Enter a weight you've done for 1–12 reps. We'll calculate your 1RM.</div>`}
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;">${lift.isPullUp?'Dead hang, full range. Added weight = 0 for bodyweight only.':'Any weight you\'ve done for 1–12 reps. We\'ll calculate your 1RM.'}</div>
     </div>`;
   }).join('');
-
-  if(gate)gate.innerHTML=`
-    <div class="card" style="margin-bottom:12px;border:1px solid var(--accent);">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px;">Strength Baseline</div>
-      <div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:6px;">${title}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">${intro}</div>
-      ${rows}
-      <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="saveBaseline()">Save Baselines & Unlock Workouts →</button>
-    </div>
-    <div class="card" style="margin-bottom:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);text-align:center;padding:24px 16px;">
-      <div style="font-size:28px;margin-bottom:8px;">🔒</div>
-      <div style="font-size:15px;font-weight:700;color:var(--muted);margin-bottom:4px;">Workouts Locked</div>
-      <div style="font-size:12px;color:var(--muted);">Complete your strength baseline above to unlock your personalised dryland program.</div>
-    </div>`;
+  return`<div class="card" style="margin-bottom:12px;border:1px solid var(--accent);" id="baseline-form-card">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px;">Strength Baseline</div>
+    <div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:6px;">Set Your Lifting Baselines</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">${intro}</div>
+    ${rows}
+    <button class="btn btn-primary" style="margin-top:16px;width:100%;" onclick="saveBaseline()">Save Baselines →</button>
+  </div>`;
 }
+
+// Show baseline form — called from "Set Baseline Now" button and "Retest" button
+function showBaselineForm(){
+  // Insert inline above workout-top content
+  const existing=document.getElementById('baseline-form-card');
+  if(existing){existing.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const top=document.getElementById('workout-top');
+  if(!top)return;
+  const div=document.createElement('div');
+  div.innerHTML=renderBaselineInline();
+  top.prepend(div.firstChild);
+  document.getElementById('baseline-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Legacy stub — kept so any old references don't crash
+function renderBaselineGate(){}
 
 function renderBaseline(){
   const el=document.getElementById('baseline-card');if(!el)return;
