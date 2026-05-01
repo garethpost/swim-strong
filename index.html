@@ -4241,13 +4241,49 @@ function renderWeekStrip(){
       <div style="font-size:10px;color:var(--muted);">${rangeStr}</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;">
-      ${dots.map(d=>`
+      ${dots.map(d=>{
+        // Visual logic:
+        // Today = solid accent fill, white label
+        // Selected (not today) = solid --text fill, accent label — clearly distinct from today
+        // Done past = neutral fill + teal checkmark
+        // Future = dimmed neutral
+        // Meet = gold fill
+        let circleBg, circleOpacity='1', ringStyle='', labelColor, labelWeight='600', checkColor='var(--accent)';
+        if(d.isMeet){
+          circleBg='var(--gold)';
+          labelColor=d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)';
+          if(d.isSelected)ringStyle='box-shadow:0 0 0 2px var(--text);';
+        } else if(d.isToday){
+          circleBg='var(--accent)';
+          labelColor='var(--accent)';
+          labelWeight='800';
+          checkColor='#fff';
+        } else if(d.isSelected){
+          circleBg='var(--text)';
+          labelColor='var(--text)';
+          labelWeight='700';
+          ringStyle='box-shadow:0 0 0 2px var(--text);';
+          checkColor='var(--bg)';
+        } else if(d.isFuture){
+          circleBg='var(--border)';
+          circleOpacity='0.4';
+          labelColor='var(--muted)';
+          labelWeight='400';
+        } else {
+          circleBg='var(--border)';
+          labelColor='var(--muted)';
+          labelWeight='400';
+        }
+        const checkmark=d.isDone?`<span style="font-size:13px;color:${checkColor};font-weight:900;">✓</span>`:'';
+        const meetIcon=d.isMeet?'<span style="font-size:11px;">🏁</span>':'';
+        return `
         <div style="text-align:center;cursor:pointer;" onclick="selectHomeDay('${d.key}')">
-          <div style="font-size:9px;color:${d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isSelected||d.isToday?'700':'400'};margin-bottom:5px;">${d.label}</div>
-          <div style="width:32px;height:32px;border-radius:50%;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);':d.isToday?'box-shadow:0 0 0 2px var(--accent);':''};display:flex;align-items:center;justify-content:center;margin:0 auto;transition:box-shadow 0.15s;">
-            ${d.isMeet?'<span style="font-size:11px;">🏁</span>':d.isDone?'<span style="font-size:13px;color:var(--accent);font-weight:900;">✓</span>':''}
+          <div style="font-size:9px;color:${labelColor};font-weight:${labelWeight};margin-bottom:5px;">${d.label}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:${circleBg};opacity:${circleOpacity};${ringStyle};display:flex;align-items:center;justify-content:center;margin:0 auto;transition:all 0.15s;">
+            ${d.isMeet?meetIcon:checkmark}
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>
     ${!isViewingToday?`<div style="font-size:10px;color:var(--accent);font-weight:600;text-align:center;margin-top:2px;cursor:pointer;" onclick="selectHomeDay('${todayKey}')">← Back to today</div>`:''}`;
 }
@@ -4422,9 +4458,11 @@ function renderHomeWeekProgress(){
     if(checkinHistory.some(c=>c.date===key))checkinDays++;
   }
 
-  const dispKm=S.useKm?doneKm:(doneKm*0.621371);
+  const dispKm=parseFloat((S.useKm?doneKm:(doneKm*0.621371)).toFixed(1));
   const dispWeekGoal=S.useKm?weekGoal:parseFloat((weekGoal*0.621371).toFixed(1));
   const unit=S.useKm?'km':'mi';
+  // Label clarifies what the target means
+  const kmTargetLabel=`${dispWeekGoal}${unit} target (${seasonGoal}${unit} season ÷ 36 wks)`;
 
   function bar(label,val,max,color,display){
     const pct=max>0?Math.min(100,Math.round(val/max*100)):0;
@@ -4441,7 +4479,7 @@ function renderHomeWeekProgress(){
 
   el.innerHTML=
     bar('Sessions',doneDryland,Math.max(1,schDryland),'var(--accent)',`${doneDryland} / ${schDryland}`)
-   +bar('Pool '+unit,parseFloat(dispKm.toFixed(1)),dispWeekGoal,'var(--green)',`${dispKm.toFixed(1)} / ${dispWeekGoal} ${unit}`)
+   +bar(`Pool ${unit} <span style='font-size:10px;color:var(--muted);font-weight:400;'>(${seasonGoal}${unit} season goal)</span>`,parseFloat(dispKm.toFixed(1)),dispWeekGoal,'var(--green)',`${dispKm.toFixed(1)} / ${dispWeekGoal} ${unit} this wk`)
    +bar('Cal target hit',calHits,daysElapsed,'var(--orange)',`${calHits} days`)
    +bar('Recovery check',checkinDays,daysElapsed,'var(--purple)',`${checkinDays} / ${daysElapsed}`);
 }
