@@ -200,7 +200,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:12px;padding:12px 14px;" id="week-strip-card"></div>
+      <div class="card" style="margin-bottom:12px;padding:10px 12px;" id="week-strip-card"></div>
       <div class="card" style="margin-bottom:12px;padding:16px;" id="home-today-summary"></div>
 
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px;padding-left:2px;">Today's Fuel</div>
@@ -4258,9 +4258,9 @@ function renderWeekStrip(){
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;">
       ${dots.map(d=>`
         <div style="text-align:center;cursor:pointer;" onclick="selectHomeDay('${d.key}')">
-          <div style="font-size:9px;color:${d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isSelected||d.isToday?'700':'400'};margin-bottom:4px;">${d.label}</div>
-          <div style="width:100%;aspect-ratio:1;border-radius:8px;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);outline:none;':''};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:box-shadow 0.15s;">
-            ${d.isMeet?'<span style="font-size:12px;">🏁</span>':d.isToday&&d.isSelected?'<span style="font-size:14px;font-weight:900;color:#fff;">→</span>':d.isDone?'<span style="font-size:13px;color:#fff;">✓</span>':d.lines.filter(l=>l).map(l=>`<span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.85);line-height:1.2;">${l}</span>`).join('')}
+          <div style="font-size:9px;color:${d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isSelected||d.isToday?'700':'400'};margin-bottom:5px;">${d.label}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);':''};display:flex;align-items:center;justify-content:center;margin:0 auto;transition:box-shadow 0.15s;">
+            ${d.isMeet?'<span style="font-size:11px;">🏁</span>':d.isDone?'<span style="font-size:12px;color:#fff;">✓</span>':''}
           </div>
         </div>`).join('')}
     </div>
