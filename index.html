@@ -4382,14 +4382,29 @@ function renderHomeWeekProgress(){
   const dow=today.getDay();
   const monOffset=dow===0?-6:1-dow;
   const mon=new Date(today);mon.setDate(today.getDate()+monOffset);
-  const daysElapsed=dow===0?7:dow; // days Mon-today inclusive
-  let schSessions=0,doneSessions=0;
-  let schKm=0,doneKm=0;
+  const daysElapsed=dow===0?7:dow;
+
+  // ── 1. Sessions: dryland workouts completed vs scheduled ──
+  let schDryland=0, doneDryland=0;
+
+  // ── 2. Pool km: logged vs season goal (weekly slice) ──
+  let doneKm=0;
+  const seasonGoal=S.kmSeasonTarget||(S.useKm?500:300);
+  const weekGoal=parseFloat((seasonGoal/36).toFixed(1)); // ~36 weeks in season
+
+  // ── 3. Cal target: days where logged cals >= daily target ──
   let calHits=0;
   S.mealLog=S.mealLog||DB.get('mealLog',{});
+
+  // ── 4. Recovery: days with a completed check-in ──
+  let checkinDays=0;
+  const checkinHistory=S.checkinHistory||[];
+
   for(let i=0;i<daysElapsed;i++){
     const d=new Date(mon);d.setDate(mon.getDate()+i);
     const key=dKey(d);
+
+    // Sessions — dryland only
     const sch=S.daySchedule[key]||{};
     let sessions=sch.sessions||[];
     if(!sch.override&&!sessions.length){
@@ -4397,23 +4412,36 @@ function renderHomeWeekProgress(){
       if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(d>=ss&&d<=se)sessions=tmpl.days[d.getDay()]||[];}
     }
     if(sch.removed)sessions=[];
-    const hasSwim=sessions.some(s=>s.startsWith('swim'));
-    const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
-    if(hasSwim)schSessions++;
-    if(hasDry)schSessions++;
-    if(hasSwim)schKm+=3.5;
+    const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest'||s.startsWith('oos_')&&s!=='oos_rest');
+    if(hasDry)schDryland++;
     const dryDone=S.history.some(h=>{try{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===d.getTime();}catch(e){return false;}});
-    const poolEntry=S.poolLog.find(e=>e.date===key);
-    if(hasSwim&&poolEntry)doneSessions++;
-    if(hasDry&&dryDone)doneSessions++;
+    if(hasDry&&dryDone)doneDryland++;
+
+    // Pool km
+    const poolEntry=(S.poolLog||[]).find(e=>e.date===key);
     if(poolEntry)doneKm+=poolEntry.distKm||0;
-    if((S.mealLog[key]||[]).length>0)calHits++;
+
+    // Cal target — check logged vs target for this day
+    const dayMeals=S.mealLog[key]||[];
+    if(dayMeals.length>0){
+      const dayData=getDailyCalFromSchedule(key);
+      if(dayData){
+        let logged=0;
+        dayMeals.forEach(m=>{const food=resolveFood(m.foodId);if(food)logged+=food.cal*(m.qty||1);});
+        if(logged>=dayData.cal*0.9)calHits++; // within 10% counts as hit
+      }
+    }
+
+    // Recovery check-in
+    if(checkinHistory.some(c=>c.date===key))checkinDays++;
   }
-  // Recovery: days this week with check-in (use readiness >0 as proxy)
-  const recoveryDays=Math.min(daysElapsed,S.readiness>0?daysElapsed:0);
-  function bar(label,val,max,color,fmt){
+
+  const dispKm=S.useKm?doneKm:(doneKm*0.621371);
+  const dispWeekGoal=S.useKm?weekGoal:parseFloat((weekGoal*0.621371).toFixed(1));
+  const unit=S.useKm?'km':'mi';
+
+  function bar(label,val,max,color,display){
     const pct=max>0?Math.min(100,Math.round(val/max*100)):0;
-    const display=fmt?fmt(val,max):`${val} / ${max}`;
     return`<div style="margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
         <div style="font-size:12px;color:var(--muted);">${label}</div>
@@ -4424,11 +4452,12 @@ function renderHomeWeekProgress(){
       </div>
     </div>`;
   }
-  el.innerHTML=`
-    ${bar('Sessions',doneSessions,Math.max(1,schSessions),'var(--accent)')}
-    ${bar('Pool km',parseFloat(doneKm.toFixed(1)),parseFloat(schKm.toFixed(1)),'var(--green)',(v,m)=>`${v.toFixed(1)} / ${m.toFixed(1)}`)}
-    ${bar('Cal target hit',calHits,daysElapsed,'var(--orange)',(v,m)=>`${v} days`)}
-    ${bar('Recovery check',recoveryDays,daysElapsed,'var(--purple)',(v,m)=>`${v} / ${m}`)}`;
+
+  el.innerHTML=
+    bar('Sessions',doneDryland,Math.max(1,schDryland),'var(--accent)',`${doneDryland} / ${schDryland}`)
+   +bar('Pool '+unit,parseFloat(dispKm.toFixed(1)),dispWeekGoal,'var(--green)',`${dispKm.toFixed(1)} / ${dispWeekGoal} ${unit}`)
+   +bar('Cal target hit',calHits,daysElapsed,'var(--orange)',`${calHits} days`)
+   +bar('Recovery check',checkinDays,daysElapsed,'var(--purple)',`${checkinDays} / ${daysElapsed}`);
 }
 function renderHome(){
   const h=new Date().getHours();
