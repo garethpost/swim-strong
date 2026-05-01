@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <!-- cache-bust: v30 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -194,13 +195,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="stat-meet-days" style="font-size:22px;font-weight:900;color:var(--gold);line-height:1;">—</div>
           <div id="stat-meet-name" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Next Meet</div>
         </div>
-        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;">
+        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;cursor:pointer;" onclick="openSwimLog()">
           <div id="stat-km" style="font-size:22px;font-weight:900;color:var(--green);line-height:1;">0.0</div>
-          <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km</div>
+          <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km ＋</div>
         </div>
       </div>
 
-      <div id="home-load-pill" style="display:none;" class="card" style="margin-bottom:12px;padding:16px;"></div>
+      <div id="home-load-pill" class="card" style="display:none;margin-bottom:12px;padding:16px;"></div>
       <div class="card" style="margin-bottom:12px;padding:10px 12px;" id="week-strip-card"></div>
       <div class="card" style="margin-bottom:12px;padding:16px;" id="home-today-summary"></div>
 
@@ -4523,7 +4524,7 @@ function renderHomeWeekProgress(){
   const dispWeekGoal=S.useKm?weekGoal:parseFloat((weekGoal*0.621371).toFixed(1));
   const unit=S.useKm?'km':'mi';
   // Label clarifies what the target means
-  const kmTargetLabel=`${dispWeekGoal}${unit} target (${seasonGoal}${unit} season ÷ 36 wks)`;
+
 
   function bar(label,val,max,color,display){
     const pct=max>0?Math.min(100,Math.round(val/max*100)):0;
@@ -4777,9 +4778,6 @@ function renderHomLoadPill(){
         <div style="margin-top:5px;">${rdots}</div>
       </div>
     </div>`;
-  // Keep legacy load-rec element in sync for updateCheckin()
-  const lr=document.getElementById('load-rec');
-  if(lr)lr.innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
 }
 function maybeShowCheckinSheet(){
   // Show if: before noon AND not checked in today
@@ -8212,6 +8210,63 @@ function showSection(name){
 
 }
 
+// ── Swim Log ──
+function openSwimLog(){
+  const unit=S.useKm?'km':'mi';
+  const goalEl=document.getElementById('swim-log-season-goal');
+  const unitEls=document.querySelectorAll('#swim-log-unit,#swim-log-goal-unit');
+  unitEls.forEach(el=>el.textContent=unit);
+  // Pre-fill today's date
+  const dateEl=document.getElementById('swim-log-date');
+  if(dateEl)dateEl.value=dKey(new Date());
+  // Pre-fill current season goal
+  if(goalEl){
+    const currentGoal=S.kmSeasonTarget||(S.useKm?500:300);
+    goalEl.value=S.useKm?currentGoal:Math.round(currentGoal*0.621371);
+  }
+  // Show weekly target note
+  const noteEl=document.getElementById('swim-log-goal-note');
+  if(noteEl){
+    const goal=S.kmSeasonTarget||(S.useKm?500:300);
+    const weekTarget=parseFloat((goal/36).toFixed(1));
+    const disp=S.useKm?weekTarget:parseFloat((weekTarget*0.621371).toFixed(1));
+    noteEl.textContent=`Current: ${S.useKm?goal:Math.round(goal*0.621371)}${unit} season → ${disp}${unit}/week target`;
+  }
+  // Clear distance input
+  const kmEl=document.getElementById('swim-log-km');
+  if(kmEl)kmEl.value='';
+  openModal('swim-log-modal');
+}
+function saveSwimLog(){
+  const kmEl=document.getElementById('swim-log-km');
+  const dateEl=document.getElementById('swim-log-date');
+  const goalEl=document.getElementById('swim-log-season-goal');
+  if(!kmEl||!dateEl)return;
+  const rawDist=parseFloat(kmEl.value);
+  if(!rawDist||rawDist<=0){alert('Enter a distance.');return;}
+  const date=dateEl.value||dKey(new Date());
+  // Convert to km for storage
+  const distKm=S.useKm?rawDist:rawDist/0.621371;
+  // Save pool log entry
+  S.poolLog=S.poolLog||[];
+  const existing=S.poolLog.findIndex(e=>e.date===date);
+  if(existing>=0){
+    S.poolLog[existing].distKm=Math.round((S.poolLog[existing].distKm+distKm)*100)/100;
+  } else {
+    S.poolLog.push({date,distKm:Math.round(distKm*100)/100});
+  }
+  DB.set('poolLog',S.poolLog);
+  // Save season goal if changed
+  if(goalEl&&goalEl.value){
+    const newGoalDisp=parseFloat(goalEl.value);
+    const newGoalKm=S.useKm?newGoalDisp:newGoalDisp/0.621371;
+    S.kmSeasonTarget=Math.round(newGoalKm);
+    DB.set('seasonKmTarget',S.kmSeasonTarget);
+  }
+  closeModal('swim-log-modal');
+  renderHome();
+}
+
 // INIT
 if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
 checkOnboarding();
@@ -8224,5 +8279,42 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 </script>
+
+<!-- Swim Log Modal -->
+<div class="modal-overlay" id="swim-log-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:flex-end;" onclick="if(event.target===this)closeModal('swim-log-modal')">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Log Pool Session">
+    <div class="modal-handle"></div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Pool Session</div>
+    <h3 style="font-size:20px;font-weight:900;margin-bottom:16px;color:var(--text);">Log Your Swim</h3>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Distance Today</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="number" id="swim-log-km" placeholder="0.0" step="0.1" min="0.1" max="30"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:24px;font-weight:800;padding:12px 14px;font-family:var(--font);text-align:center;">
+        <span id="swim-log-unit" style="font-size:16px;font-weight:700;color:var(--muted);">km</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Date</div>
+      <input type="date" id="swim-log-date"
+        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;padding:11px 14px;font-family:var(--font);">
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Season Goal <span style="font-weight:400;text-transform:none;">(optional — sets your weekly target)</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="number" id="swim-log-season-goal" placeholder="500" step="10" min="50" max="2000"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-weight:700;padding:11px 14px;font-family:var(--font);">
+        <span id="swim-log-goal-unit" style="font-size:14px;font-weight:700;color:var(--muted);">km</span>
+      </div>
+      <div id="swim-log-goal-note" style="font-size:11px;color:var(--muted);margin-top:5px;"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveSwimLog()" style="margin-bottom:8px;">Log Session ✓</button>
+    <button class="btn-ghost" onclick="closeModal('swim-log-modal')" style="width:100%;">Cancel</button>
+  </div>
+</div>
 </body>
 </html>
