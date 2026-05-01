@@ -4378,7 +4378,8 @@ function renderHomeTodaySummary(){
   };
 
   const hasSwim=sessions.some(s=>s.startsWith('swim'));
-  const dryLandSessions=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest'||s.startsWith('oos_')&&s!=='oos_rest');
+  // Deduplicate dryland sessions — stale data can produce multiple identical entries
+  const dryLandSessions=[...new Set(sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest'||s.startsWith('oos_')&&s!=='oos_rest'))];
   const isRest=!hasSwim&&!dryLandSessions.length;
   const activeMeet=S.meets.find(m=>{try{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;return today>=ms&&today<=me;}catch(e){return false;}});
 
@@ -8380,6 +8381,17 @@ function saveSwimLog(){
 if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
 checkOnboarding();
 applyClubLogo();
+// Deduplicate any daySchedule entries that have repeated session types (stale off-season data)
+(function cleanDaySchedule(){
+  let dirty=false;
+  Object.keys(S.daySchedule).forEach(k=>{
+    const sch=S.daySchedule[k];
+    if(!sch||!Array.isArray(sch.sessions))return;
+    const deduped=[...new Set(sch.sessions)];
+    if(deduped.length!==sch.sessions.length){sch.sessions=deduped;dirty=true;}
+  });
+  if(dirty)DB.set('daySchedule',S.daySchedule);
+})();
 renderHome();
 maybeShowCheckinSheet();
 renderCustomTargetMeets();
