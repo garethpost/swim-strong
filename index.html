@@ -233,9 +233,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     </div>
     <!-- WORKOUT -->
     <div id="section-workout" class="section">
+      <p style="font-size:30px;font-weight:900;color:var(--text);margin:0 0 3px 0;line-height:1.1;">Dryland.</p>
+      <p id="dryland-subtitle" style="font-size:13px;color:var(--muted);margin:0 0 18px 0;">—</p>
+      <div id="baseline-gate"></div>
       <div id="workout-top"></div>
-      <div id="baseline-card"></div>
       <div id="workout-content"></div>
+      <div id="baseline-card"></div>
       <div id="workout-actions" style="display:none;margin-top:16px;">
         <div class="card" style="margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -557,7 +560,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
   <nav id="nav" role="navigation" aria-label="Main navigation">
     <button class="nav-btn active" id="nav-home" aria-label="Home" onclick="showSection('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>Home</button>
-    <button class="nav-btn" id="nav-workout" aria-label="Workout" onclick="showSection('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20M2 12h4M18 12h4"/></svg>Workout</button>
+    <button class="nav-btn" id="nav-workout" aria-label="Dryland" onclick="showSection('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20M2 12h4M18 12h4"/></svg>Dryland</button>
     <button class="nav-btn" id="nav-times" aria-label="Swim Times" onclick="showSection('times')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Times</button>
     <button class="nav-btn" id="nav-schedule" aria-label="Schedule" onclick="showSection('schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule</button>
     <button class="nav-btn" id="nav-fuel" aria-label="Fuel &amp; Nutrition" onclick="showSection('fuel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>Fuel</button>
@@ -1025,7 +1028,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-summary-modal')" aria-label="Close dialog">Keep editing</button>
 </div></div>
 <div class="modal-overlay" id="ex-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Exercise Details"><div class="modal-handle"></div><h3 id="ex-modal-title" style="font-size:17px;margin-bottom:8px;"></h3><p id="ex-modal-desc" style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px;"></p><p id="ex-modal-cue" style="font-size:13px;color:var(--accent);"></p><div style="margin-top:16px;"><button class="btn btn-secondary" onclick="closeModal('ex-modal')" aria-label="Close dialog">Close</button></div></div></div>
-<div class="modal-overlay" id="picker-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Preview Workout Type"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Preview Workout Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')" aria-label="Close dialog">Cancel</button></div></div></div>
+<div class="modal-overlay" id="picker-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Override Session Type"><div class="modal-handle"></div><h3 style="font-size:17px;margin-bottom:8px;">Override Session Type</h3><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><button class="btn btn-secondary" onclick="forceWorkout('lower')">🦵 Lower Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('upper')">💪 Upper Body Strength</button><button class="btn btn-secondary" onclick="forceWorkout('power')">⚡ Power & Plyometrics</button><button class="btn btn-secondary" onclick="forceWorkout('mobility')">🧘 Mobility & Recovery</button><button class="btn btn-secondary" onclick="forceWorkout('cardio')">🏃 Sprint Cardio</button></div><div style="margin-top:12px;"><button class="btn-ghost" style="width:100%" onclick="closeModal('picker-modal')" aria-label="Close dialog">Cancel</button></div></div></div>
 <div class="modal-overlay" id="day-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Day Schedule"><div class="modal-handle"></div>
 <h3 id="day-modal-title" style="font-size:17px;margin-bottom:4px;"></h3>
 <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Tap to add/remove sessions. Multiple allowed.</p>
@@ -1756,7 +1759,7 @@ function applyUnitSettings(){
   if(kmInp)kmInp.placeholder=S.useKm?'km today':'miles today';
   renderKmTracker();
   renderHomeCals();
-  renderBaseline();
+  renderWorkoutTab();
   if(S.currentWorkout)renderWorkout(S.currentWorkout);
   // Update pickers immediately — no re-render touches the More tab settings card
   updateUnitPickers();
@@ -2057,6 +2060,20 @@ function updatePmDob(){
   }
 }
 function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'intermediate';}
+function getAgeGroup(){
+  // Returns 'youth' (<13), 'teen' (13-15), or 'senior' (16+)
+  const age=getActualAge();
+  if(age===null)return'senior'; // no DOB = assume adult
+  if(age<13)return'youth';
+  if(age<16)return'teen';
+  return'senior';
+}
+function getAgeGroupLabel(){
+  const ag=getAgeGroup();
+  if(ag==='youth')return'Youth (under 13)';
+  if(ag==='teen')return'Teen (13–15)';
+  return'Senior (16+)';
+}
 
 function updateObProvince(){
   // Future: populate province options based on country selection
@@ -3179,6 +3196,7 @@ function generateWorkout(forceType){
   const trainingLevel=getTrainingLevel();
   const isTaper=tp.yes&&!forceType&&tp.meet.priority!=='C';
   const counts=LEVEL_COUNTS[trainingLevel]||LEVEL_COUNTS.intermediate;
+  const ag=getAgeGroup(); // 'youth' | 'teen' | 'senior'
 
   // Schedule is source of truth — only use forceType for manual preview
   const scheduledType=getTodayDrylandType();
@@ -3195,26 +3213,37 @@ function generateWorkout(forceType){
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>({...e,sets:1}))});
 
+  // Age-group exercise filter: youth=bodyweight only, teen=beginner level enforced
+  const effLevel=ag==='youth'?'beginner':ag==='teen'?'beginner':trainingLevel;
+  function ageFilter(exArr){
+    if(ag==='youth')return exArr.filter(e=>!e.weighted&&equipOk(e.name));
+    if(ag==='teen')return exArr.filter(e=>equipOk(e.name));
+    return exArr.filter(e=>equipOk(e.name));
+  }
+
   if(dayType==='lower'){
-    const main=filterExercises(EX.lower,  'lower', sp, trainingLevel, isTaper)
+    const main=filterExercises(ageFilter(EX.lower),'lower',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
-    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+    const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:isTaper?2:counts.core===3?3:2}));
-    blocks.push({title:'🦵 Lower Body Strength',exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
+    const blockTitle=ag==='youth'?'🦵 Lower Body (Bodyweight)':ag==='teen'?'🦵 Lower Body Strength':'🦵 Lower Body Strength';
+    blocks.push({title:blockTitle,exercises:main,strokeNote:strokeBlockNote(sp,'lower')});
     blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='upper'){
-    const main=filterExercises(EX.upper,  'upper', sp, trainingLevel, isTaper)
+    const main=filterExercises(ageFilter(EX.upper),'upper',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
-    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+    const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:isTaper?2:2}));
-    blocks.push({title:'💪 Upper Body Strength',exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
+    const blockTitle=ag==='youth'?'💪 Upper Body (Bodyweight)':ag==='teen'?'💪 Upper Body Strength':'💪 Upper Body Strength';
+    blocks.push({title:blockTitle,exercises:main,strokeNote:strokeBlockNote(sp,'upper')});
     blocks.push({title:'🔩 Core Finisher',exercises:core});
   } else if(dayType==='power'){
-    const plyos=filterExercises(EX.plyos, 'power', sp, trainingLevel, isTaper)
+    const plyos=filterExercises(ageFilter(EX.plyos),'power',sp,effLevel,isTaper)
       .map(e=>({...e,sets:effectiveSets}));
-    const core=filterExercises(EX.core,   'core',  sp, trainingLevel, isTaper)
+    const core=filterExercises(ageFilter(EX.core),'core',sp,effLevel,isTaper)
       .map(e=>({...e,sets:2}));
-    blocks.push({title:'⚡ Plyometric Power',exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
+    const blockTitle=ag==='youth'?'⚡ Agility & Movement':'⚡ Plyometric Power';
+    blocks.push({title:blockTitle,exercises:plyos,strokeNote:strokeBlockNote(sp,'power')});
     blocks.push({title:'🔩 Core',exercises:core});
   } else if(dayType==='mobility'){
     const mob=EX.mobility.filter(e=>equipOk(e.name));
@@ -3325,11 +3354,28 @@ function renderWorkoutTab(){
   const el=document.getElementById('workout-top');if(!el)return;
   const isGoal=S.workoutMode==='goal';
   const gp=S.goalProgram;
+  const ag=getAgeGroup();
+
+  // ── Dryland subtitle ──
+  const dsub=document.getElementById('dryland-subtitle');
+  if(dsub){
+    const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const todayN=dayNames[new Date().getDay()];
+    const todayDayTypeForSub=getTodayDrylandType();
+    const sessionTypeLabel=todayDayTypeForSub==='rest'?'Rest day':
+      todayDayTypeForSub==='lower'?'Lower Body':todayDayTypeForSub==='upper'?'Upper Body':
+      todayDayTypeForSub==='power'?'Power & Plyos':todayDayTypeForSub==='mobility'?'Mobility':
+      todayDayTypeForSub==='cardio'?'Sprint Cardio':'Training';
+    dsub.textContent=`${todayN} · ${sessionTypeLabel} · ${getAgeGroupLabel()}`;
+  }
+
+  // ── Baseline gate: show at top if not set, else render collapsed at bottom ──
+  renderBaselineGate();
 
   // ── Mode toggle ──
   const toggleHtml=`
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px;">
-      <div style="font-size:10px;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Training Mode</div>
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Training Mode</div>
       <div style="display:flex;gap:8px;">
         <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(0,198,255,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.3;">
           📋<br><span style="font-size:11px;">Standard</span>
@@ -3343,7 +3389,6 @@ function renderWorkoutTab(){
 
   let modeHtml='';
   if(!isGoal){
-    // Standard mode — show subtitle + action buttons
     const todayDayType=getTodayDrylandType();
     const isRestDay=todayDayType==='rest';
     const restBanner=isRestDay?`
@@ -3355,14 +3400,16 @@ function renderWorkoutTab(){
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:8px;">Active Recovery Options</div>
           <div style="font-size:13px;color:var(--text);line-height:1.7;">🚶 20min easy walk<br>🧘 10min breathwork or stretching<br>🛁 Contrast shower · Ice bath<br>😴 Aim for 8–9hrs sleep tonight</div>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Optional: do a mobility session anyway</button>
+        <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;">Optional: mobility session</button>
       </div>`:''
     modeHtml=`
-      <p class="section-title">Today's Session</p>
-      <p class="section-sub" id="workout-subtitle">—</p>
-      ${restBanner}
-      ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Today's Workout →</button>`:''}
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:16px;">Preview any workout type</button>`;
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Today's Session</div>
+        <div id="workout-subtitle" style="font-size:18px;font-weight:900;color:var(--accent);margin-bottom:4px;">—</div>
+        <div id="workout-schedule-note" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+        ${restBanner}
+        ${!isRestDay?`<button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="width:100%;">Start Today's Session →</button>`:''}
+      </div>`;
   } else if(!gp){
     // Goal mode — setup card
     const abMeets=S.meets.filter(m=>{
@@ -3443,10 +3490,24 @@ function renderWorkoutTab(){
         ${goalsDisplay}
       </div>
       <button id="gen-workout-btn" class="btn btn-primary" onclick="startWorkout(this)" style="margin-bottom:8px;">Generate Goal Workout →</button>
-      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Override today's type</button>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('picker-modal')" style="width:100%;margin-bottom:8px;">Override session type</button>
       <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;margin-bottom:16px;">Deactivate Goal Program</button>`;
   }
   el.innerHTML=toggleHtml+modeHtml;
+
+  // Populate Today's Session subtitle after render
+  if(!isGoal){
+    const subEl=document.getElementById('workout-subtitle');
+    const noteEl=document.getElementById('workout-schedule-note');
+    const todayDayType2=getTodayDrylandType();
+    const labels2={lower:'Lower Body Strength',upper:'Upper Body Strength',power:'Power & Plyos',mobility:'Mobility & Recovery',cardio:'Sprint Cardio',rest:'Rest Day'};
+    if(subEl)subEl.textContent=labels2[todayDayType2]||'Training';
+    if(noteEl){
+      const tk2=dKey(new Date());
+      const hasDayOverride=S.daySchedule[tk2]&&S.daySchedule[tk2].override;
+      noteEl.textContent=hasDayOverride?'Manually scheduled for today':'From your season template · '+getAgeGroupLabel();
+    }
+  }
 }
 
 function setWorkoutMode(mode){
@@ -6937,28 +6998,120 @@ function toggleTimer(){
 }
 
 // ── 1RM Baseline Card ──
-function renderBaseline(){
-  const el=document.getElementById('baseline-card');if(!el)return;
+function renderBaselineGate(){
+  // Called from renderWorkoutTab — shows gate at TOP when baseline not set,
+  // hides gate and renders collapsed strip at BOTTOM when done.
+  const ag=getAgeGroup();
+  const gate=document.getElementById('baseline-gate');
+  const card=document.getElementById('baseline-card');
+  const workoutTop=document.getElementById('workout-top');
+
+  // Youth (under 13): no 1RM baseline needed — bodyweight only
+  if(ag==='youth'){
+    if(gate)gate.innerHTML='';
+    if(card)card.innerHTML='';
+    if(workoutTop)workoutTop.style.display='block';
+    return;
+  }
+
   const weeks=weeksSinceRM();
   const needsRetest=weeks!==null&&weeks>=8;
   const hasAny=Object.keys(S.oneRM).length>0;
 
-  // COLLAPSED STATE — baselines set and no retest needed
-  // Show a compact strip; swimmer doesn't need to see this every session
+  if(hasAny&&!needsRetest){
+    // Baseline done — hide gate, show collapsed strip at bottom, unlock workout
+    if(gate)gate.innerHTML='';
+    if(workoutTop)workoutTop.style.display='block';
+    renderBaseline(); // renders collapsed strip into baseline-card
+    return;
+  }
+
+  // Baseline NOT set (or retest due) — show gate, lock workout area
+  if(workoutTop)workoutTop.style.display='none';
+  if(card)card.innerHTML=''; // baseline-card not used in gate state
+
+  const isRetest=needsRetest;
+  const isTeen=ag==='teen';
+  const title=isRetest?'Time to Retest Your Baselines':'Set Your Strength Baselines First';
+  const intro=isRetest
+    ?`It's been ${weeks} weeks. Retest your baselines so the app can recalculate your training loads accurately.`
+    :isTeen
+    ?`Before your first session, log a weight and reps you can do comfortably. You don't need to max out — the app estimates your 1RM from any weight × reps (e.g. 3 sets of 8). This unlocks personalised loading for every session.`
+    :`Before your first session, log a weight and reps you can do comfortably. The app uses the Epley formula to estimate your 1RM and prescribe the right load for every session. No need to max out.`;
+
+  const rows=ONE_RM_LIFTS.map(lift=>{
+    const existing=S.oneRM[lift.key];
+    const dispRM=existing?`<span style="color:var(--accent);font-weight:700;">${dW(existing).toFixed(1)} ${uL()} 1RM</span>`:`<span style="color:var(--muted);">Not set</span>`;
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:14px;font-weight:600;">${lift.label}</div>
+        <div style="font-size:12px;">${dispRM}</div>
+      </div>
+      ${lift.isPullUp?`
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="number" id="rm-w-${lift.key}" placeholder="Added weight (${uL()}) — 0 if bodyweight" step="2.5" min="0"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+        <span style="font-size:12px;color:var(--muted);">×</span>
+        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="30"
+          style="width:64px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Dead hang, chin over bar. Enter reps at bodyweight (added weight = 0) or with a dip belt.</div>`:`
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="number" id="rm-w-${lift.key}" placeholder="Weight (${uL()})" step="2.5" min="0"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+        <span style="font-size:12px;color:var(--muted);">×</span>
+        <input type="number" id="rm-r-${lift.key}" placeholder="Reps" min="1" max="12"
+          style="width:64px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Enter a weight you've done for 1–12 reps. We'll calculate your 1RM.</div>`}
+    </div>`;
+  }).join('');
+
+  if(gate)gate.innerHTML=`
+    <div class="card" style="margin-bottom:12px;border:1px solid var(--accent);">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px;">Strength Baseline</div>
+      <div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:6px;">${title}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">${intro}</div>
+      ${rows}
+      <button class="btn btn-primary" style="margin-top:14px;width:100%;" onclick="saveBaseline()">Save Baselines & Unlock Workouts →</button>
+    </div>
+    <div class="card" style="margin-bottom:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);text-align:center;padding:24px 16px;">
+      <div style="font-size:28px;margin-bottom:8px;">🔒</div>
+      <div style="font-size:15px;font-weight:700;color:var(--muted);margin-bottom:4px;">Workouts Locked</div>
+      <div style="font-size:12px;color:var(--muted);">Complete your strength baseline above to unlock your personalised dryland program.</div>
+    </div>`;
+}
+
+function renderBaseline(){
+  const el=document.getElementById('baseline-card');if(!el)return;
+  const ag=getAgeGroup();
+
+  // Youth: no baseline card needed
+  if(ag==='youth'){el.innerHTML='';return;}
+
+  const weeks=weeksSinceRM();
+  const needsRetest=weeks!==null&&weeks>=8;
+  const hasAny=Object.keys(S.oneRM).length>0;
+
+  // COLLAPSED STRIP at bottom — baselines set and no retest needed
   if(hasAny&&!needsRetest){
     const phase=getPhase(S.programWeek);
     const topLift=ONE_RM_LIFTS.find(l=>S.oneRM[l.key]);
-    const topPct=topLift?(lift=>lift?Math.round((lift.pcts[phase.name]||0.70)*100):70)(topLift):70;
-    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:16px;">🏋️</span>
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--text);">Baselines set</div>
-          <div style="font-size:11px;color:var(--muted);">${weeks!==null?weeks+'wk ago':'—'} · Loading at ${topPct}% this phase</div>
+    const topPct=topLift?Math.round((topLift.pcts[phase.name]||0.70)*100):70;
+    el.innerHTML=`
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;margin-top:4px;">Strength Baseline</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🏋️</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">Baselines set</div>
+              <div style="font-size:11px;color:var(--muted);">${weeks!==null?weeks+'wk ago':'—'} · ${phase.name} phase · Loading at ${topPct}%</div>
+            </div>
+          </div>
+          <button class="btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="expandBaseline()">Retest</button>
         </div>
-      </div>
-      <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="expandBaseline()">Retest</button>
-    </div>`;
+      </div>`;
     return;
   }
 
@@ -7011,9 +7164,9 @@ function renderBaseline(){
   </div>`;
 }
 function expandBaseline(){
-  // Force full card to show for retest
+  // Force gate to show for retest — wipe date to trigger gate
   S.oneRMDate=null;DB.set('oneRMDate',null);
-  renderBaseline();
+  renderWorkoutTab();
 }
 function buildBaselineSummary(){
   const phase=getPhase(S.programWeek);
@@ -7051,7 +7204,7 @@ function saveBaseline(){
   if(!saved){alert('Enter at least one weight and rep count.');return;}
   S.oneRMDate=new Date().toISOString();
   DB.set('oneRM',S.oneRM);DB.set('oneRMDate',S.oneRMDate);
-  renderBaseline();
+  renderWorkoutTab();
 }
 
 // ── Schedule Pool Shortcut ──
@@ -8053,7 +8206,7 @@ function showSection(name){
     if(phaseEl)phaseEl.value=S.swimPhase;
     updatePhaseImpact();
   }
-  if(name==='workout'){renderWorkoutTab();renderBaseline();updateNotifStatus();}
+  if(name==='workout'){renderWorkoutTab();updateNotifStatus();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();}
 
