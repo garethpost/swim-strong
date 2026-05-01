@@ -2734,6 +2734,57 @@ function getPhase(w){
     return{name:'Taper',label:'Championship Peak',cls:'phase-taper'};
   }
 }
+// Derives training phase from actual season calendar position
+// Works backwards from next A/B meet — no manual week counter needed
+function getSeasonPhaseFromDates(){
+  const tmpl=S.seasonTemplate||{};
+  const today=new Date();today.setHours(0,0,0,0);
+
+  // Find the next significant meet (A or B)
+  const futureMeets=S.meets
+    .filter(m=>m.priority!=='C'&&localDate(m.date)>today)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const nextMeet=futureMeets[0]||null;
+
+  // Season bounds
+  const seasonStart=tmpl.start?localDate(tmpl.start):null;
+  const seasonEnd=tmpl.end?localDate(tmpl.end):null;
+  const totalDays=seasonStart&&seasonEnd?Math.round((seasonEnd-seasonStart)/86400000):null;
+  const totalWeeks=totalDays?Math.round(totalDays/7):null;
+  const weekNum=seasonStart?Math.max(1,Math.floor((today-seasonStart)/86400000/7)+1):null;
+
+  // If in taper right now
+  const taperNow=isTaperWeek();
+  if(taperNow.yes) return{label:'Peak & Taper',detail:taperNow.meet.name.split(' ')[0],color:'var(--orange)'};
+
+  // If on a meet day
+  const onMeet=S.meets.some(m=>{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;return today>=ms&&today<=me;});
+  if(onMeet) return{label:'Race Day',detail:'🏆',color:'var(--gold)'};
+
+  // Use weeks-to-meet to determine phase
+  if(nextMeet){
+    const daysOut=Math.round((localDate(nextMeet.date)-today)/86400000);
+    const weeksOut=Math.ceil(daysOut/7);
+    const taperLen=getTaperDays(nextMeet)/7; // taper in weeks
+
+    if(weeksOut<=2+taperLen) return{label:'Sharpening',detail:weeksOut+'w to meet',color:'var(--orange)'};
+    if(weeksOut<=5+taperLen) return{label:'Power Block',detail:weeksOut+'w to meet',color:'var(--red)'};
+    if(weeksOut<=10+taperLen) return{label:'Strength Block',detail:weeksOut+'w to meet',color:'var(--accent)'};
+    return{label:'General Prep',detail:weeksOut+'w to meet',color:'var(--green)'};
+  }
+
+  // No meet — fall back to position within season
+  if(weekNum&&totalWeeks){
+    const pct=weekNum/totalWeeks;
+    if(pct>=0.85) return{label:'Peak & Taper',detail:'Wk '+weekNum,color:'var(--orange)'};
+    if(pct>=0.65) return{label:'Power Block',detail:'Wk '+weekNum,color:'var(--red)'};
+    if(pct>=0.35) return{label:'Strength Block',detail:'Wk '+weekNum,color:'var(--accent)'};
+    return{label:'General Prep',detail:'Wk '+weekNum,color:'var(--green)'};
+  }
+
+  // Fallback to manual week
+  return{label:getPhase(S.programWeek).label,detail:'Wk '+S.programWeek,color:'var(--muted)'};
+}
 function getDayType(dow){return{1:'lower',2:'upper',3:'mobility',4:'lower',5:'upper',6:'cardio',0:'mobility'}[dow]||'mobility';}
 
 // Read today's dryland type from schedule — schedule is source of truth
@@ -4802,11 +4853,8 @@ function renderHome(){
     const osCur=getCurrentOffSeasonPhase();
     headerPhaseStr=osCur?'Off-Season · '+osCur.name:'Off-Season';
   } else {
-    const taperNow=isTaperWeek();
-    const meetNow=S.meets.some(m=>{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;const td=new Date();td.setHours(0,0,0,0);return td>=ms&&td<=me;});
-    if(meetNow) headerPhaseStr='Race Day 🏆';
-    else if(taperNow.yes) headerPhaseStr='Taper · '+taperNow.meet.name.split(' ')[0];
-    else headerPhaseStr=phase.label+' · Wk '+S.programWeek;
+    const sp=getSeasonPhaseFromDates();
+    headerPhaseStr=sp.label+(sp.detail?' · '+sp.detail:'');
   }
   if(headerSub)headerSub.textContent=`${clubStr?clubStr+' · ':''}${headerPhaseStr}`;
 
