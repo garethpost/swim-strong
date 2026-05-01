@@ -3494,20 +3494,16 @@ function renderWorkoutTab(){
       <button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="this.closest('.card').style.display='none'">Skip for now — use bodyweight/RPE</button>
     </div>`:'';
 
-  // Goal Program toggle card
-  const goalToggleHtml=`
-    <div class="card" style="margin-bottom:12px;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Training Mode</div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="setWorkoutMode('standard')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${!isGoal?'var(--accent)':'var(--border)'};background:${!isGoal?'rgba(26,188,191,0.12)':'var(--surface)'};color:${!isGoal?'var(--accent)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.4;">
-          📋<br><span style="font-size:11px;">Standard</span>
-        </button>
-        <button onclick="setWorkoutMode('goal')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid ${isGoal?'var(--purple)':'var(--border)'};background:${isGoal?'rgba(192,132,252,0.12)':'var(--surface)'};color:${isGoal?'var(--purple)':'var(--muted)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;line-height:1.4;">
-          🎯<br><span style="font-size:11px;">Goal Program</span>
-        </button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">${isGoal?'Workouts are biased toward your target meet and selected goals.':'Adaptive dryland based on your schedule, phase, and readiness.'}</div>
-    </div>`;
+  // Goal Program toggle — subtle pill inside standard view, not a peer mode selector
+  const goalToggleHtml=isGoal
+    ?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <button onclick="setWorkoutMode('standard')" style="font-size:11px;color:var(--purple);background:rgba(192,132,252,0.12);border:1px solid var(--purple);border-radius:20px;padding:4px 12px;font-family:var(--font);cursor:pointer;font-weight:700;">🎯 Goal Program active — switch to Standard</button>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>`
+    :`<div style="text-align:right;margin-bottom:10px;">
+        <button onclick="setWorkoutMode('goal')" style="font-size:11px;color:var(--muted);background:transparent;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:var(--font);cursor:pointer;">🎯 Goal Program</button>
+      </div>`;
 
   let modeHtml='';
 
