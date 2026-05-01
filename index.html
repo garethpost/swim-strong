@@ -180,67 +180,54 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div id="section-home" class="section active">
       <div id="home-club-logo-wrap" style="display:none;text-align:center;margin-bottom:8px;"><img id="home-club-logo" src="" alt="" style="height:56px;object-fit:contain;border-radius:8px;"></div>
 
-      <!-- Greeting -->
-      <p id="greeting" style="font-size:30px;font-weight:900;color:var(--text);margin:0 0 2px 0;line-height:1.1;">Morning.</p>
-      <p id="phase-info" style="font-size:13px;color:var(--muted);margin:0 0 16px 0;">—</p>
-
+      <p id="greeting" style="font-size:30px;font-weight:900;color:var(--text);margin:0 0 3px 0;line-height:1.1;">Morning.</p>
+      <p id="phase-info" style="font-size:13px;color:var(--muted);margin:0 0 18px 0;">—</p>
       <div id="alert-zone"></div>
 
-      <!-- Stats: Streak / Sessions / Pool km -->
-      <div class="stats-row" style="margin-bottom:14px;">
-        <div class="stat-box"><div class="stat-val" id="stat-streak" style="color:var(--accent);">0</div><div class="stat-lbl">Day<br>Streak</div></div>
-        <div class="stat-box"><div class="stat-val" id="stat-total" style="color:var(--purple);">0</div><div class="stat-lbl">Sessions</div></div>
-        <div class="stat-box"><div class="stat-val" id="stat-km" style="color:var(--green);">0.0</div><div class="stat-lbl">Pool km</div></div>
+      <!-- 3 tiles: Streak | Next Meet | Pool km -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;">
+          <div id="stat-streak" style="font-size:26px;font-weight:900;color:var(--accent);line-height:1;">0</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Day Streak</div>
+        </div>
+        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;cursor:pointer;" onclick="switchTab('schedule')">
+          <div id="stat-meet-days" style="font-size:22px;font-weight:900;color:var(--gold);line-height:1;">—</div>
+          <div id="stat-meet-name" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Next Meet</div>
+        </div>
+        <div class="card" style="margin-bottom:0;padding:14px 10px;text-align:center;">
+          <div id="stat-km" style="font-size:22px;font-weight:900;color:var(--green);line-height:1;">0.0</div>
+          <div id="stat-km-lbl" style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Pool km</div>
+        </div>
       </div>
 
-      <!-- Week strip -->
       <div class="card" style="margin-bottom:12px;padding:12px 14px;" id="week-strip-card"></div>
-
-      <!-- Today summary -->
       <div class="card" style="margin-bottom:12px;padding:16px;" id="home-today-summary"></div>
 
-      <!-- Today Fuel rings -->
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px;padding-left:2px;">Today's Fuel</div>
       <div class="card" style="margin-bottom:12px;padding:16px;" id="home-fuel-rings"></div>
 
-      <!-- This Week Progress -->
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px;padding-left:2px;">This Week's Progress</div>
       <div class="card" style="margin-bottom:12px;padding:16px;" id="home-week-progress"></div>
 
-      <!-- Hidden kcal elements still needed by renderHomeCals / other logic -->
+      <!-- Hidden stubs for legacy function compatibility -->
       <div id="stat-cal" style="display:none;">—</div>
       <div id="stat-cal-lbl" style="display:none;"></div>
       <div id="stat-macros" style="display:none;"></div>
       <div id="stat-cal-box" style="display:none;"></div>
-
-      <!-- KM tracker (hidden — km stat is in stat row, but logKm() still needs these) -->
+      <div id="stat-total" style="display:none;">0</div>
       <div id="km-display" style="display:none;">0.0</div>
       <div id="km-unit-label" style="display:none;">km</div>
       <div id="km-session-label" style="display:none;"></div>
       <div id="km-season-bar" style="display:none;"></div>
       <div id="km-season-label" style="display:none;"></div>
-      <div id="km-input-row" style="display:none;">
-        <input id="km-amount-input" type="number" step="0.1" min="0.1" max="30">
-      </div>
-
-      <!-- Next Meet -->
-      <div class="card" style="margin-bottom:12px;padding:16px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Next Meet</div>
-        <div id="home-meets-list"></div>
-      </div>
-
-      <div id="home-nudge-card" style="display:none;margin-bottom:12px;"></div>
-      <div id="offseason-home-widget" class="card" style="display:none;margin-bottom:12px;padding:12px 16px;"></div>
-      <div id="home-load-pill" style="display:none;margin-bottom:12px;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:2px;">Today's Load</div>
-            <div style="font-size:14px;font-weight:700;" id="load-rec">—</div>
-          </div>
-          <div style="text-align:right;font-size:11px;color:var(--muted);">
-            <div>😴 <span id="sleep-val-pill">—</span> · ⚡ <span id="readiness-val-pill">—</span></div>
-            <button onclick="showCheckinSheet()" style="margin-top:4px;background:none;border:none;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:var(--font);">Edit check-in</button>
-          </div>
+      <div id="km-input-row" style="display:none;"><input id="km-amount-input" type="number" step="0.1" min="0.1" max="30"></div>
+      <div id="home-meets-list" style="display:none;"></div>
+      <div id="home-nudge-card" style="display:none;"></div>
+      <div id="offseason-home-widget" style="display:none;"></div>
+      <div id="home-load-pill" style="display:none;">
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div id="load-rec">—</div></div>
+          <div><span id="sleep-val-pill">—</span><span id="readiness-val-pill">—</span></div>
         </div>
       </div>
       <input type="range" id="sleep-slider" min="4" max="11" value="8" step="0.5" style="display:none;" oninput="updateCheckin()">
@@ -249,7 +236,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <span id="readiness-val" style="display:none;"></span>
       <div id="checkin-avg" style="display:none;"></div>
     </div>
-
     <!-- WORKOUT -->
     <div id="section-workout" class="section">
       <div id="workout-top"></div>
@@ -4094,81 +4080,79 @@ function delTime(ev,idx){if(!confirm('Delete this entry?'))return;S.timeHistory[
 function renderHomeTodaySummary(){
   const el=document.getElementById('home-today-summary');
   if(!el)return;
-  const tmplCheck=S.seasonTemplate||{};
-  const seasonReady=tmplCheck.start&&tmplCheck.end&&Object.keys(tmplCheck.days||{}).length>0;
   const today=new Date();today.setHours(0,0,0,0);
   const key=dKey(today);
   const sch=S.daySchedule[key]||{};
   let sessions=sch.sessions||[];
-  if(!sch.override&&!sessions.length&&seasonReady){
-    const tmpl=S.seasonTemplate;
-    const ss=localDate(tmpl.start),se=localDate(tmpl.end);
-    if(today>=ss&&today<=se)sessions=tmpl.days[today.getDay()]||[];
+  if(!sch.override&&!sessions.length){
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(today>=ss&&today<=se)sessions=tmpl.days[today.getDay()]||[];}
   }
   if(sch.removed)sessions=[];
-  const META={
-    swim_am:{icon:'🏊',label:'Swim AM',color:'var(--accent)'},
-    swim_pm:{icon:'🏊',label:'Swim PM',color:'var(--accent)'},
-    dry_lower:{icon:'🦵',label:'Weights Lower',color:'var(--green)'},
-    dry_upper:{icon:'💪',label:'Weights Upper',color:'var(--green)'},
-    dry_power:{icon:'⚡',label:'Power / Plyo',color:'var(--orange)'},
-    dry_mobility:{icon:'🧘',label:'Mobility',color:'var(--purple)'},
-    dry_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
-    dry_rest:{icon:'😴',label:'Rest',color:'var(--muted)'},
-    oos_cardio:{icon:'🏃',label:'Cardio',color:'var(--gold)'},
-    oos_mobility:{icon:'🧘',label:'Mobility',color:'var(--purple)'},
-    oos_strength:{icon:'💪',label:'Strength',color:'var(--green)'},
-    oos_rest:{icon:'😴',label:'Rest',color:'var(--muted)'},
-    oos_swim:{icon:'🏊',label:'Swim',color:'var(--accent)'},
+
+  // Session type labels — dryland only shown in detail
+  const DRY_META={
+    dry_lower:{icon:'🦵',label:'Lower Body',desc:'Squats · Deadlifts · Glutes',color:'var(--green)'},
+    dry_upper:{icon:'💪',label:'Upper Body',desc:'Press · Pull · Core',color:'var(--green)'},
+    dry_power:{icon:'⚡',label:'Power & Plyo',desc:'Jumps · Explosive sets',color:'var(--orange)'},
+    dry_mobility:{icon:'🧘',label:'Mobility',desc:'Foam roll · Dynamic stretching',color:'var(--purple)'},
+    dry_cardio:{icon:'🏃',label:'Cardio',desc:'Zone 2 steady state · 30–45 min',color:'var(--gold)'},
+    oos_cardio:{icon:'🏃',label:'Cardio',desc:'Zone 2 steady state · 30–45 min',color:'var(--gold)'},
+    oos_strength:{icon:'💪',label:'Strength',desc:'Full body compound lifts',color:'var(--green)'},
+    oos_mobility:{icon:'🧘',label:'Mobility',desc:'Recovery · Flexibility work',color:'var(--purple)'},
+    oos_swim:{icon:'🏊',label:'Swim',desc:'Technique focus · Easy effort',color:'var(--accent)'},
   };
+
   const hasSwim=sessions.some(s=>s.startsWith('swim'));
-  const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
-  const isRest=!hasSwim&&!hasDry&&!sessions.some(s=>s.startsWith('oos_')&&s!=='oos_rest');
+  const dryLandSessions=sessions.filter(s=>s.startsWith('dry_')&&s!=='dry_rest'||s.startsWith('oos_')&&s!=='oos_rest');
+  const isRest=!hasSwim&&!dryLandSessions.length;
   const activeMeet=S.meets.find(m=>{try{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;return today>=ms&&today<=me;}catch(e){return false;}});
-  // Session label for heading
-  const sessionLabel=activeMeet?activeMeet.name:sessions.filter(s=>s!=='dry_rest'&&s!=='oos_rest').map(id=>(META[id]||{label:id.replace(/_/g,' ')}).label).join(' + ')||'Rest';
+
+  // Heading label
+  const parts=[];
+  if(hasSwim)parts.push('Swim');
+  dryLandSessions.forEach(id=>{const m=DRY_META[id];if(m)parts.push(m.label);});
+  const sessionLabel=activeMeet?activeMeet.name:parts.join(' + ')||'Rest';
+
   // Load badge
-  const loadLabel=activeMeet?'Meet Day':hasSwim&&hasDry?'Full Day':hasSwim?'Swim':hasDry?'Dryland':sessions.some(s=>s.startsWith('oos_')&&s!=='oos_rest')?'Training':'Rest';
-  const loadColor=activeMeet?'var(--gold)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':sessions.some(s=>s.startsWith('oos_')&&s!=='oos_rest')?'var(--orange)':'var(--muted)';
-  // Kcal + focus from schedule
-  const calData=getDailyCalFromSchedule();
-  const phase=getPhase(S.programWeek);
-  const focusMap={GPP:'Aerobic base',Strength:'Lactate threshold',Power:'Speed & power',Taper:'Race prep',Recovery:'Active recovery'};
-  const focusLine=calData?`${calData.cal.toLocaleString()} kcal target · ${focusMap[phase.name]||phase.label}`:'';
-  // Warm-up description based on session type
-  const warmupMap={
-    swim_am:'Warm-up 400m · Main set 10×100 · Cool-down',
-    swim_pm:'Warm-up 300m · Main set 8×100 · Technique work',
-    dry_lower:'Squat warm-up · Lower body compound sets',
-    dry_upper:'Push-pull warm-up · Upper body compound sets',
-    dry_power:'Plyo activation · Power complex sets',
-    dry_mobility:'Foam roll · Dynamic mobility flow',
-    dry_cardio:'Zone 2 cardio · 30-45 min steady state',
-    oos_cardio:'Zone 2 cardio · 30-45 min steady state',
-    oos_strength:'Compound lifts · Full body strength',
-    oos_mobility:'Full body mobility · Recovery focus',
-    oos_swim:'Easy swim · Technique focus',
-  };
-  const primarySession=sessions.find(s=>s!=='dry_rest'&&s!=='oos_rest');
-  const warmup=primarySession?warmupMap[primarySession]||'':'' ;
-  // Pool check-in
-  const todayPoolLog=S.poolLog.find(e=>e.date===key);
-  const poolCheckinHtml=hasSwim?(
-    todayPoolLog
-      ?`<div style="margin-top:10px;padding:7px 10px;background:rgba(26,188,191,0.1);border-radius:8px;border-left:2px solid var(--accent);font-size:11px;color:var(--muted);">✅ Pool logged · ${todayPoolLog.distKm?todayPoolLog.distKm.toFixed(1)+'km':''} ${todayPoolLog.notes?'· "'+todayPoolLog.notes+'"':''}</div>`
-      :`<button onclick="openPoolCheckin()" style="margin-top:10px;width:100%;padding:8px;border-radius:8px;border:1px dashed var(--accent);background:rgba(26,188,191,0.06);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🏊 Log pool session</button>`
-  ):'';
+  const loadLabel=activeMeet?'Meet Day':hasSwim&&dryLandSessions.length?'Full Day':hasSwim?'Swim':dryLandSessions.length?'Dryland':'Rest';
+  const loadColor=activeMeet?'var(--gold)':hasSwim&&dryLandSessions.length?'var(--green)':hasSwim?'var(--accent)':dryLandSessions.length?'var(--purple)':'var(--muted)';
+
+  // Dryland detail rows
+  const dryRows=dryLandSessions.map(id=>{
+    const m=DRY_META[id]||{icon:'📌',label:id.replace(/_/g,' '),desc:'',color:'var(--muted)'};
+    return`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+      <span style="font-size:20px;">${m.icon}</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${m.color};">${m.label}</div>
+        ${m.desc?`<div style="font-size:11px;color:var(--muted);">${m.desc}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const swimRow=hasSwim?`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+    <span style="font-size:20px;">🏊</span>
+    <div style="font-size:13px;font-weight:700;color:var(--accent);">Swim session</div>
+  </div>`:'';
+
+  const meetRow=activeMeet?`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+    <span style="font-size:20px;">🏁</span>
+    <div><div style="font-size:13px;font-weight:700;color:var(--gold);">${activeMeet.name}</div>
+    <div style="font-size:11px;color:var(--muted);">Race day — check Schedule tab</div></div>
+  </div>`:'';
+
+  const restRow=isRest&&!activeMeet?`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+    <span style="font-size:20px;">🛌</span>
+    <div style="font-size:13px;font-weight:700;color:var(--muted);">Rest day — active recovery</div>
+  </div>`:'';
+
   el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
       <div style="font-size:15px;font-weight:800;color:var(--accent);">Today — ${sessionLabel}</div>
       <span style="font-size:9px;font-weight:700;color:#000;background:${loadColor};padding:2px 9px;border-radius:20px;white-space:nowrap;">${loadLabel}</span>
     </div>
-    ${focusLine?`<div style="font-size:12px;color:var(--muted);margin-bottom:${warmup?'4px':'0'};">${focusLine}</div>`:''}
-    ${warmup?`<div style="font-size:12px;color:var(--muted);">${warmup}</div>`:''}
-    ${isRest&&!activeMeet?`<div style="font-size:13px;color:var(--muted);margin-top:4px;">Rest day — recovery 🛌</div>`:''}
-    ${poolCheckinHtml}`;
+    ${meetRow}${swimRow}${dryRows}${restRow}`;
 }
-
 function renderHomeMeets(){
   const el=document.getElementById('home-meets-list');
   if(!el)return;
@@ -4461,57 +4445,95 @@ function renderHome(){
   const h=new Date().getHours();
   const firstName=S.profile&&S.profile.name?S.profile.name.split(' ')[0]:'';
   const greetWord=h<12?'Morning':h<17?'Afternoon':'Evening';
-  document.getElementById('greeting').textContent=firstName?`${greetWord}, ${firstName}.`:`${greetWord}.`;
-  const phase=getPhase(S.programWeek);
-  const cycle=S.programCycle||1;
-  document.getElementById('phase-info').textContent=`Cycle ${cycle} · Week ${S.programWeek} of 16 · ${phase.label}`;
-  const clubStr=S.profile&&S.profile.club?S.profile.club:'';
-  document.getElementById('header-sub').textContent=`${clubStr?clubStr+' · ':''}C${cycle} Wk ${S.programWeek} · ${phase.name}`;
-  // Update greeting subtitle with day + today session type
-  {
-    const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const todayName=dayNames[new Date().getDay()];
-    const tk=dKey(new Date());
-    const tsch=S.daySchedule[tk]||{};
-    let tsess=tsch.sessions||[];
-    if(!tsch.override&&!tsess.length){const tmpl2=S.seasonTemplate||{};if(tmpl2.start&&tmpl2.end){const ss2=localDate(tmpl2.start),se2=localDate(tmpl2.end);const td2=new Date();td2.setHours(0,0,0,0);if(td2>=ss2&&td2<=se2)tsess=tmpl2.days[td2.getDay()]||[];}}
-    if(tsch.removed)tsess=[];
-    const hasSw=tsess.some(s=>s.startsWith('swim'));
-    const hasDr=tsess.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
-    const dayType=hasSw&&hasDr?'Swim + Lift day':hasSw?'Swim day':hasDr?'Dryland day':'Rest day';
-    const phEl=document.getElementById('phase-info');
-    if(phEl)phEl.textContent=`${todayName} · ${dayType}`;
+  const greetEl=document.getElementById('greeting');
+  if(greetEl)greetEl.textContent=firstName?`${greetWord}, ${firstName}.`:`${greetWord}.`;
+
+  // Subtitle: day of week + session type
+  const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayName=dayNames[new Date().getDay()];
+  const tk=dKey(new Date());
+  const tsch=S.daySchedule[tk]||{};
+  let tsess=tsch.sessions||[];
+  if(!tsch.override&&!tsess.length){
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);const td=new Date();td.setHours(0,0,0,0);if(td>=ss&&td<=se)tsess=tmpl.days[td.getDay()]||[];}
   }
+  if(tsch.removed)tsess=[];
+  const hasSw=tsess.some(s=>s.startsWith('swim'));
+  const hasDr=tsess.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
+  const hasOos=tsess.some(s=>s.startsWith('oos_')&&s!=='oos_rest');
+  const dayType=hasSw&&hasDr?'Swim + Lift day':hasSw?'Swim day':hasDr?'Dryland day':hasOos?'Training day':'Rest day';
+  const phEl=document.getElementById('phase-info');
+  if(phEl)phEl.textContent=`${todayName} · ${dayType}`;
+
+  // Header subtitle (app header bar)
+  const phase=getPhase(S.programWeek);const cycle=S.programCycle||1;
+  const clubStr=S.profile&&S.profile.club?S.profile.club:'';
+  const headerSub=document.getElementById('header-sub');
+  if(headerSub)headerSub.textContent=`${clubStr?clubStr+' · ':''}${S.offSeason&&S.offSeason.active?'Off-Season':'C'+cycle+' Wk '+S.programWeek}`;
+
+  // Off-season override for subtitle
+  const osPh=getCurrentOffSeasonPhase();
+  const osActive=S.offSeason&&S.offSeason.active;
+  if(osActive&&osPh&&phEl){
+    const osStart=new Date(osPh.start+'T00:00:00');
+    const today2=new Date();today2.setHours(0,0,0,0);
+    const osWeek=Math.floor((today2-osStart)/(7*86400000))+1;
+    phEl.textContent=`${todayName} · Off-Season ${osPh.name} Wk ${osWeek}`;
+  }
+
+  // Streak
   const hist=S.history;
-  // Total sessions = dryland + pool check-ins (deduplicated by day to avoid double-counting double-day)
   const drylandDays=new Set(hist.map(h=>{const d=new Date(h.date);d.setHours(0,0,0,0);return d.getTime();}));
   const poolDays=new Set((S.poolLog||[]).map(e=>{const d=localDate(e.date);return d.getTime();}));
   const allActiveDays=new Set([...drylandDays,...poolDays]);
-  document.getElementById('stat-total').textContent=hist.length+(S.poolLog||[]).length;
-  // Pool km total for stat box
-  const totalKm=(S.poolLog||[]).reduce((a,e)=>a+(e.distKm||0),0);
+  const t2=new Date();t2.setHours(0,0,0,0);
+  let streak=0;
+  const startOffset=allActiveDays.has(t2.getTime())?0:1;
+  for(let i=startOffset;i<365;i++){const check=new Date(t2);check.setDate(t2.getDate()-i);if(allActiveDays.has(check.getTime()))streak++;else break;}
+  const streakEl=document.getElementById('stat-streak');
+  if(streakEl)streakEl.textContent=streak;
+  const totalEl=document.getElementById('stat-total');
+  if(totalEl)totalEl.textContent=hist.length+(S.poolLog||[]).length;
+
+  // Next meet tile
+  const today=new Date();today.setHours(0,0,0,0);
+  const sorted=S.meets.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const nextMeet=sorted.find(m=>{try{const endStr=m.endDate||m.date;const end=localDate(endStr);end.setHours(23,59,59,0);return end>=today;}catch(e){return false;}});
+  const meetDaysEl=document.getElementById('stat-meet-days');
+  const meetNameEl=document.getElementById('stat-meet-name');
+  if(nextMeet&&meetDaysEl&&meetNameEl){
+    const ms=localDate(nextMeet.date);
+    const dO=Math.round((ms-today)/86400000);
+    if(dO<0){meetDaysEl.textContent='NOW';meetDaysEl.style.fontSize='16px';}
+    else if(dO===0){meetDaysEl.textContent='TODAY';meetDaysEl.style.fontSize='14px';}
+    else{const w=Math.floor(dO/7),d=dO%7;meetDaysEl.textContent=(w?w+'w ':'')+(d?d+'d':'');meetDaysEl.style.fontSize='22px';}
+    meetNameEl.textContent=nextMeet.name;
+  } else if(meetDaysEl&&meetNameEl){
+    meetDaysEl.textContent='—';meetNameEl.textContent='No meets yet';
+  }
+
+  // Pool km tile
   const kmEl=document.getElementById('stat-km');
-  if(kmEl)kmEl.textContent=totalKm.toFixed(1);
+  const kmLblEl=document.getElementById('stat-km-lbl');
+  const totalKm=(S.poolLog||[]).reduce((a,e)=>a+(e.distKm||0),0);
+  const dispKm=S.useKm?totalKm:(totalKm*0.621371);
+  const unit=S.useKm?'km':'mi';
+  if(kmEl)kmEl.textContent=dispKm.toFixed(1);
+  // Show yearly goal if set
+  const yearGoal=S.kmYearGoal||(S.useKm?500:300);
+  if(kmLblEl)kmLblEl.textContent=`${unit} · goal ${yearGoal}${unit}`;
+
+  // Alert zone
+  const az=document.getElementById('alert-zone');if(az)az.innerHTML='';
+  const tp=isTaperWeek();
+  if(tp.yes&&az)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
+  S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-today)/86400000);if(d>=0&&d<=7&&az)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
+
   renderHomeCals();
   renderKmTracker();
   renderHomeFuelRings();
   renderHomeWeekProgress();
-  // Streak: any day with at least one logged session (dryland OR pool) counts
-  // Start from yesterday if today has nothing yet, otherwise from today
-  const t2=new Date();t2.setHours(0,0,0,0);
-  let streak=0;
-  const startOffset=allActiveDays.has(t2.getTime())?0:1;
-  for(let i=startOffset;i<365;i++){
-    const check=new Date(t2);check.setDate(t2.getDate()-i);
-    if(allActiveDays.has(check.getTime()))streak++;
-    else break;
-  }
-  document.getElementById('stat-streak').textContent=streak;
-  const az=document.getElementById('alert-zone');az.innerHTML='';
-  const tp=isTaperWeek();
-  if(tp.yes)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
-  const td=new Date();td.setHours(0,0,0,0);
-  S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-td)/86400000);if(d>=0&&d<=7)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
   updateCheckin();
   renderWeekStrip();
   renderHomeTodaySummary();
@@ -4519,22 +4541,6 @@ function renderHome(){
   renderPostSessionNudge();
   renderHomLoadPill();
   renderOffSeasonHomeWidget();
-  // Update phase-info to show off-season phase if active
-  const osPh=getCurrentOffSeasonPhase();
-  const osActive=S.offSeason&&S.offSeason.active;
-  if(osActive){
-    if(osPh){
-      const osStart=new Date(osPh.start+'T00:00:00');
-      const today2=new Date();today2.setHours(0,0,0,0);
-      const osWeek=Math.floor((today2-osStart)/(7*86400000))+1;
-      document.getElementById('phase-info').textContent=`Off-Season · ${osPh.name} · Week ${osWeek} of ${osPh.weeks}`;
-      document.getElementById('header-sub').textContent=`Off-Season · ${osPh.name} Wk ${osWeek}`;
-    } else {
-      // Off-season active but today outside phase range — show generic
-      document.getElementById('phase-info').textContent='Off-Season · Plan active';
-      document.getElementById('header-sub').textContent='Off-Season';
-    }
-  }
 }
 let checkinSaveTimer=null;
 function updateCheckin(){
