@@ -2867,10 +2867,11 @@ const EX_EQUIP={
   'Ab Wheel Rollout':'minimal','Hanging Leg Raise':'minimal',
   'Plank':'bw','Side Plank':'bw',
 };
-const EQUIP_RANK={gym:3,minimal:2,bodyweight:1};
+const EQUIP_RANK={gym:3,minimal:2,bw:1,bodyweight:1};
 function equipOk(exName){
   const req=EX_EQUIP[exName]||'bw';
-  return EQUIP_RANK[S.equipmentMode||'gym']>=EQUIP_RANK[req];
+  if(req==='bw')return true; // bodyweight exercises always available
+  return (EQUIP_RANK[S.equipmentMode||'gym']||1)>=(EQUIP_RANK[req]||1);
 }
 
 // Stroke-specific filter profiles
