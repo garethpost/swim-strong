@@ -2501,14 +2501,13 @@ function cancelKm(){
 }
 
 // ── Dynamic daily calories ──
-function getDailyCalFromSchedule(){
-  // Returns {cal, carbs, protein, fat, waterL} based on TODAY's schedule and stored bodyStats
+function getDailyCalFromSchedule(forDate){
+  // Returns {cal, carbs, protein, fat, waterL} based on schedule for forDate (defaults to today)
   if(!S.bodyStats)return null;
   const {wtKg,ht:htCm,age,sex}=S.bodyStats;
   if(!wtKg||!htCm||!age||!sex)return null;
   const bmr=sex==='male'?(10*wtKg+6.25*htCm-5*age+5):(10*wtKg+6.25*htCm-5*age-161);
-  // Get TODAY's sessions
-  const today=new Date();today.setHours(0,0,0,0);
+  const today=forDate?new Date(forDate+'T00:00:00'):new Date();today.setHours(0,0,0,0);
   // Meet day — high carb, high calorie race fuel
   if(isMeetDay(today)){
     const cal=Math.round(bmr*2.2);
@@ -4329,13 +4328,13 @@ function renderPostSessionNudge(){
 function renderHomeFuelRings(){
   const el=document.getElementById('home-fuel-rings');
   if(!el)return;
-  const data=getDailyCalFromSchedule();
+  const selectedKey=window._homeSelectedKey||dKey(new Date());
+  const data=getDailyCalFromSchedule(selectedKey);
   if(!data){
     el.innerHTML=`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Today's Fuel</div><div style="font-size:12px;color:var(--muted);">Set up Fuel tab to see nutrition progress.</div>`;
     return;
   }
   S.mealLog=S.mealLog||DB.get('mealLog',{});
-  const selectedKey=window._homeSelectedKey||dKey(new Date());
   const todayMeals=S.mealLog[selectedKey]||[];
   let logCal=0,logCarbs=0,logProtein=0,logFat=0;
   todayMeals.forEach(m=>{
