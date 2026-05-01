@@ -3361,6 +3361,8 @@ function deactivateGoalProgram(){
   S.goalProgram=null;
   DB.set('workoutMode','standard');
   DB.set('goalProgram',null);
+  const wc=document.getElementById('workout-content');
+  if(wc)wc.innerHTML='';
   renderWorkoutTab();
 }
 
@@ -3710,32 +3712,33 @@ function generateGoalWorkout(forceType){
     blocks.push({title:'🧘 Mobility Finisher',exercises:mob});
   } else if(dayType==='mobility'){
     // Goal-biased mobility — stay on recovery day but target goal-relevant tissue
-    const dolphinPowerGoals=['Underwater dolphin power','Explosive power off the block','Turn speed & walls'];
-    const shoulderGoals=['Stroke power & pull strength','Shoulder health & injury prevention'];
-    const hipGoals=['Hip flexibility & kick range','Race endurance & pace control'];
-    const hasDolphin=goals.some(g=>dolphinPowerGoals.includes(g));
-    const hasShoulder=goals.some(g=>shoulderGoals.includes(g));
-    const hasHip=goals.some(g=>hipGoals.includes(g));
-    // Build a prioritised pool based on goals
-    const hipAnkleMob=_mobPool.filter(e=>['Hip','Couch','Pigeon','Ankle'].some(n=>e.name.includes(n)));
-    const shoulderMob=_mobPool.filter(e=>['Shoulder','Doorway','Lat','Thoracic'].some(n=>e.name.includes(n)));
-    let goalMobPool=[];
-    if(hasDolphin||hasHip) goalMobPool=[...goalMobPool,...hipAnkleMob];
-    if(hasShoulder) goalMobPool=[...goalMobPool,...shoulderMob];
-    // Deduplicate, then pad with general pool to reach 6
-    const seen=new Set();
-    goalMobPool=goalMobPool.filter(e=>{if(seen.has(e.name))return false;seen.add(e.name);return true;});
-    const padded=[...goalMobPool,..._mobPool.filter(e=>!seen.has(e.name))].slice(0,6);
-    const finalPool=padded.length>=4?padded:_mobPool;
-    // Descriptive block title and rationale note
-    const mobTitle=hasDolphin?'🧘 Mobility — Dolphin Power Focus'
-      :hasShoulder?'🧘 Mobility — Shoulder & Thoracic Focus'
-      :hasHip?'🧘 Mobility — Hip & Flexibility Focus'
-      :'🧘 Mobility & Recovery';
-    const mobNote=hasDolphin?'Hip flexor and ankle mobility directly drive underwater dolphin kick power and streamline depth.'
-      :hasShoulder?'Shoulder and thoracic mobility protect your rotator cuff and improve stroke efficiency.'
-      :hasHip?'Hip flexibility increases kick range and reduces drag through the water.'
-      :'';
+    // Map every goal to its priority mobility tissue and rationale
+    const GOAL_MOB_MAP={
+      'Explosive power off the block':       {tags:['Hip','Couch','Pigeon','Ankle'],title:'🧘 Mobility — Explosive Start Focus',note:'Hip flexor length and ankle dorsiflexion directly improve block drive and first-stroke power.'},
+      'Underwater dolphin power':            {tags:['Hip','Couch','Pigeon','Ankle'],title:'🧘 Mobility — Dolphin Power Focus',note:'Hip flexor and ankle mobility drive underwater dolphin kick power and streamline depth.'},
+      'Sprint top-end speed':                {tags:['Hip','Couch','Pigeon','Ankle','Lat','Thoracic'],title:'🧘 Mobility — Sprint Speed Focus',note:'Hip and thoracic mobility allow full extension and rotation at top-end sprint speed.'},
+      'Race endurance & pace control':       {tags:['Hip','Shoulder','Thoracic','Lat'],title:'🧘 Mobility — Endurance Focus',note:'Thoracic and hip mobility reduce drag and maintain efficient stroke mechanics over long efforts.'},
+      'Turn speed & walls':                  {tags:['Hip','Couch','Pigeon','Ankle'],title:'🧘 Mobility — Turn Speed Focus',note:'Hip flexor and ankle flexibility improve flip turn tuck and push-off angle.'},
+      'Stroke power & pull strength':        {tags:['Shoulder','Doorway','Lat','Thoracic'],title:'🧘 Mobility — Shoulder & Pull Focus',note:'Shoulder and lat mobility increase pull range and reduce impingement risk.'},
+      'Shoulder health & injury prevention': {tags:['Shoulder','Doorway','Thoracic','Lat'],title:'🧘 Mobility — Shoulder Health Focus',note:'Posterior shoulder and thoracic work protects your rotator cuff and keeps overhead range full.'},
+      'Core stability & body position':      {tags:['Hip','Thoracic','Lat','Shoulder'],title:'🧘 Mobility — Body Position Focus',note:'Hip and thoracic mobility underpin core stability and horizontal body position in the water.'},
+      'Hip flexibility & kick range':        {tags:['Hip','Couch','Pigeon','Ankle'],title:'🧘 Mobility — Hip & Kick Focus',note:'Hip flexor length and ankle range directly increase kick amplitude and reduce drag.'},
+      'General strength base':               {tags:['Hip','Shoulder','Thoracic','Ankle'],title:'🧘 Mobility & Recovery',note:'Full-body mobility maintenance supports joint health across all movement patterns.'},
+    };
+    // Collect tags and metadata from all active goals
+    const allTags=[],allTitles=[],allNotes=[];
+    goals.forEach(g=>{
+      const m=GOAL_MOB_MAP[g];
+      if(m){allTags.push(...m.tags);allTitles.push(m.title);allNotes.push(m.note);}
+    });
+    const uniqueTags=[...new Set(allTags)];
+    // Build prioritised pool — goal-relevant first, then pad
+    const goalPool=_mobPool.filter(e=>uniqueTags.some(t=>e.name.includes(t)));
+    const seen=new Set(goalPool.map(e=>e.name));
+    const padded=[...goalPool,..._mobPool.filter(e=>!seen.has(e.name))].slice(0,6);
+    const finalPool=padded.length>=3?padded:_mobPool;
+    const mobTitle=allTitles[0]||'🧘 Mobility & Recovery';
+    const mobNote=allNotes[0]||'';
     const mobExercises=pick(finalPool,6).map(e=>({...e,sets:2}));
     if(mobNote) mobExercises[0]={...mobExercises[0],note:mobNote};
     blocks.push({title:mobTitle,exercises:mobExercises});
