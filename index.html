@@ -223,7 +223,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="km-input-row" style="display:none;"><input id="km-amount-input" type="number" step="0.1" min="0.1" max="30"></div>
       <div id="home-meets-list" style="display:none;"></div>
       <div id="home-nudge-card" style="display:none;"></div>
-      <div id="offseason-home-widget" style="display:none;"></div>
+      <div id="offseason-home-widget"></div>
       <div id="home-load-pill" style="display:none;">
         <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
           <div><div id="load-rec">—</div></div>
@@ -4225,23 +4225,14 @@ function renderWeekStrip(){
     const isMeet=S.meets.some(m=>{try{const md=localDate(m.date);const me=m.endDate?localDate(m.endDate):md;return d>=md&&d<=me;}catch(e){return false;}});
     const dryDone=S.history.some(h=>{try{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===d.getTime();}catch(e){return false;}});
     const poolDone=S.poolLog.some(e=>e.date===key);
-    let dotBg,dotOpacity='1';
+    // All circles neutral — gold for meets only; checkmark marks completed dryland days
+    let dotBg='var(--border)';
+    let dotOpacity='1';
     if(isMeet){dotBg='var(--gold)';}
-    else if(isFuture){dotBg=hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':hasDry?'var(--purple)':'var(--border)';dotOpacity='0.4';}
-    else if(isToday){dotBg=isRest?'var(--border)':hasSwim&&hasDry?'var(--green)':hasSwim?'var(--accent)':'var(--purple)';}
-    else{
-      const bothDone=(hasSwim&&poolDone&&hasDry&&dryDone)||(hasSwim&&poolDone&&!hasDry)||(hasDry&&dryDone&&!hasSwim);
-      const partDone=(hasSwim&&poolDone&&hasDry&&!dryDone)||(hasDry&&dryDone&&hasSwim&&!poolDone);
-      if(isRest)dotBg='var(--border)';
-      else if(bothDone)dotBg='var(--green)';
-      else if(partDone)dotBg='var(--orange)';
-      else{dotBg='var(--red)';dotOpacity='0.5';}
-    }
-    // Inner label
-    const typeLabel=isMeet?'Meet':isRest?'':hasSwim&&hasDry?'Swim+\nLift':hasSwim?'Swim':hasDry?'Dryland':'';
-    const lines=typeLabel.split('\n');
-    const isDone=!isFuture&&!isToday&&!isRest&&(poolDone||dryDone);
-    dots.push({label:days[i],dotBg,dotOpacity,isToday,isSelected,key,lines,isMeet,isDone,isFuture});
+    else if(isFuture){dotOpacity='0.45';}
+    // isDone = dryland workout completed that day (aligns with Schedule tab source: S.history)
+    const isDone=!isFuture&&dryDone;
+    dots.push({label:days[i],dotBg,dotOpacity,isToday,isSelected,key,isMeet,isDone,isFuture});
   }
   const rangeStr=`${mon.toLocaleDateString('en-CA',{month:'short',day:'numeric'})} – ${new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6).toLocaleDateString('en-CA',{month:'short',day:'numeric'})}`;
   // Selected day label
@@ -4258,8 +4249,8 @@ function renderWeekStrip(){
       ${dots.map(d=>`
         <div style="text-align:center;cursor:pointer;" onclick="selectHomeDay('${d.key}')">
           <div style="font-size:9px;color:${d.isSelected?'var(--accent)':d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isSelected||d.isToday?'700':'400'};margin-bottom:5px;">${d.label}</div>
-          <div style="width:32px;height:32px;border-radius:50%;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);':''};display:flex;align-items:center;justify-content:center;margin:0 auto;transition:box-shadow 0.15s;">
-            ${d.isMeet?'<span style="font-size:11px;">🏁</span>':d.isDone?'<span style="font-size:12px;color:#fff;">✓</span>':''}
+          <div style="width:32px;height:32px;border-radius:50%;background:${d.dotBg};opacity:${d.dotOpacity};${d.isSelected?'box-shadow:0 0 0 2px var(--accent);':d.isToday?'box-shadow:0 0 0 2px var(--accent);':''};display:flex;align-items:center;justify-content:center;margin:0 auto;transition:box-shadow 0.15s;">
+            ${d.isMeet?'<span style="font-size:11px;">🏁</span>':d.isDone?'<span style="font-size:13px;color:var(--accent);font-weight:900;">✓</span>':''}
           </div>
         </div>`).join('')}
     </div>
@@ -4500,15 +4491,13 @@ function renderHome(){
     phEl.textContent=`${todayName} · Off-Season ${osPh.name} Wk ${osWeek}`;
   }
 
-  // Streak
+  // Streak — consecutive days with a completed dryland workout
   const hist=S.history;
   const drylandDays=new Set(hist.map(h=>{const d=new Date(h.date);d.setHours(0,0,0,0);return d.getTime();}));
-  const poolDays=new Set((S.poolLog||[]).map(e=>{const d=localDate(e.date);return d.getTime();}));
-  const allActiveDays=new Set([...drylandDays,...poolDays]);
   const t2=new Date();t2.setHours(0,0,0,0);
   let streak=0;
-  const startOffset=allActiveDays.has(t2.getTime())?0:1;
-  for(let i=startOffset;i<365;i++){const check=new Date(t2);check.setDate(t2.getDate()-i);if(allActiveDays.has(check.getTime()))streak++;else break;}
+  const startOffset=drylandDays.has(t2.getTime())?0:1;
+  for(let i=startOffset;i<365;i++){const check=new Date(t2);check.setDate(t2.getDate()-i);if(drylandDays.has(check.getTime()))streak++;else break;}
   const streakEl=document.getElementById('stat-streak');
   if(streakEl)streakEl.textContent=streak;
   const totalEl=document.getElementById('stat-total');
@@ -5613,18 +5602,22 @@ function renderOffSeasonHomeWidget(){
   const today=new Date();today.setHours(0,0,0,0);
   const phStart=new Date(ph.start+'T00:00:00');
   const weekNum=Math.floor((today-phStart)/(7*86400000))+1;
+  el.className='card';
   el.style.display='block';
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;">Off-Season</div>
-      <div style="font-size:15px;font-weight:800;color:var(--accent);">${ph.name}</div>
-      <div style="font-size:11px;color:var(--muted);">Week ${weekNum} of ${ph.weeks} · ${ph.desc.split('.')[0]}</div>
-    </div>
-    <div style="text-align:right;">
-      <div style="font-size:10px;color:var(--muted);">Next season</div>
-      <div style="font-size:12px;font-weight:700;">${S.offSeason&&S.offSeason.nextSeasonStart||'—'}</div>
-    </div>
-  </div>`;
+  el.style.marginTop='12px';
+  el.innerHTML=`
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Off-Season</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:18px;font-weight:900;color:var(--accent);line-height:1.1;">${ph.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:5px;">Week ${weekNum} of ${ph.weeks}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${ph.desc.split('.')[0]}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Next season</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);">${S.offSeason&&S.offSeason.nextSeasonStart||'—'}</div>
+      </div>
+    </div>`;
 }
 
 // ── Nutrition ──
