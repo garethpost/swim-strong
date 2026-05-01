@@ -342,7 +342,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <!-- Frozen rings header (populated by renderMealTracker) -->
       <div id="fuel-sticky-header" style="flex-shrink:0;"></div>
       <!-- Scrollable content below header -->
-      <div id="fuel-scroll-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 100px;">
+      <div id="fuel-scroll-body" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 100px;background:var(--bg);">
         <p class="section-title">Fuel</p>
         <p class="section-sub">Nutrition for a competitive swimmer</p>
         <div id="meal-tracker-section"></div>
@@ -366,12 +366,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="profile-display" style="margin-bottom:12px;"></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">Edit Profile</button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('club-logo-input').click()">📷 Club Logo</button>
-            <button class="btn-ghost" id="remove-logo-btn" style="display:none;font-size:12px;padding:8px 10px;" onclick="removeClubLogo()">✕ Remove</button>
-          </div>
-          <input type="file" id="club-logo-input" accept="image/*" style="display:none;" onchange="uploadClubLogo(event)">
-          <div id="logo-preview-wrap" style="display:none;margin-top:10px;">
-            <img id="logo-preview" src="" alt="Club logo" style="height:48px;object-fit:contain;border-radius:6px;border:1px solid var(--border);padding:4px;background:var(--surface);">
           </div>
         </div>
         <div class="card">
@@ -6749,7 +6743,7 @@ function renderMealTracker(){
   // Render sticky header
   const stickyEl=document.getElementById('fuel-sticky-header');
   if(stickyEl){
-    stickyEl.innerHTML=`<div style="background:var(--card);border-bottom:1px solid var(--border);padding:14px 16px 10px;">
+    stickyEl.innerHTML=`<div style="background:var(--surface);border-bottom:2px solid var(--accent);padding:14px 16px 10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">Today's Fuel</div>
         ${dlLabel?`<span style="font-size:10px;font-weight:700;color:${dlColor};background:rgba(0,0,0,0.08);border:1px solid ${dlColor};padding:2px 8px;border-radius:10px;">${dlLabel}</span>`:''}
