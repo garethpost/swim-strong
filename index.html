@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 62</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 63</div>
       </div>
     </div>
 
@@ -4415,13 +4415,7 @@ function renderHomeTodaySummary(){
   const isToday=key===dKey(today);
   const isPast=viewDate<today;
   const isFuture=viewDate>today;
-  const sch=S.daySchedule[key]||{};
-  let sessions=sch.sessions||[];
-  if(!sch.override&&!sessions.length){
-    const tmpl=S.seasonTemplate||{};
-    if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(viewDate>=ss&&viewDate<=se)sessions=tmpl.days[viewDate.getDay()]||[];}
-  }
-  if(sch.removed)sessions=[];
+  const sessions=getSessionsForDate(viewDate);
 
   // Session type labels — dryland only shown in detail
   const DRY_META={
@@ -4543,13 +4537,7 @@ function renderWeekStrip(){
     const isToday=key===todayKey;
     const isFuture=d>today;
     const isSelected=key===selectedKey;
-    const sch=S.daySchedule[key]||{};
-    let sessions=sch.sessions||[];
-    if(!sch.override&&!sessions.length){
-      const tmpl=S.seasonTemplate||{};
-      if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(d>=ss&&d<=se)sessions=tmpl.days[d.getDay()]||[];}
-    }
-    if(sch.removed)sessions=[];
+    const sessions=getSessionsForDate(d);
     const hasSwim=sessions.some(s=>s.startsWith('swim'));
     const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
     const isRest=!hasSwim&&!hasDry&&!sessions.some(s=>s.startsWith('oos_')&&s!=='oos_rest');
@@ -4763,13 +4751,7 @@ function renderHomeWeekProgress(){
     const key=dKey(d);
 
     // Sessions — dryland only
-    const sch=S.daySchedule[key]||{};
-    let sessions=sch.sessions||[];
-    if(!sch.override&&!sessions.length){
-      const tmpl=S.seasonTemplate||{};
-      if(tmpl.start&&tmpl.end){const ss=localDate(tmpl.start),se=localDate(tmpl.end);if(d>=ss&&d<=se)sessions=tmpl.days[d.getDay()]||[];}
-    }
-    if(sch.removed)sessions=[];
+    const sessions=getSessionsForDate(d);
     const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest'||s.startsWith('oos_')&&s!=='oos_rest');
     if(hasDry)schDryland++;
     const dryDone=S.history.some(h=>{try{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===d.getTime();}catch(e){return false;}});
@@ -5187,6 +5169,37 @@ function isTaperDay(dt){
     return dO>0&&dO<=td;
   });
 }
+// Returns sessions for a given date, respecting meet days and day-before-meet rules
+function getSessionsForDate(dt){
+  const key=dKey(dt);
+  const sch=S.daySchedule[key]||{};
+  let sessions=sch.sessions||[];
+  // If no manual override, read from template
+  if(!sch.override&&!sessions.length){
+    const tmpl=S.seasonTemplate||{};
+    if(tmpl.start&&tmpl.end){
+      const ss=localDate(tmpl.start),se=localDate(tmpl.end);
+      if(dt>=ss&&dt<=se)sessions=[...(tmpl.days[dt.getDay()]||[])];
+    }
+  }
+  if(sch.removed)return[];
+  // Meet day — strip all dryland, keep swim sessions (warm-up etc.)
+  if(isMeetDay(dt)){
+    return sessions.filter(s=>s.startsWith('swim'));
+  }
+  // Day before an A or B meet — mobility only, no heavy lifting
+  const tomorrow=new Date(dt);tomorrow.setDate(dt.getDate()+1);
+  const meetTomorrow=S.meets.find(m=>{
+    if(m.priority==='C')return false;
+    const ms=localDate(m.date);
+    return tomorrow>=ms&&tomorrow<=ms; // first day of meet only
+  });
+  if(meetTomorrow){
+    const swimOnly=sessions.filter(s=>s.startsWith('swim'));
+    return[...swimOnly,'dry_mobility'];
+  }
+  return sessions;
+}
 // Schedule guide visibility is handled entirely by renderCalendar — no manual dismiss needed
 
 function renderSeasonSnapshot(){
@@ -5340,19 +5353,9 @@ function renderCalendar(){
     const isToday=dt.getTime()===today.getTime();
     const hasMeet=isMeetDay(dt);
     const taperDay=!hasMeet&&isTaperDay(dt);
-    // Get sessions — manual override takes priority, else check template
-    let sessions=sch.sessions||[];
-    const isOverride=sch.override===true;
     const isRemoved=sch.removed===true;
-    if(!isOverride&&!isRemoved&&!sessions.length){
-      // Check season template for this day of week
-      const dow=dt.getDay();
-      const tmpl=S.seasonTemplate||{};
-      if(tmpl.start&&tmpl.end){
-        const ss=localDate(tmpl.start),se=localDate(tmpl.end);
-        if(dt>=ss&&dt<=se){sessions=tmpl.days[dow]||[];}
-      }
-    }
+    // Use getSessionsForDate so meet days auto-strip dryland
+    const sessions=isRemoved?[]:getSessionsForDate(dt);
     const hasSwim=sessions.some(s=>s.startsWith('swim'));
     const hasDry=sessions.some(s=>s.startsWith('dry_')&&s!=='dry_rest');
     const swimCount=sessions.filter(s=>s.startsWith('swim')).length;
