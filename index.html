@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v69 -->
+  <!-- cache-bust: v70 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 69</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 70</div>
       </div>
     </div>
 
@@ -4160,6 +4160,18 @@ function renderStrokeTabs(){
 }
 function selStroke(s){S.activeTStroke=s;renderStrokeTabs();renderTimesContent();}
 
+// Collapse/expand LCM or SCM analysis card
+const _timesCollapsed={lcm:false,scm:false};
+function toggleTimesSection(which){
+  _timesCollapsed[which]=!_timesCollapsed[which];
+  const body=document.getElementById(which+'-analysis-body');
+  const chevron=document.getElementById(which+'-chevron');
+  if(!body||!chevron)return;
+  const collapsed=_timesCollapsed[which];
+  body.style.display=collapsed?'none':'block';
+  chevron.style.transform=collapsed?'rotate(180deg)':'rotate(0deg)';
+}
+
 function buildChart(hist,field){
   const vals=hist.map(e=>tSec(e[field])).filter(v=>v!==Infinity);
   if(vals.length<2)return'';
@@ -4369,8 +4381,13 @@ function renderTimesContent(){
         <span style="font-size:12px;color:var(--text);line-height:1.5;">${g.tip}</span>
       </div>`).join('')}
     </div>`;
-    html+=`<div class="card">
-      <div class="card-title">LCM Analysis</div>
+    const lcmChartHtml=lcmHist.length>=2?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📈 Progression Chart</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`:'';
+    html+=`<div class="card" id="lcm-analysis-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleTimesSection('lcm')">
+        <div class="card-title" style="margin-bottom:0;">LCM Analysis</div>
+        <span id="lcm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;">▲</span>
+      </div>
+      <div id="lcm-analysis-body" style="margin-top:10px;">
       ${iL!==null&&iL>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
         <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iL.toFixed(2)}s total</span>
         <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);">${rate.toFixed(2)}s/mo</span>
@@ -4379,6 +4396,8 @@ function renderTimesContent(){
       ${seasonYtdHtml}
       ${projHtml}
       ${guidanceHtml}
+      ${lcmChartHtml}
+      </div>
     </div>`;
   }
   // ── SCM Analysis ──
@@ -4459,8 +4478,13 @@ function renderTimesContent(){
         <span style="font-size:12px;color:var(--text);line-height:1.5;">${g.tip}</span>
       </div>`).join('')}
     </div>`;
-    html+=`<div class="card">
-      <div class="card-title">SCM Analysis</div>
+    const scmChartHtml=scmHist.length>=2?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📈 Progression Chart</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`:'';
+    html+=`<div class="card" id="scm-analysis-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleTimesSection('scm')">
+        <div class="card-title" style="margin-bottom:0;">SCM Analysis</div>
+        <span id="scm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;">▲</span>
+      </div>
+      <div id="scm-analysis-body" style="margin-top:10px;">
       ${iS!==null&&iS>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
         <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iS.toFixed(2)}s total</span>
         <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--purple);">${rateS.toFixed(2)}s/mo</span>
@@ -4469,11 +4493,10 @@ function renderTimesContent(){
       ${scmYtdHtml}
       ${scmProjHtml}
       ${scmGuidanceHtml}
+      ${scmChartHtml}
+      </div>
     </div>`;
   }
-  // ── Charts ──
-  if(lcmHist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`;
-  if(scmHist.length>=2)html+=`<div class="card"><div class="card-title">SCM Progression</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`;
   // ── PB Log ──
   html+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div class="card-title" style="margin-bottom:0;">PB Log</div></div>`;
   if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Tap + Add PB to log your first entry.</p></div>`;
