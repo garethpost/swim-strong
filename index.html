@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 64</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 65</div>
       </div>
     </div>
 
@@ -4169,8 +4169,188 @@ function renderTimesContent(){
   </div>`;
   const lcmHist=hist.filter(e=>e.lcm&&e.lcm!=='—');
   const scmHist=hist.filter(e=>e.scm&&e.scm!=='—');
+  // ── LCM Analysis (always shown when any LCM data exists) ──
+  if(lcmHist.length>=1){
+    const first=lcmHist[0],last2=lcmHist[lcmHist.length-1];
+    const iL=lcmHist.length>=2?tSec(first.lcm)-tSec(last2.lcm):null;
+    const mo=lcmHist.length>=2?Math.max(1,Math.round((new Date(last2.date)-new Date(first.date))/2592000000)):null;
+    const rate=iL!==null&&mo?iL/mo:null;
+    // Race projection
+    const today=new Date();today.setHours(0,0,0,0);
+    const upcomingMeets=S.meets.filter(m=>{try{return localDate(m.date)>=today;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date));
+    const targetMeet=upcomingMeets[0];
+    let projHtml='';
+    if(gapLCM!==null&&gapLCM<=0){
+      projHtml=`<div style="background:rgba(0,230,118,0.1);border:1px solid var(--green);border-radius:10px;padding:12px 14px;margin-top:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px;">✓ Standard Already Met!</div>
+        <div style="font-size:12px;color:var(--muted);">You have qualified for ${stdLabel}. Consider stepping up to the next standard.</div>
+      </div>`;
+    } else if(gapLCM!==null&&gapLCM>0&&rate&&rate>0&&targetMeet){
+      const meetDate=localDate(targetMeet.date);
+      const monthsToMeet=Math.max(0,(meetDate-today)/2592000000);
+      const projectedGap=gapLCM-(rate*monthsToMeet);
+      const onTrack=projectedGap<=0;
+      const needPerMonth=onTrack?0:projectedGap/Math.max(0.5,monthsToMeet);
+      let verdict,verdictColor,verdictBg;
+      if(onTrack){verdict=`On track ✓ — projected to qualify with <b style="color:var(--green)">${Math.abs(projectedGap).toFixed(2)}s to spare</b> at ${targetMeet.name}`;verdictColor='var(--green)';verdictBg='rgba(0,230,118,0.08)';}
+      else if(needPerMonth<0.1){verdict=`Very close — need <b style="color:var(--orange)">${(needPerMonth*100).toFixed(1)}ms more/month</b> to qualify by ${targetMeet.name}`;verdictColor='var(--orange)';verdictBg='rgba(255,152,0,0.08)';}
+      else{verdict=`Need to find <b style="color:var(--red)">${needPerMonth.toFixed(2)}s more/month</b> to qualify by ${targetMeet.name}`;verdictColor='var(--red)';verdictBg='rgba(255,82,82,0.08)';}
+      projHtml=`<div style="background:${verdictBg};border:1px solid ${verdictColor};border-radius:10px;padding:12px 14px;margin-top:10px;">
+        <div style="font-size:11px;font-weight:700;color:${verdictColor};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Race Projection → ${targetMeet.name}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;">${verdict}</div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--muted);">Gap now</div><div style="font-size:16px;font-weight:800;color:var(--red);">+${gapLCM.toFixed(2)}s</div></div>
+          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--muted);">At meet (proj.)</div><div style="font-size:16px;font-weight:800;color:${onTrack?'var(--green)':'var(--orange)'};">${onTrack?'✓':'+'+Math.abs(projectedGap).toFixed(2)+'s'}</div></div>
+        </div>
+      </div>`;
+    } else if(gapLCM!==null&&gapLCM>0&&rate&&rate>0){
+      const moNeeded=Math.ceil(gapLCM/rate);
+      projHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:10px;">
+        <div style="font-size:12px;color:var(--muted);">🎯 At current rate: ${stdLabel} in ~<b style="color:var(--accent);">${moNeeded} month${moNeeded!==1?'s':''}</b>. Add a meet in Schedule to see race projection.</div>
+      </div>`;
+    }
+    // Season YTD
+    const tmpl=S.seasonTemplate||{};
+    const seasonStart=tmpl.start?localDate(tmpl.start):null;
+    let seasonYtdHtml='';
+    if(seasonStart){
+      const inSeason=lcmHist.filter(e=>new Date(e.date)>=seasonStart);
+      const firstOfSeason=inSeason[0],latestOfSeason=inSeason[inSeason.length-1];
+      if(firstOfSeason&&latestOfSeason&&firstOfSeason!==latestOfSeason){
+        const ytdDrop=tSec(firstOfSeason.lcm)-tSec(latestOfSeason.lcm);
+        const weeksSince=Math.max(1,(new Date(latestOfSeason.date)-new Date(firstOfSeason.date))/604800000);
+        const ytdColor=ytdDrop>0?'var(--green)':'var(--red)';
+        const ytdLabel=ytdDrop>0?`▼ ${ytdDrop.toFixed(2)}s faster`:`▲ ${Math.abs(ytdDrop).toFixed(2)}s slower`;
+        const sdDisp=seasonStart.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
+        seasonYtdHtml=`<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📅 Season to Date · LCM · since ${sdDisp}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Season start</div><div style="font-size:15px;font-weight:800;color:var(--text);">${firstOfSeason.lcm}</div></div>
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Current best</div><div style="font-size:15px;font-weight:800;color:var(--accent);">${latestOfSeason.lcm}</div></div>
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">YTD gain</div><div style="font-size:13px;font-weight:800;color:${ytdColor};">${ytdLabel}</div></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right;">${(ytdDrop/weeksSince*10).toFixed(1)}ms/week avg</div>
+        </div>`;
+      } else if(inSeason.length<=1){
+        seasonYtdHtml=`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:8px 0;">Log a second LCM time this season to see YTD improvement.</div>`;
+      }
+    } else {
+      seasonYtdHtml=`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:8px 0;">Set a season in Schedule → Season Template to track YTD improvement.</div>`;
+    }
+    // Training guidance — always show, pulls from actual logged data
+    const today2=new Date();today2.setHours(0,0,0,0);
+    const recentRPE=(S.sessionRPELog||[]).filter(r=>{try{const d=new Date(r.date);return(today2-d)/86400000<=28;}catch(e){return false;}});
+    const avgRPE=recentRPE.length?recentRPE.reduce((s,r)=>s+r.rpe,0)/recentRPE.length:null;
+    const recentCheckins=(S.checkinHistory||[]).filter(c=>{try{return(today2-localDate(c.date))/86400000<=28;}catch(e){return false;}});
+    const hasDryland=recentCheckins.some(c=>(c.sessions||[]).some(s=>s.startsWith('dry_')));
+    const recentKm=(S.swimKmLog||[]).filter(k=>{try{return(today2-new Date(k.date))/86400000<=28;}catch(e){return false;}}).reduce((s,k)=>s+(k.km||0),0);
+    const guidanceTips=[];
+    if(gapLCM!==null&&gapLCM>0){
+      if(rate!==null&&rate<0.05)guidanceTips.push({icon:'📈',tip:'Improvement rate is very low — check you\'re logging all races, not just PBs. If the data is accurate, the program needs a shakeup.',urgency:'red'});
+      else if(rate!==null&&rate<0.2)guidanceTips.push({icon:'🔧',tip:`At ${rate.toFixed(2)}s/mo you have the trajectory — but need to accelerate. One more quality LCM race per block sharpens the trend line.`,urgency:'orange'});
+      if(avgRPE!==null&&avgRPE<6)guidanceTips.push({icon:'⚡',tip:`Avg session RPE is ${avgRPE.toFixed(1)}/10 — too comfortable for a ${gapLCM.toFixed(2)}s gap. Push harder in race-pace sets.`,urgency:'orange'});
+      if(avgRPE!==null&&avgRPE>8.5)guidanceTips.push({icon:'😴',tip:`RPE averaging ${avgRPE.toFixed(1)}/10 — deep in the red. Without proper recovery weeks adaptation stalls and times plateau.`,urgency:'orange'});
+      if(!hasDryland)guidanceTips.push({icon:'🏋️',tip:'No dryland logged in 4 weeks. Strength training drives starts, turns, and underwaters — the cheapest seconds available.',urgency:'orange'});
+      if(recentKm>0&&recentKm<20)guidanceTips.push({icon:'🌊',tip:`Only ${recentKm.toFixed(1)} km in the pool this month. Volume underwrites speed — aerobic base needs to be there first.`,urgency:'red'});
+      if(gapLCM<=1)guidanceTips.push({icon:'🎯',tip:`Only ${gapLCM.toFixed(2)}s to go. Close it with race-specific work: 2-3 race-pace reps per session, perfect taper execution, clean meet warm-up.`,urgency:'green'});
+      else if(gapLCM<=3)guidanceTips.push({icon:'💪',tip:'Within striking distance. Turn + underwater improvements (0.5–1s each) and a dialled-in start can close this gap alone.',urgency:'green'});
+    } else if(gapLCM!==null&&gapLCM<=0){
+      guidanceTips.push({icon:'🏅',tip:'Standard met. Consider targeting the next level up, or chase a personal best at your next meet.',urgency:'green'});
+    }
+    if(!guidanceTips.length&&lcmHist.length<3){
+      guidanceTips.push({icon:'📊',tip:'Log at least 3 LCM times to unlock training guidance. Each race entry sharpens the projection.',urgency:''});
+    }
+    if(!guidanceTips.length&&avgRPE===null){
+      guidanceTips.push({icon:'🔢',tip:'Log session RPE after workouts (in the Train tab) to get training-load-aware guidance here.',urgency:''});
+    }
+    const guidanceHtml=`<div style="margin-top:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">🧠 How to close the gap</div>
+      ${guidanceTips.map(g=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--surface);border-radius:8px;border-left:3px solid ${g.urgency==='red'?'var(--red)':g.urgency==='orange'?'var(--orange)':g.urgency==='green'?'var(--green)':'var(--border)'};margin-bottom:6px;">
+        <span style="font-size:16px;flex-shrink:0;">${g.icon}</span>
+        <span style="font-size:12px;color:var(--text);line-height:1.5;">${g.tip}</span>
+      </div>`).join('')}
+    </div>`;
+    html+=`<div class="card">
+      <div class="card-title">LCM Analysis</div>
+      ${iL!==null&&iL>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+        <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iL.toFixed(2)}s total</span>
+        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);">${rate.toFixed(2)}s/mo</span>
+        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--muted);">over ${mo}mo</span>
+      </div>`:iL!==null?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Times have not improved — review training stimulus.</div>`:''}
+      ${seasonYtdHtml}
+      ${projHtml}
+      ${guidanceHtml}
+    </div>`;
+  }
+  // ── SCM Analysis ──
+  if(scmHist.length>=1){
+    const firstS=scmHist[0],lastS=scmHist[scmHist.length-1];
+    const iS=scmHist.length>=2?tSec(firstS.scm)-tSec(lastS.scm):null;
+    const moS=scmHist.length>=2?Math.max(1,Math.round((new Date(lastS.date)-new Date(firstS.date))/2592000000)):null;
+    const rateS=iS!==null&&moS?iS/moS:null;
+    const tmplS=S.seasonTemplate||{};
+    const seasonStartS=tmplS.start?localDate(tmplS.start):null;
+    let scmYtdHtml='';
+    if(seasonStartS){
+      const inSeasonS=scmHist.filter(e=>new Date(e.date)>=seasonStartS);
+      const firstSS=inSeasonS[0],lastSS=inSeasonS[inSeasonS.length-1];
+      if(firstSS&&lastSS&&firstSS!==lastSS){
+        const ytdDropS=tSec(firstSS.scm)-tSec(lastSS.scm);
+        const weeksSS=Math.max(1,(new Date(lastSS.date)-new Date(firstSS.date))/604800000);
+        const ytdColS=ytdDropS>0?'var(--green)':'var(--red)';
+        const ytdLblS=ytdDropS>0?`▼ ${ytdDropS.toFixed(2)}s faster`:`▲ ${Math.abs(ytdDropS).toFixed(2)}s slower`;
+        const sdispS=seasonStartS.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
+        scmYtdHtml=`<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📅 Season to Date · SCM · since ${sdispS}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Season start</div><div style="font-size:15px;font-weight:800;color:var(--text);">${firstSS.scm}</div></div>
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Current best</div><div style="font-size:15px;font-weight:800;color:var(--purple);">${lastSS.scm}</div></div>
+            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">YTD gain</div><div style="font-size:13px;font-weight:800;color:${ytdColS};">${ytdLblS}</div></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right;">${(ytdDropS/weeksSS*10).toFixed(1)}ms/week avg</div>
+        </div>`;
+      } else if(inSeasonS.length<=1){
+        scmYtdHtml=`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:8px 0;">Log a second SCM time this season to see YTD improvement.</div>`;
+      }
+    }
+    const today3=new Date();today3.setHours(0,0,0,0);
+    let scmProjHtml='';
+    if(gapSCM!==null&&gapSCM<=0){
+      scmProjHtml=`<div style="background:rgba(0,230,118,0.1);border:1px solid var(--green);border-radius:10px;padding:10px 14px;margin-top:10px;font-size:12px;color:var(--green);font-weight:700;">✓ SCM Standard Already Met!</div>`;
+    } else if(gapSCM!==null&&gapSCM>0&&rateS&&rateS>0){
+      const upS=S.meets.filter(m=>{try{return localDate(m.date)>=today3;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date));
+      const tgtS=upS[0];
+      if(tgtS){
+        const moToMeetS=Math.max(0,(localDate(tgtS.date)-today3)/2592000000);
+        const projGapS=gapSCM-(rateS*moToMeetS);
+        const onTrackS=projGapS<=0;
+        scmProjHtml=`<div style="background:${onTrackS?'rgba(0,230,118,0.08)':'rgba(255,152,0,0.08)'};border:1px solid ${onTrackS?'var(--green)':'var(--orange)'};border-radius:10px;padding:10px 14px;margin-top:10px;">
+          <div style="font-size:11px;font-weight:700;color:${onTrackS?'var(--green)':'var(--orange)'};margin-bottom:4px;">Race Projection → ${tgtS.name}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;">
+            <div style="background:var(--bg);border-radius:8px;padding:6px;"><div style="font-size:9px;color:var(--muted);">Gap now</div><div style="font-size:14px;font-weight:800;color:var(--red);">+${gapSCM.toFixed(2)}s</div></div>
+            <div style="background:var(--bg);border-radius:8px;padding:6px;"><div style="font-size:9px;color:var(--muted);">At meet (proj.)</div><div style="font-size:14px;font-weight:800;color:${onTrackS?'var(--green)':'var(--orange)'};">${onTrackS?'✓ On track':'+'+Math.abs(projGapS).toFixed(2)+'s'}</div></div>
+          </div>
+        </div>`;
+      } else {
+        const moNS=Math.ceil(gapSCM/rateS);
+        scmProjHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:var(--muted);">🎯 SCM standard in ~${moNS} month${moNS!==1?'s':''} at current rate. Add a meet to see race projection.</div>`;
+      }
+    }
+    html+=`<div class="card">
+      <div class="card-title">SCM Analysis</div>
+      ${iS!==null&&iS>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+        <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iS.toFixed(2)}s total</span>
+        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--purple);">${rateS.toFixed(2)}s/mo</span>
+        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--muted);">over ${moS}mo</span>
+      </div>`:iS!==null?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Times have not improved — review training stimulus.</div>`:''}
+      ${scmYtdHtml}
+      ${scmProjHtml}
+    </div>`;
+  }
+  // ── Charts ──
   if(lcmHist.length>=2)html+=`<div class="card"><div class="card-title">LCM Progression</div><div class="chart-wrap">${buildChart(lcmHist,'lcm')}</div></div>`;
   if(scmHist.length>=2)html+=`<div class="card"><div class="card-title">SCM Progression</div><div class="chart-wrap">${buildChart(scmHist,'scm')}</div></div>`;
+  // ── PB Log ──
   html+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div class="card-title" style="margin-bottom:0;">PB Log</div></div>`;
   if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Tap + Add PB to log your first entry.</p></div>`;
   else html+=[...hist].reverse().map((e,ri)=>{
@@ -4193,223 +4373,6 @@ function renderTimesContent(){
     </div>`;
   }).join('');
   html+=`</div>`;
-  if(lcmHist.length>=2){
-    const first=lcmHist[0],last2=lcmHist[lcmHist.length-1];
-    const iL=tSec(first.lcm)-tSec(last2.lcm);
-    const mo=Math.max(1,Math.round((new Date(last2.date)-new Date(first.date))/2592000000));
-    const rate=iL/mo;
-    // ── Race Projection — connect gap to meet calendar ──
-    const today=new Date();today.setHours(0,0,0,0);
-    const upcomingMeets=S.meets.filter(m=>{try{return localDate(m.date)>=today;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date));
-    const targetMeet=upcomingMeets[0];
-    let projHtml='';
-    if(gapLCM!==null&&gapLCM<=0){
-      projHtml=`<div style="background:rgba(0,230,118,0.1);border:1px solid var(--green);border-radius:10px;padding:12px 14px;margin-top:12px;">
-        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px;">✓ Standard Already Met!</div>
-        <div style="font-size:12px;color:var(--muted);">You have already qualified for ${stdLabel}. Consider stepping up to the next standard.</div>
-      </div>`;
-    } else if(gapLCM!==null&&gapLCM>0&&rate>0&&targetMeet){
-      const monthsNeeded=gapLCM/rate;
-      const meetDate=localDate(targetMeet.date);
-      const monthsToMeet=Math.max(0,(meetDate-today)/2592000000);
-      const projectedGap=gapLCM-(rate*monthsToMeet);
-      const onTrack=projectedGap<=0;
-      const needPerMonth=onTrack?0:projectedGap/Math.max(0.5,monthsToMeet);
-      let verdict,verdictColor,verdictBg;
-      if(onTrack){
-        const cushionSec=Math.abs(projectedGap);
-        verdict=`On track ✓ — projected to qualify with <b style="color:var(--green)">${cushionSec.toFixed(2)}s to spare</b> at ${targetMeet.name}`;
-        verdictColor='var(--green)';verdictBg='rgba(0,230,118,0.08)';
-      } else if(needPerMonth<0.1){
-        verdict=`Very close — need <b style="color:var(--orange)">${(needPerMonth*100).toFixed(1)}ms more/month</b> to qualify by ${targetMeet.name}`;
-        verdictColor='var(--orange)';verdictBg='rgba(255,152,0,0.08)';
-      } else {
-        verdict=`Need to find <b style="color:var(--red)">${needPerMonth.toFixed(2)}s more/month</b> to qualify by ${targetMeet.name}`;
-        verdictColor='var(--red)';verdictBg='rgba(255,82,82,0.08)';
-      }
-      projHtml=`<div style="background:${verdictBg};border:1px solid ${verdictColor};border-radius:10px;padding:12px 14px;margin-top:12px;">
-        <div style="font-size:11px;font-weight:700;color:${verdictColor};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Race Projection → ${targetMeet.name}</div>
-        <div style="font-size:13px;color:var(--text);line-height:1.6;">${verdict}</div>
-        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:10px;color:var(--muted);">Gap now</div>
-            <div style="font-size:16px;font-weight:800;color:var(--red);">+${gapLCM.toFixed(2)}s</div>
-          </div>
-          <div style="background:var(--bg);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:10px;color:var(--muted);">At meet (projected)</div>
-            <div style="font-size:16px;font-weight:800;color:${onTrack?'var(--green)':'var(--orange)'};">${onTrack?'-':'+'+(Math.abs(projectedGap).toFixed(2)+'s')}</div>
-          </div>
-        </div>
-      </div>`;
-    } else if(gapLCM!==null&&gapLCM>0&&rate>0){
-      const moNeeded=Math.ceil(gapLCM/rate);
-      projHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:10px;">
-        <div style="font-size:12px;color:var(--muted);">🎯 At current rate: ${stdLabel} in ~<b style="color:var(--gold);">${moNeeded} month${moNeeded!==1?'s':''}</b>. Add a target meet in Schedule to see race projection.</div>
-      </div>`;
-    }
-    // ── Season YTD improvement ──
-    const tmpl=S.seasonTemplate||{};
-    const seasonStart=tmpl.start?localDate(tmpl.start):null;
-    let seasonYtdHtml='';
-    if(seasonStart&&lcmHist.length>=1){
-      // First entry on or after season start
-      const inSeason=lcmHist.filter(e=>new Date(e.date)>=seasonStart);
-      const firstOfSeason=inSeason[0];
-      const latestOfSeason=inSeason[inSeason.length-1];
-      if(firstOfSeason&&latestOfSeason&&firstOfSeason!==latestOfSeason){
-        const ytdDrop=tSec(firstOfSeason.lcm)-tSec(latestOfSeason.lcm);
-        const daysSince=Math.round((new Date(latestOfSeason.date)-new Date(firstOfSeason.date))/86400000);
-        const weeksSince=Math.max(1,daysSince/7);
-        const ytdColor=ytdDrop>0?'var(--green)':'var(--red)';
-        const ytdLabel=ytdDrop>0?`▼ ${ytdDrop.toFixed(2)}s faster`:`▲ ${Math.abs(ytdDrop).toFixed(2)}s slower`;
-        const seasonStartDisp=seasonStart.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-        seasonYtdHtml=`
-        <div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📅 Season to Date (LCM · since ${seasonStartDisp})</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
-            <div style="background:var(--bg);border-radius:8px;padding:8px;">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Season start</div>
-              <div style="font-size:14px;font-weight:800;color:var(--text);">${firstOfSeason.lcm}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:8px;padding:8px;">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Current best</div>
-              <div style="font-size:14px;font-weight:800;color:var(--accent);">${latestOfSeason.lcm}</div>
-            </div>
-            <div style="background:var(--bg);border-radius:8px;padding:8px;">
-              <div style="font-size:9px;color:var(--muted);margin-bottom:2px;">YTD gain</div>
-              <div style="font-size:14px;font-weight:800;color:${ytdColor};">${ytdLabel}</div>
-            </div>
-          </div>
-          ${weeksSince>0?`<div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right;">${(ytdDrop/weeksSince*10).toFixed(1)}ms/week average improvement</div>`:''}
-        </div>`;
-      } else if(firstOfSeason&&firstOfSeason===latestOfSeason){
-        const seasonStartDisp=seasonStart.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-        seasonYtdHtml=`<div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">Add a second LCM entry this season to see YTD improvement.</div>`;
-      }
-    } else if(!seasonStart){
-      seasonYtdHtml=`<div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">Set a season in Schedule → Season Template to track YTD improvement.</div>`;
-    }
-    // ── Training load context for guidance ──
-    const today2=new Date();today2.setHours(0,0,0,0);
-    const recentRPE=(S.sessionRPELog||[]).filter(r=>{
-      try{const d=new Date(r.date);d.setHours(0,0,0,0);return (today2-d)/86400000<=28;}catch(e){return false;}
-    });
-    const avgRPE=recentRPE.length?recentRPE.reduce((s,r)=>s+r.rpe,0)/recentRPE.length:null;
-    const recentCheckins=(S.checkinHistory||[]).filter(c=>{
-      try{const d=localDate(c.date);return (today2-d)/86400000<=28;}catch(e){return false;}
-    });
-    const hasDryland=recentCheckins.some(c=>(c.sessions||[]).some(s=>s.startsWith('dry_')));
-    const recentKm=(S.swimKmLog||[]).filter(k=>{
-      try{const d=new Date(k.date);d.setHours(0,0,0,0);return (today2-d)/86400000<=28;}catch(e){return false;}
-    }).reduce((s,k)=>s+(k.km||0),0);
-    // Build guidance bullets based on gap, rate, and training data
-    const guidanceTips=[];
-    if(gapLCM!==null&&gapLCM>0){
-      if(rate<0.05)guidanceTips.push({icon:'📈',tip:'Your improvement rate is very low — make sure you\'re logging all races, not just PBs. If data is accurate, your program needs a shakeup.',urgency:'red'});
-      else if(rate<0.2)guidanceTips.push({icon:'🔧',tip:`At ${rate.toFixed(2)}s/mo, you have the raw trajectory — but you need to accelerate. Add one more quality LCM race per block to sharpen the trend line.`,urgency:'orange'});
-      if(avgRPE!==null&&avgRPE<6)guidanceTips.push({icon:'⚡',tip:`Your avg session RPE is ${avgRPE.toFixed(1)}/10 — that's too comfortable for a ${gapLCM.toFixed(2)}s gap. Push harder in race-pace sets.`,urgency:'orange'});
-      if(avgRPE!==null&&avgRPE>8.5)guidanceTips.push({icon:'😴',tip:`RPE averaging ${avgRPE.toFixed(1)}/10 — you\'re deep in the red. Without recovery weeks, adaptation stalls and times plateau.`,urgency:'orange'});
-      if(!hasDryland)guidanceTips.push({icon:'🏋️',tip:'No dryland logged in 4 weeks. Strength training directly drives starts, turns, and underwaters — the cheapest seconds in the pool.',urgency:'orange'});
-      if(recentKm>0&&recentKm<20)guidanceTips.push({icon:'🌊',tip:`Only ${recentKm.toFixed(1)} km in the pool this month. Volume underwrites speed — base aerobic work needs to be there first.`,urgency:'red'});
-      if(gapLCM<=1)guidanceTips.push({icon:'🎯',tip:`Only ${gapLCM.toFixed(2)}s to standard. This gap closes with race-specific work: 2-3 race-pace reps in practice, perfect taper execution, and a clean meet warm-up.`,urgency:'green'});
-      else if(gapLCM<=3)guidanceTips.push({icon:'💪',tip:'Within striking distance. Focus on turn and underwater improvements (0.5–1s each) and dial in your start sequence.',urgency:'green'});
-    }
-    if(guidanceTips.length===0&&gapLCM!==null&&gapLCM<=0){
-      guidanceTips.push({icon:'🏅',tip:'Standard already met. Consider registering for the next level up, or target a personal best at your next meet.',urgency:'green'});
-    }
-    if(guidanceTips.length===0&&lcmHist.length<3){
-      guidanceTips.push({icon:'📊',tip:'Log at least 3 LCM times to unlock full training guidance. Each race entry sharpens the projection.',urgency:''});
-    }
-    const guidanceHtml=guidanceTips.length?`
-      <div style="margin-top:12px;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">🧠 How to close the gap</div>
-        ${guidanceTips.map(g=>`
-          <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--surface);border-radius:8px;border-left:3px solid ${g.urgency==='red'?'var(--red)':g.urgency==='orange'?'var(--orange)':'var(--green)'};margin-bottom:6px;">
-            <span style="font-size:16px;flex-shrink:0;">${g.icon}</span>
-            <span style="font-size:12px;color:var(--text);line-height:1.5;">${g.tip}</span>
-          </div>`).join('')}
-      </div>`:'';
-    html+=`<div class="card">
-      <div class="card-title">LCM Analysis</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.9;">
-        ${iL>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-          <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iL.toFixed(2)}s total</span>
-          <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);">${rate.toFixed(2)}s/mo rate</span>
-          <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--muted);">over ${mo}mo</span>
-        </div>`:'<p style="font-size:12px;">Add more LCM entries to see improvement rate.</p>'}
-      </div>
-      ${seasonYtdHtml}
-      ${projHtml}
-      ${guidanceHtml}
-    </div>`;
-  }
-  // ── SCM Analysis (if enough data) ──
-  if(scmHist.length>=2){
-    const firstS=scmHist[0],lastS=scmHist[scmHist.length-1];
-    const iS=tSec(firstS.scm)-tSec(lastS.scm);
-    const moS=Math.max(1,Math.round((new Date(lastS.date)-new Date(firstS.date))/2592000000));
-    const rateS=iS/moS;
-    // Season YTD for SCM
-    const tmplS=S.seasonTemplate||{};
-    const seasonStartS=tmplS.start?localDate(tmplS.start):null;
-    let scmYtdHtml='';
-    if(seasonStartS&&scmHist.length>=2){
-      const inSeasonS=scmHist.filter(e=>new Date(e.date)>=seasonStartS);
-      const firstSS=inSeasonS[0],lastSS=inSeasonS[inSeasonS.length-1];
-      if(firstSS&&lastSS&&firstSS!==lastSS){
-        const ytdDropS=tSec(firstSS.scm)-tSec(lastSS.scm);
-        const daySS=Math.round((new Date(lastSS.date)-new Date(firstSS.date))/86400000);
-        const weeksSS=Math.max(1,daySS/7);
-        const ytdColS=ytdDropS>0?'var(--green)':'var(--red)';
-        const ytdLblS=ytdDropS>0?`▼ ${ytdDropS.toFixed(2)}s faster`:`▲ ${Math.abs(ytdDropS).toFixed(2)}s slower`;
-        const sdispS=seasonStartS.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'});
-        scmYtdHtml=`<div style="margin-top:10px;background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">📅 Season to Date (SCM · since ${sdispS})</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;">
-            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Season start</div><div style="font-size:14px;font-weight:800;color:var(--text);">${firstSS.scm}</div></div>
-            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">Current best</div><div style="font-size:14px;font-weight:800;color:var(--purple);">${lastSS.scm}</div></div>
-            <div style="background:var(--bg);border-radius:8px;padding:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:2px;">YTD gain</div><div style="font-size:14px;font-weight:800;color:${ytdColS};">${ytdLblS}</div></div>
-          </div>
-          ${weeksSS>0?`<div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right;">${(ytdDropS/weeksSS*10).toFixed(1)}ms/week average improvement</div>`:''}
-        </div>`;
-      }
-    }
-    // SCM race projection
-    const today3=new Date();today3.setHours(0,0,0,0);
-    let scmProjHtml='';
-    if(gapSCM!==null&&gapSCM<=0){
-      scmProjHtml=`<div style="background:rgba(0,230,118,0.1);border:1px solid var(--green);border-radius:10px;padding:10px 14px;margin-top:10px;font-size:12px;color:var(--green);font-weight:700;">✓ SCM Standard Already Met!</div>`;
-    } else if(gapSCM!==null&&gapSCM>0&&rateS>0){
-      const upS=S.meets.filter(m=>{try{return localDate(m.date)>=today3;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date));
-      const tgtS=upS[0];
-      if(tgtS){
-        const meetDateS=localDate(tgtS.date);
-        const moToMeetS=Math.max(0,(meetDateS-today3)/2592000000);
-        const projGapS=gapSCM-(rateS*moToMeetS);
-        const onTrackS=projGapS<=0;
-        scmProjHtml=`<div style="background:${onTrackS?'rgba(0,230,118,0.08)':'rgba(255,152,0,0.08)'};border:1px solid ${onTrackS?'var(--green)':'var(--orange)'};border-radius:10px;padding:10px 14px;margin-top:10px;">
-          <div style="font-size:11px;font-weight:700;color:${onTrackS?'var(--green)':'var(--orange)'};margin-bottom:4px;">SCM → ${tgtS.name}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;">
-            <div style="background:var(--bg);border-radius:8px;padding:6px;"><div style="font-size:9px;color:var(--muted);">Gap now</div><div style="font-size:14px;font-weight:800;color:var(--red);">+${gapSCM.toFixed(2)}s</div></div>
-            <div style="background:var(--bg);border-radius:8px;padding:6px;"><div style="font-size:9px;color:var(--muted);">At meet</div><div style="font-size:14px;font-weight:800;color:${onTrackS?'var(--green)':'var(--orange)'};">${onTrackS?'✓ On track':'+'+Math.abs(projGapS).toFixed(2)+'s'}</div></div>
-          </div>
-        </div>`;
-      } else {
-        const moNS=Math.ceil(gapSCM/rateS);
-        scmProjHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:var(--muted);">🎯 SCM standard in ~${moNS} month${moNS!==1?'s':''} at current rate.</div>`;
-      }
-    }
-    html+=`<div class="card">
-      <div class="card-title">SCM Analysis</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-        ${iS>0?`<span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iS.toFixed(2)}s total</span>
-        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--purple);">${rateS.toFixed(2)}s/mo rate</span>
-        <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--muted);">over ${moS}mo</span>`:'<span style="font-size:12px;color:var(--muted);">Add more SCM entries to see rate.</span>'}
-      </div>
-      ${scmYtdHtml}
-      ${scmProjHtml}
-    </div>`;
-  }
   document.getElementById('times-content').innerHTML=html;
 }
 
