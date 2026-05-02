@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 59</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 60</div>
       </div>
     </div>
 
@@ -5607,7 +5607,8 @@ function autoDryland(tmplDays, phase){
   // tmplDays: {0:[sessions], 1:[sessions], ...} for Sun-Sat
   // Returns {0:[sessions], ...} with dryland intelligently added
   const result={};
-  for(let dow=0;dow<7;dow++) result[dow]=[...(tmplDays[dow]||[])];
+  // Strip any existing dryland before re-applying so we don't double-add
+  for(let dow=0;dow<7;dow++) result[dow]=(tmplDays[dow]||[]).filter(s=>s.startsWith('swim'));
 
   // Taper / rest — mobility only across the board
   if(phase==='taper'||phase==='rest'){
@@ -5647,52 +5648,49 @@ function autoDryland(tmplDays, phase){
       dry='dry_mobility';
 
     } else if(cls==='am_only'){
-      // AM swim → dryland PM (best slot for heavy lifting)
-      if(phase==='sprint'){
-        // Sprint: power/plyo priority, alternate with upper
-        dry=powerCount<1?'dry_power':'dry_upper';
-        if(dry==='dry_power') powerCount++;
-      } else if(hardTomorrow){
-        // Hard swim tomorrow — protect the legs, go upper
+      // AM swim → dryland PM: best slot for heavy work
+      // Only restrict to upper if tomorrow is a DOUBLE day (not just any swim)
+      const doubleTomorrow=nextCls==='double';
+      if(doubleTomorrow){
+        // Double tomorrow — protect legs
         dry='dry_upper'; upperCount++;
+      } else if(phase==='sprint'){
+        // Sprint: rotate power → lower → upper
+        if(powerCount<2){dry='dry_power';powerCount++;}
+        else{dry=lowerCount<=upperCount?'dry_lower':'dry_upper';if(dry==='dry_lower')lowerCount++;else upperCount++;}
+      } else if(phase==='threshold'){
+        // Threshold: lower → upper → power rotation
+        if(lowerCount<=upperCount&&lowerCount<=powerCount){dry='dry_lower';lowerCount++;}
+        else if(upperCount<=powerCount){dry='dry_upper';upperCount++;}
+        else{dry='dry_power';powerCount++;}
       } else {
-        // Best slot — alternate lower/upper, add power in sprint/threshold
-        if(phase==='threshold'&&powerCount<1&&lowerCount>=1){
-          dry='dry_power'; powerCount++;
-        } else {
-          dry=lowerCount<=upperCount?'dry_lower':'dry_upper';
-          if(dry==='dry_lower') lowerCount++; else upperCount++;
-        }
+        // Base: alternate lower/upper
+        dry=lowerCount<=upperCount?'dry_lower':'dry_upper';
+        if(dry==='dry_lower')lowerCount++;else upperCount++;
       }
 
     } else if(cls==='pm_only'){
-      // PM swim → dryland must be AM (before pool, so keep it light/upper)
-      if(phase==='base'){
-        dry='dry_upper'; upperCount++; // upper only, no heavy legs before PM swim
-      } else if(phase==='sprint'){
-        dry='dry_power'; powerCount++; // power work AM, pool PM is speed work
-      } else {
+      // PM swim → dryland AM: must be moderate, no heavy legs before pool
+      if(phase==='sprint'){
+        dry='dry_power'; powerCount++; // explosive AM, speed PM
+      } else if(phase==='threshold'&&upperCount>lowerCount){
         dry='dry_upper'; upperCount++;
+      } else {
+        dry='dry_upper'; upperCount++; // safe default before PM swim
       }
 
     } else if(cls==='noswim'){
-      // No swim day — best chance for heavy strength OR true rest
-      const adjSwim=prevCls!=='noswim'||nextCls!=='noswim';
-      if(phase==='base'){
-        // Base: use no-swim days for lower body strength
-        dry=lowerCount<=upperCount?'dry_lower':'dry_upper';
-        if(dry==='dry_lower') lowerCount++; else upperCount++;
-      } else if(phase==='sprint'){
-        // Sprint: power or cardio on no-swim days
-        dry=powerCount<1?'dry_power':'dry_cardio';
-        if(dry==='dry_power') powerCount++;
+      // No swim — prime slot for strength or recovery
+      if(phase==='sprint'){
+        dry=powerCount<2?'dry_power':'dry_lower';
+        if(dry==='dry_power')powerCount++;else lowerCount++;
       } else if(phase==='threshold'){
-        // Threshold: strength or cardio
-        dry=lowerCount<2?'dry_lower':'dry_cardio';
-        if(dry==='dry_lower') lowerCount++;
+        // Use no-swim for lower body (legs need the dedicated day)
+        dry=lowerCount<=upperCount?'dry_lower':'dry_power';
+        if(dry==='dry_lower')lowerCount++;else powerCount++;
       } else {
-        dry=lowerCount<=upperCount?'dry_lower':'dry_upper';
-        if(dry==='dry_lower') lowerCount++; else upperCount++;
+        // Base: lower body on rest days
+        dry='dry_lower'; lowerCount++;
       }
     }
 
