@@ -537,7 +537,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 75</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 76</div>
       </div>
     </div>
 
@@ -8809,7 +8809,13 @@ applyClubLogo();
   });
   if(dirty)DB.set('daySchedule',S.daySchedule);
 })();
-renderHome();
+try{renderHome();}catch(e){
+  console.error('renderHome crash:',e);
+  const sub=document.getElementById('header-sub');
+  if(sub)sub.textContent='Error: '+e.message;
+  const sec=document.getElementById('section-home');
+  if(sec){const errDiv=document.createElement('div');errDiv.style='padding:20px;color:#ff4444;font-size:12px;word-break:break-all;background:#1a0000;border-radius:8px;margin:12px 0;';errDiv.innerHTML='<b>renderHome() crashed:</b><br>'+e.message+'<br><br><pre style="white-space:pre-wrap;font-size:10px;">'+e.stack+'</pre><br><button onclick="localStorage.clear();location.reload();" style="background:#ff4444;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;">Clear data &amp; reload</button>';sec.prepend(errDiv);}
+}
 maybeShowCheckinSheet();
 renderCustomTargetMeets();
 // Register service worker for offline support
