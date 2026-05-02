@@ -31,9 +31,13 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
 #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;}
-#header{padding:50px 20px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;}
-#header h1{font-size:21px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
-#header .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+#header{padding:0;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;}
+#header-top{padding:50px 20px 10px;display:flex;align-items:flex-end;justify-content:space-between;}
+#header-tagline{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:3px;opacity:0.85;}
+#header h1{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-0.5px;line-height:1;}
+#header-strip{background:var(--surface);border-top:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;}
+#header-strip-text{font-size:11px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#header .sub{display:none;}
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
 .unit-picker-btn.active{background:var(--accent);color:#000;}
 #wt-kg.active,#wt-lbs.active,#dist-km.active,#dist-mi.active{background:var(--accent);color:#000;}
@@ -164,12 +168,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <body>
 <div id="app">
   <div id="header">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
-      <div>
-        <h1>SwimFitPro</h1>
-        <div class="sub" id="header-sub">Loading...</div>
+    <div id="header-top">
+      <div style="display:flex;align-items:flex-end;gap:10px;">
+        <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;margin-bottom:2px;">
+        <div>
+          <div id="header-tagline">Swim · Train · Fuel</div>
+          <h1>SwimFitPro</h1>
+        </div>
       </div>
+    </div>
+    <div id="header-strip">
+      <div id="header-strip-text">Loading...</div>
     </div>
   </div>
   <div id="content">
@@ -537,7 +546,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 77</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 78</div>
       </div>
     </div>
 
@@ -1869,14 +1878,20 @@ function applyTheme(key){
   if(key==='bioluminescence'){root.style.setProperty('--text','#e8fffe');}
   // Light themes: header title needs to be readable
   const h1=document.querySelector('#header h1');
+  const tagline=document.getElementById('header-tagline');
+  const stripText=document.getElementById('header-strip-text');
   const isLight=(key==='tide'||key==='speedstripe');
   const textCol=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
+  const accentCol=theme.vars['--accent']||'var(--accent)';
+  const mutedCol=theme.vars['--muted']||'var(--muted)';
   if(h1){
     h1.style.background='none';
     h1.style['-webkit-background-clip']='unset';
     h1.style['-webkit-text-fill-color']=textCol;
     h1.style.color=textCol;
   }
+  if(tagline){tagline.style.color=accentCol;}
+  if(stripText){stripText.style.color=mutedCol;}
   DB.set('appTheme',key);
   S.appTheme=key;
   renderThemePicker();
@@ -5100,7 +5115,7 @@ function renderHome(){
   // Header subtitle (app header bar)
   const phase=getPhase(S.programWeek);const cycle=S.programCycle||1;
   const clubStr=S.profile&&S.profile.club?S.profile.club:'';
-  const headerSub=document.getElementById('header-sub');
+  const headerSub=document.getElementById('header-strip-text');
   // Build meaningful phase label for header
   let headerPhaseStr;
   if(S.offSeason&&S.offSeason.active){
