@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v72 -->
+  <!-- cache-bust: v73 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,9 +31,14 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
 #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;}
-#header{padding:50px 20px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;}
-#header h1{font-size:21px;font-weight:700;color:var(--text);letter-spacing:-0.3px;}
-#header .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+#header{padding:44px 20px 0;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:0;}
+#header-top{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:10px;}
+#header h1{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-0.8px;line-height:1;}
+#header-strip{display:flex;gap:0;align-items:stretch;background:var(--surface);margin:0 -20px;border-top:1px solid var(--border);overflow:hidden;}
+.hstrip-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;border-right:1px solid var(--border);}
+.hstrip-item:last-child{border-right:none;}
+.hstrip-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:2px;}
+.hstrip-val{font-size:12px;font-weight:700;color:var(--accent);}
 .unit-toggle{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;}
 .unit-picker-btn.active{background:var(--accent);color:#000;}
 #wt-kg.active,#wt-lbs.active,#dist-km.active,#dist-mi.active{background:var(--accent);color:#000;}
@@ -164,13 +169,31 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <body>
 <div id="app">
   <div id="header">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
-      <div>
-        <h1>SwimFitPro</h1><div class="sub" id="header-sub">Loading...</div>
+    <div id="header-top">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img id="header-club-logo" src="" alt="" style="display:none;height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0;">
+        <h1>SwimFitPro</h1>
+      </div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);opacity:0.7;">Swim · Train · Fuel</div>
+    </div>
+    <div id="header-strip">
+      <div class="hstrip-item">
+        <div class="hstrip-label">Phase</div>
+        <div class="hstrip-val" id="hstrip-phase">—</div>
+      </div>
+      <div class="hstrip-item">
+        <div class="hstrip-label">Week</div>
+        <div class="hstrip-val" id="hstrip-week">—</div>
+      </div>
+      <div class="hstrip-item">
+        <div class="hstrip-label">Next meet</div>
+        <div class="hstrip-val" id="hstrip-meet">—</div>
+      </div>
+      <div class="hstrip-item">
+        <div class="hstrip-label">Season km</div>
+        <div class="hstrip-val" id="hstrip-km">—</div>
       </div>
     </div>
-    <button class="unit-toggle" onclick="toggleUnits()" id="unit-btn">kg</button>
   </div>
   <div id="content">
 
@@ -537,7 +560,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 72</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 73</div>
       </div>
     </div>
 
@@ -1868,17 +1891,20 @@ function applyTheme(key){
   Object.entries(theme.vars).forEach(([k,v])=>root.style.setProperty(k,v));
   // Fix text for special themes
   if(key==='bioluminescence'){root.style.setProperty('--text','#e8fffe');}
-  // Light themes: header title needs to be readable (gradient clips to transparent on light bg)
+  // Light themes: header title needs to be readable
   const h1=document.querySelector('#header h1');
   const isLight=(key==='tide'||key==='speedstripe');
+  const textCol=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
   if(h1){
     h1.style.background='none';
     h1.style['-webkit-background-clip']='unset';
-    h1.style['-webkit-text-fill-color']=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
-    h1.style.color=isLight?(theme.vars['--text']||'#111111'):'var(--text)';
+    h1.style['-webkit-text-fill-color']=textCol;
+    h1.style.color=textCol;
   }
-  // btn-primary: on light themes the white text is fine, but we need readable btn text
-  // All btn-primary already use var(--accent2) and var(--accent) in their gradient — auto follows
+  // "Swim · Train · Fuel" tagline colour
+  const tagline=document.querySelector('#header-top > div:last-child');
+  if(tagline)tagline.style.color=theme.vars['--accent']||'var(--accent)';
+  // Strip item values follow accent automatically via var(--accent) — no override needed
   DB.set('appTheme',key);
   S.appTheme=key;
   renderThemePicker();
@@ -5115,6 +5141,32 @@ function renderHome(){
     headerPhaseStr=sp.label+(sp.detail?' · '+sp.detail:'');
   }
   if(headerSub)headerSub.textContent=`${clubStr?clubStr+' · ':''}${headerPhaseStr}`;
+  // ── Phase strip ──
+  const hPhase=document.getElementById('hstrip-phase');
+  const hWeek=document.getElementById('hstrip-week');
+  const hMeet=document.getElementById('hstrip-meet');
+  const hKm=document.getElementById('hstrip-km');
+  if(hPhase){
+    const spLabel=S.offSeason&&S.offSeason.active?(getCurrentOffSeasonPhase()||{name:'Off-Season'}).name:getSeasonPhaseFromDates().label;
+    hPhase.textContent=spLabel||'—';
+  }
+  if(hWeek)hWeek.textContent='Wk '+(S.programWeek||1);
+  if(hMeet){
+    const today0=new Date();today0.setHours(0,0,0,0);
+    const nm=( S.meets||[]).filter(m=>{try{return localDate(m.date)>=today0;}catch(e){return false;}}).sort((a,b)=>localDate(a.date)-localDate(b.date))[0];
+    if(nm){const d=Math.round((localDate(nm.date)-today0)/86400000);hMeet.textContent=d===0?'Today':d+'d';}
+    else hMeet.textContent='—';
+  }
+  if(hKm){
+    const kmLog=S.swimKmLog||[];
+    const tmplS=S.seasonTemplate||{};
+    const sStart=tmplS.start?localDate(tmplS.start):null;
+    const seasonKm=sStart?kmLog.filter(k=>{try{return new Date(k.date)>=sStart;}catch(e){return false;}}).reduce((s,k)=>s+(k.km||0),0):null;
+    const useKm=S.useKm!==false;
+    if(seasonKm!==null){
+      hKm.textContent=useKm?seasonKm.toFixed(1)+'km':Math.round(seasonKm*0.621)+'mi';
+    } else hKm.textContent='—';
+  }
 
   // Off-season override for subtitle
   const osPh=getCurrentOffSeasonPhase();
