@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v70 -->
+  <!-- cache-bust: v71 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 70</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 71</div>
       </div>
     </div>
 
@@ -4161,7 +4161,7 @@ function renderStrokeTabs(){
 function selStroke(s){S.activeTStroke=s;renderStrokeTabs();renderTimesContent();}
 
 // Collapse/expand LCM or SCM analysis card
-const _timesCollapsed={lcm:false,scm:false};
+const _timesCollapsed={lcm:true,scm:true,pb:true};
 function toggleTimesSection(which){
   _timesCollapsed[which]=!_timesCollapsed[which];
   const body=document.getElementById(which+'-analysis-body');
@@ -4171,6 +4171,8 @@ function toggleTimesSection(which){
   body.style.display=collapsed?'none':'block';
   chevron.style.transform=collapsed?'rotate(180deg)':'rotate(0deg)';
 }
+function _timesChevron(which){return _timesCollapsed[which]?'▲':'▲';}
+function _timesBodyStyle(which){return _timesCollapsed[which]?'display:none;':'';}
 
 function buildChart(hist,field){
   const vals=hist.map(e=>tSec(e[field])).filter(v=>v!==Infinity);
@@ -4385,9 +4387,9 @@ function renderTimesContent(){
     html+=`<div class="card" id="lcm-analysis-card">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleTimesSection('lcm')">
         <div class="card-title" style="margin-bottom:0;">LCM Analysis</div>
-        <span id="lcm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;">▲</span>
+        <span id="lcm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;transform:${_timesCollapsed.lcm?'rotate(180deg)':'rotate(0deg)'};">▲</span>
       </div>
-      <div id="lcm-analysis-body" style="margin-top:10px;">
+      <div id="lcm-analysis-body" style="margin-top:10px;${_timesCollapsed.lcm?'display:none;':''}">
       ${iL!==null&&iL>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
         <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iL.toFixed(2)}s total</span>
         <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--accent);">${rate.toFixed(2)}s/mo</span>
@@ -4482,9 +4484,9 @@ function renderTimesContent(){
     html+=`<div class="card" id="scm-analysis-card">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleTimesSection('scm')">
         <div class="card-title" style="margin-bottom:0;">SCM Analysis</div>
-        <span id="scm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;">▲</span>
+        <span id="scm-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;transform:${_timesCollapsed.scm?'rotate(180deg)':'rotate(0deg)'};">▲</span>
       </div>
-      <div id="scm-analysis-body" style="margin-top:10px;">
+      <div id="scm-analysis-body" style="margin-top:10px;${_timesCollapsed.scm?'display:none;':''}">
       ${iS!==null&&iS>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
         <span style="background:rgba(0,230,118,0.12);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--green);">▼ ${iS.toFixed(2)}s total</span>
         <span style="background:var(--surface);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--purple);">${rateS.toFixed(2)}s/mo</span>
@@ -4498,7 +4500,12 @@ function renderTimesContent(){
     </div>`;
   }
   // ── PB Log ──
-  html+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div class="card-title" style="margin-bottom:0;">PB Log</div></div>`;
+  html+=`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;" onclick="toggleTimesSection('pb')">
+      <div class="card-title" style="margin-bottom:0;">PB Log <span style="font-size:10px;color:var(--muted);font-weight:400;">(${hist.length})</span></div>
+      <span id="pb-chevron" style="font-size:14px;color:var(--muted);transition:transform 0.2s;transform:${_timesCollapsed.pb?'rotate(180deg)':'rotate(0deg)'};">▲</span>
+    </div>
+    <div id="pb-analysis-body" style="${_timesCollapsed.pb?'display:none;':'margin-top:8px;'}">`;
   if(!hist.length)html+=`<div class="empty-state" style="padding:16px 0;"><p>No PBs yet. Tap + Add PB to log your first entry.</p></div>`;
   else html+=[...hist].reverse().map((e,ri)=>{
     const isBL=bL&&e.lcm===bL.lcm&&e.date===bL.date;
@@ -4519,7 +4526,7 @@ function renderTimesContent(){
       <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;" onclick="delTime('${esc(ev)}',${hist.length-1-ri})">✕</button>
     </div>`;
   }).join('');
-  html+=`</div>`;
+  html+=`</div></div>`; // close pb-analysis-body + card
   document.getElementById('times-content').innerHTML=html;
 }
 
@@ -8356,8 +8363,8 @@ function _buildRaceCards(todayRaces,races,activeMeet,meetDay){
     const sessionIcon=isFinals?'⏱️':'🏊';
     // Persist open/closed state across tab switches
     if(!S._raceCardOpen)S._raceCardOpen={};
-    // Default: open if no result yet, collapsed once result is logged
-    if(S._raceCardOpen[race.id]===undefined)S._raceCardOpen[race.id]=!latestLog;
+    // Default: always collapsed — swimmer taps to expand
+    if(S._raceCardOpen[race.id]===undefined)S._raceCardOpen[race.id]=false;
     const cardOpen=S._raceCardOpen[race.id];
 
     let resultHtml='';
