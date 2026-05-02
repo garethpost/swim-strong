@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v68 -->
+  <!-- cache-bust: v69 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 68</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 69</div>
       </div>
     </div>
 
@@ -3237,7 +3237,96 @@ function generateWorkout(forceType){
 
   // Schedule is source of truth — only use forceType for manual preview
   const scheduledType=getTodayDrylandType();
-  const dayType=forceType||(phase.name==='Power'&&scheduledType!=='rest'?'power':scheduledType);
+  const baseDayType=forceType||(phase.name==='Power'&&scheduledType!=='rest'?'power':scheduledType);
+
+  // ── Readiness-Modulated Adaptation Engine (Build 69) ──
+  // Adapts session TYPE based on readiness, sleep, and recent RPE trend.
+  // forceType (manual preview) bypasses all adaptation.
+  let dayType=baseDayType;
+  let adaptNote=null; // shown in session header to explain why session was modified
+
+  if(!forceType&&baseDayType!=='rest'&&baseDayType!=='mobility'){
+    const r=S.readiness||3;
+    const sl=S.sleep||7;
+
+    // Sleep debt compounds readiness — treat <6h sleep as -1 effective readiness
+    const effectiveReadiness=sl<6?Math.max(1,r-1):r;
+
+    // RPE trend: average of last 5 dryland sessions (ignores swim RPE)
+    const today0=new Date();today0.setHours(0,0,0,0);
+    const yesterday0=new Date(today0);yesterday0.setDate(today0.getDate()-1);
+    const recentRPE=(S.sessionRPELog||[])
+      .filter(r=>{try{const d=new Date(r.date);return(today0-d)/86400000<=14&&d<today0;}catch(e){return false;}})
+      .slice(-5);
+    const rpeAvg=recentRPE.length>=2?recentRPE.reduce((s,r)=>s+r.rpe,0)/recentRPE.length:null;
+
+    // Yesterday's pool RPE — if high, shift CNS demand away from same muscle group
+    const yesterdayRPE=(S.sessionRPELog||[]).find(r=>{
+      try{const d=new Date(r.date);d.setHours(0,0,0,0);return d.getTime()===yesterday0.getTime();}
+      catch(e){return false;}
+    });
+    const highPoolYesterday=yesterdayRPE&&yesterdayRPE.rpe>=8;
+
+    // Decision tree — order matters (most restrictive first)
+    if(effectiveReadiness<=2){
+      // Body is not ready — mobility only, no load
+      dayType='mobility';
+      adaptNote={
+        icon:'😴',
+        label:'Session Modified — Recovery Priority',
+        reason:sl<6
+          ?`Sleep ${sl}h + Readiness ${r}/5 — effective readiness too low for loaded session. Mobility promotes recovery without adding fatigue.`
+          :`Readiness ${r}/5 — CNS not ready for loaded work. Mobility session today protects adaptation from the week's training.`,
+        color:'var(--purple)'
+      };
+    } else if(effectiveReadiness===3){
+      // Compromised — drop power to lower, keep lower/upper but flag reduced intensity
+      if(baseDayType==='power'){
+        dayType='lower';
+        adaptNote={
+          icon:'⚠️',
+          label:'Session Modified — Power → Lower Body',
+          reason:`Readiness ${r}/5${sl<7?' + Sleep '+sl+'h':''} — plyometric CNS demand is high. Lower body strength achieves similar stimulus with lower injury risk today.`,
+          color:'var(--orange)'
+        };
+      } else {
+        adaptNote={
+          icon:'📉',
+          label:'Reduced Intensity Day',
+          reason:`Readiness ${r}/5 — full volume reduced. Focus on quality movement over load. Skip the last set if form degrades.`,
+          color:'var(--orange)'
+        };
+      }
+    } else if(effectiveReadiness>=4&&highPoolYesterday){
+      // Good readiness but heavy pool session yesterday — shift CNS load
+      if(baseDayType==='upper'){
+        dayType='lower';
+        adaptNote={
+          icon:'🔄',
+          label:'Session Rotated — Upper → Lower Body',
+          reason:`High-RPE pool session yesterday (${yesterdayRPE.rpe}/10). Upper body CNS still recovering — shifting to lower body maintains training stimulus without competing with pool recovery.`,
+          color:'var(--accent)'
+        };
+      } else if(baseDayType==='power'){
+        dayType='lower';
+        adaptNote={
+          icon:'🔄',
+          label:'Session Rotated — Power → Lower Body',
+          reason:`High-RPE pool session yesterday (${yesterdayRPE.rpe}/10). Plyometrics on a fatigued CNS risk injury and reduce power output quality. Lower body strength today.`,
+          color:'var(--accent)'
+        };
+      }
+    } else if(effectiveReadiness>=4&&rpeAvg!==null&&rpeAvg>8.5){
+      // Consistently grinding too hard — flag overreach risk
+      adaptNote={
+        icon:'🔥',
+        label:'Overreach Warning',
+        reason:`Avg session RPE ${rpeAvg.toFixed(1)}/10 over last ${recentRPE.length} sessions. You're in the red zone. Today's session is on schedule but consider a deload week if this continues.`,
+        color:'var(--red)'
+      };
+    }
+  }
+
   const scheme=getScheme(phase.name,mult);
 
   // Double-swim day detection — reduce volume one notch
@@ -3314,9 +3403,10 @@ function generateWorkout(forceType){
   const schedNote=forceType?'Manual preview':scheduledType!=='rest'?'From your schedule':'Day-of-week default';
   const strokeLabel=sp.stroke.charAt(0).toUpperCase()+sp.stroke.slice(1);
   const levelLabel={beginner:'Beginner',intermediate:'Intermediate',advanced:'Advanced'}[trainingLevel]||'';
-  return{phase,dayType,mult,load,scheme,emp,sp,trainingLevel,
+  return{phase,dayType,baseDayType,mult,load,scheme,emp,sp,trainingLevel,
     taperNote:isTaper?`Dryland tapered — ${tp.meet.name} in ${tp.daysOut}d`:null,
     doubleDayNote:isDoubleDay?'Double swim day — volume reduced':'',
+    adaptNote,
     title:`${phase.label} — ${labels[dayType]||dayType}`,
     subtitle:`${load.label} · ${strokeLabel} · ${levelLabel} · Wk ${S.programWeek}`,
     schedNote,blocks,readiness:S.readiness,sleep:S.sleep,date:new Date().toISOString()};
@@ -3913,6 +4003,14 @@ function renderWorkout(w){
   const goalTag=ltGoals.map(g=>GOAL_TAGS[g]).filter(Boolean)[0];
   if(goalTag)html+=`<div style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.35);color:#f5c842;margin-left:6px;vertical-align:middle;">${goalTag}</div>`;
   if(w.taperNote)html+=`<div class="alert-banner alert-taper">⚡ ${w.taperNote}</div>`;
+  if(w.adaptNote){
+    const an=w.adaptNote;
+    html+=`<div style="margin-bottom:10px;padding:12px 14px;background:var(--card);border:1px solid ${an.color};border-left:3px solid ${an.color};border-radius:10px;">
+      <div style="font-size:12px;font-weight:700;color:${an.color};margin-bottom:4px;">${an.icon} ${an.label}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;">${an.reason}</div>
+      ${w.baseDayType&&w.baseDayType!==w.dayType?`<div style="font-size:11px;color:var(--muted);margin-top:6px;opacity:0.7;">Scheduled: ${({lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'})[w.baseDayType]||w.baseDayType} → Today: ${({lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Sprint Cardio'})[w.dayType]||w.dayType}</div>`:''}
+    </div>`;
+  }
   if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Goal Program:</strong> ${w.goals.slice(0,2).join(' · ')}</div>`;
   else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Adaptive focus:</strong> ${w.emp==='fly'?'Butterfly pull & power':'Freestyle speed'}</div>`;
   html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--accent);color:var(--text);">📊 <strong style="color:var(--accent);">${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?'<span style="color:var(--muted);"> · '+w.scheme.note+'</span>':''}</div>`;
