@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v73 -->
+  <!-- cache-bust: v74 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,10 +31,10 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
 #app{display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;}
-#header{padding:44px 20px 0;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:0;}
-#header-top{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:10px;}
+#header{padding:44px 0 0;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;}
+#header-top{display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 10px;}
 #header h1{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-0.8px;line-height:1;}
-#header-strip{display:flex;gap:0;align-items:stretch;background:var(--surface);margin:0 -20px;border-top:1px solid var(--border);overflow:hidden;}
+#header-strip{display:flex;align-items:stretch;background:var(--surface);border-top:1px solid var(--border);}
 .hstrip-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;border-right:1px solid var(--border);}
 .hstrip-item:last-child{border-right:none;}
 .hstrip-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:2px;}
@@ -560,7 +560,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 73</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 74</div>
       </div>
     </div>
 
