@@ -1,9 +1,14 @@
 // SwimFitPro Service Worker
-const CACHE_NAME = 'swimfitpro-v67';
+const CACHE_NAME = 'swimfitpro-v68';
 const CACHE_URLS = [
   './index.html',
   './icons/Icon-513.jpeg',
 ];
+
+// Allow page to trigger immediate activation
+self.addEventListener('message', event => {
+  if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
 
 // Install: cache core assets
 self.addEventListener('install', event => {
