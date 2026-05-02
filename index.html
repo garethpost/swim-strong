@@ -538,7 +538,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 65</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 66</div>
       </div>
     </div>
 
@@ -4169,6 +4169,13 @@ function renderTimesContent(){
   </div>`;
   const lcmHist=hist.filter(e=>e.lcm&&e.lcm!=='—');
   const scmHist=hist.filter(e=>e.scm&&e.scm!=='—');
+  // ── Training load context — shared by both LCM and SCM guidance ──
+  const _tldToday=new Date();_tldToday.setHours(0,0,0,0);
+  const _recentRPE=(S.sessionRPELog||[]).filter(r=>{try{const d=new Date(r.date);return(_tldToday-d)/86400000<=28;}catch(e){return false;}});
+  const avgRPE=_recentRPE.length?_recentRPE.reduce((s,r)=>s+r.rpe,0)/_recentRPE.length:null;
+  const _recentCheckins=(S.checkinHistory||[]).filter(c=>{try{return(_tldToday-localDate(c.date))/86400000<=28;}catch(e){return false;}});
+  const hasDryland=_recentCheckins.some(c=>(c.sessions||[]).some(s=>s.startsWith('dry_')));
+  const recentKm=(S.swimKmLog||[]).filter(k=>{try{return(_tldToday-new Date(k.date))/86400000<=28;}catch(e){return false;}}).reduce((s,k)=>s+(k.km||0),0);
   // ── LCM Analysis (always shown when any LCM data exists) ──
   if(lcmHist.length>=1){
     const first=lcmHist[0],last2=lcmHist[lcmHist.length-1];
@@ -4237,13 +4244,7 @@ function renderTimesContent(){
     } else {
       seasonYtdHtml=`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:8px 0;">Set a season in Schedule → Season Template to track YTD improvement.</div>`;
     }
-    // Training guidance — always show, pulls from actual logged data
-    const today2=new Date();today2.setHours(0,0,0,0);
-    const recentRPE=(S.sessionRPELog||[]).filter(r=>{try{const d=new Date(r.date);return(today2-d)/86400000<=28;}catch(e){return false;}});
-    const avgRPE=recentRPE.length?recentRPE.reduce((s,r)=>s+r.rpe,0)/recentRPE.length:null;
-    const recentCheckins=(S.checkinHistory||[]).filter(c=>{try{return(today2-localDate(c.date))/86400000<=28;}catch(e){return false;}});
-    const hasDryland=recentCheckins.some(c=>(c.sessions||[]).some(s=>s.startsWith('dry_')));
-    const recentKm=(S.swimKmLog||[]).filter(k=>{try{return(today2-new Date(k.date))/86400000<=28;}catch(e){return false;}}).reduce((s,k)=>s+(k.km||0),0);
+    // Training guidance — uses shared avgRPE/hasDryland/recentKm from outer scope
     const guidanceTips=[];
     if(gapLCM!==null&&gapLCM>0){
       if(rate!==null&&rate<0.05)guidanceTips.push({icon:'📈',tip:'Improvement rate is very low — check you\'re logging all races, not just PBs. If the data is accurate, the program needs a shakeup.',urgency:'red'});
@@ -4336,6 +4337,30 @@ function renderTimesContent(){
         scmProjHtml=`<div style="background:rgba(0,198,255,0.06);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:var(--muted);">🎯 SCM standard in ~${moNS} month${moNS!==1?'s':''} at current rate. Add a meet to see race projection.</div>`;
       }
     }
+    // SCM guidance — same logic as LCM but against gapSCM
+    const scmGuidanceTips=[];
+    if(gapSCM!==null&&gapSCM>0){
+      if(rateS!==null&&rateS<0.05)scmGuidanceTips.push({icon:'📈',tip:'SCM improvement rate is very low — make sure you\'re logging all races, not just PBs. If accurate, the program needs a shakeup.',urgency:'red'});
+      else if(rateS!==null&&rateS<0.2)scmGuidanceTips.push({icon:'🔧',tip:`At ${rateS.toFixed(2)}s/mo you have the trajectory — but need to accelerate. One more quality SCM race per block sharpens the trend.`,urgency:'orange'});
+      // Reuse training-load data already computed in LCM block (avgRPE, hasDryland, recentKm)
+      if(avgRPE!==null&&avgRPE<6)scmGuidanceTips.push({icon:'⚡',tip:`Avg session RPE is ${avgRPE.toFixed(1)}/10 — too comfortable for a ${gapSCM.toFixed(2)}s gap. Push harder in race-pace sets.`,urgency:'orange'});
+      if(avgRPE!==null&&avgRPE>8.5)scmGuidanceTips.push({icon:'😴',tip:`RPE averaging ${avgRPE.toFixed(1)}/10 — deep in the red. Without recovery weeks, adaptation stalls.`,urgency:'orange'});
+      if(!hasDryland)scmGuidanceTips.push({icon:'🏋️',tip:'No dryland logged in 4 weeks. Starts, turns, and underwaters all improve with dryland — easiest time gains available.',urgency:'orange'});
+      if(recentKm>0&&recentKm<20)scmGuidanceTips.push({icon:'🌊',tip:`Only ${recentKm.toFixed(1)} km in the pool this month. Volume underwrites speed — get the base in first.`,urgency:'red'});
+      if(gapSCM<=1)scmGuidanceTips.push({icon:'🎯',tip:`Only ${gapSCM.toFixed(2)}s to go. Close it with race-specific work: race-pace reps, perfect taper, clean warm-up.`,urgency:'green'});
+      else if(gapSCM<=3)scmGuidanceTips.push({icon:'💪',tip:'Within striking distance. Turn + underwater improvements (0.5–1s each) and a sharp start can close this gap alone.',urgency:'green'});
+    } else if(gapSCM!==null&&gapSCM<=0){
+      scmGuidanceTips.push({icon:'🏅',tip:'SCM standard met. Target the next level up or chase a new personal best at your next meet.',urgency:'green'});
+    }
+    if(!scmGuidanceTips.length&&scmHist.length<3)scmGuidanceTips.push({icon:'📊',tip:'Log at least 3 SCM times to unlock training guidance. Each entry sharpens the projection.',urgency:''});
+    if(!scmGuidanceTips.length&&avgRPE===null)scmGuidanceTips.push({icon:'🔢',tip:'Log session RPE after workouts (Train tab) to get training-load-aware guidance here.',urgency:''});
+    const scmGuidanceHtml=`<div style="margin-top:12px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">🧠 How to close the gap</div>
+      ${scmGuidanceTips.map(g=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--surface);border-radius:8px;border-left:3px solid ${g.urgency==='red'?'var(--red)':g.urgency==='orange'?'var(--orange)':g.urgency==='green'?'var(--green)':'var(--border)'};margin-bottom:6px;">
+        <span style="font-size:16px;flex-shrink:0;">${g.icon}</span>
+        <span style="font-size:12px;color:var(--text);line-height:1.5;">${g.tip}</span>
+      </div>`).join('')}
+    </div>`;
     html+=`<div class="card">
       <div class="card-title">SCM Analysis</div>
       ${iS!==null&&iS>0?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
@@ -4345,6 +4370,7 @@ function renderTimesContent(){
       </div>`:iS!==null?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Times have not improved — review training stimulus.</div>`:''}
       ${scmYtdHtml}
       ${scmProjHtml}
+      ${scmGuidanceHtml}
     </div>`;
   }
   // ── Charts ──
