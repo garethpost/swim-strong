@@ -338,6 +338,23 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           </div>
           <button class="btn btn-primary" onclick="addMeet()">Add Meet</button>
         </div>
+
+        <!-- MY MEETS — collapsible, default collapsed -->
+        <div class="card" id="my-meets-card">
+          <div onclick="toggleMyMeets()" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+            <div>
+              <div class="card-title" style="margin-bottom:0;">My Meets</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="my-meets-count" style="font-size:11px;color:var(--muted);"></span>
+              <svg id="my-meets-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;color:var(--muted);transform:rotate(180deg);transition:transform 0.2s;"><polyline points="18 15 12 9 6 15"/></svg>
+            </div>
+          </div>
+          <div id="my-meets-body" style="display:none;margin-top:12px;">
+            <div id="meets-list"></div>
+          </div>
+        </div>
+
       </div><!-- end #schedule-normal -->
 
       <!-- Legacy anchor kept for backward compat — now empty -->
@@ -546,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 79</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 80</div>
       </div>
     </div>
 
@@ -947,6 +964,26 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 <button class="btn btn-primary" onclick="savePoolCheckin()" style="margin-bottom:8px;">Log Session ✓</button>
 <button class="btn-ghost" style="width:100%;" onclick="closeModal('pool-checkin-modal')" aria-label="Close dialog">Skip</button>
+</div></div>
+
+<!-- ── Edit Meet Modal ── -->
+<div class="modal-overlay" id="edit-meet-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Edit Meet"><div class="modal-handle"></div>
+<h3 style="font-size:18px;font-weight:800;margin-bottom:16px;">Edit Meet</h3>
+<input type="hidden" id="edit-meet-id">
+<div class="form-row"><label>Meet Name</label><input type="text" id="edit-meet-name" placeholder="AB Provincials"></div>
+<div class="form-grid-2">
+  <div class="form-row"><label>Start Date</label><input type="date" id="edit-meet-date"></div>
+  <div class="form-row"><label>End Date</label><input type="date" id="edit-meet-end"></div>
+</div>
+<div class="form-row"><label>Meet Category</label>
+  <select id="edit-meet-priority">
+    <option value="A">A Meet — Full taper (7 days)</option>
+    <option value="B">B Meet — Partial taper (4 days)</option>
+    <option value="C">C Meet — No taper</option>
+  </select>
+</div>
+<button class="btn btn-primary" style="margin-top:8px;" onclick="saveMeetEdit()">Save Changes</button>
+<button class="btn" style="margin-top:8px;background:var(--surface);color:var(--muted);" onclick="closeModal('edit-meet-modal')">Cancel</button>
 </div></div>
 
 <!-- ── Meet Race Entry Modal ── -->
@@ -5806,16 +5843,69 @@ function addMeet(){
   document.getElementById('meet-date-input').value='';
   document.getElementById('meet-end-input').value='';
   document.getElementById('meet-name-input').value='';
-  renderMeets();renderCalendar();
+  renderMeets();renderCalendar();renderHome();
+  // Auto-expand My Meets so swimmer sees their new entry
+  const body=document.getElementById('my-meets-body');
+  const chev=document.getElementById('my-meets-chevron');
+  if(body){body.style.display='block';}
+  if(chev){chev.style.transform='rotate(0deg)';}
+  _myMeetsCollapsed=false;
 }
-function deleteMeet(id){S.meets=S.meets.filter(m=>m.id!==id);DB.set('meets',S.meets);renderMeets();renderCalendar();}
+let _myMeetsCollapsed=true;
+function toggleMyMeets(){
+  _myMeetsCollapsed=!_myMeetsCollapsed;
+  const body=document.getElementById('my-meets-body');
+  const chev=document.getElementById('my-meets-chevron');
+  if(body)body.style.display=_myMeetsCollapsed?'none':'block';
+  if(chev)chev.style.transform=_myMeetsCollapsed?'rotate(180deg)':'rotate(0deg)';
+}
+function editMeet(id){
+  const m=S.meets.find(m=>m.id===id);if(!m)return;
+  document.getElementById('edit-meet-id').value=id;
+  document.getElementById('edit-meet-name').value=m.name;
+  document.getElementById('edit-meet-date').value=m.date;
+  document.getElementById('edit-meet-end').value=m.endDate||m.date;
+  document.getElementById('edit-meet-priority').value=m.priority||'B';
+  openModal('edit-meet-modal');
+}
+function saveMeetEdit(){
+  const id=parseInt(document.getElementById('edit-meet-id').value);
+  const name=document.getElementById('edit-meet-name').value.trim();
+  const date=document.getElementById('edit-meet-date').value.trim();
+  const endDate=document.getElementById('edit-meet-end').value.trim();
+  const priority=document.getElementById('edit-meet-priority').value;
+  if(!name||!date)return alert('Name and start date are required.');
+  const idx=S.meets.findIndex(m=>m.id===id);
+  if(idx===-1)return;
+  S.meets[idx]={...S.meets[idx],name,date,endDate:endDate||date,priority};
+  S.meets.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  DB.set('meets',S.meets);
+  closeModal('edit-meet-modal');
+  renderMeets();renderCalendar();renderHome();
+}
+function deleteMeet(id){
+  const m=S.meets.find(m=>m.id===id);
+  if(!m)return;
+  if(!confirm(`Delete "${m.name}"? This cannot be undone.`))return;
+  S.meets=S.meets.filter(m=>m.id!==id);
+  // Also clean up any races + race logs tied to this meet
+  S.meetRaces=S.meetRaces.filter(r=>r.meetId!==id);
+  S.meetRaceLog=S.meetRaceLog.filter(l=>l.meetId!==id);
+  DB.set('meets',S.meets);
+  DB.set('meetRaces',S.meetRaces);
+  DB.set('meetRaceLog',S.meetRaceLog);
+  renderMeets();renderCalendar();renderHome();
+}
 function renderMeets(){
   const el=document.getElementById('meets-list');
+  if(!el)return;
+  const countEl=document.getElementById('my-meets-count');
   const today=new Date();today.setHours(0,0,0,0);
-  const upcoming=S.meets.filter(m=>!m.endDate||localDate(m.endDate||m.date)>=today);
-  const past=S.meets.filter(m=>m.endDate?localDate(m.endDate)<today:localDate(m.date)<today);
-  if(!S.meets.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:8px 0;">No meets added.</p>';return;}
-  const renderMeet=(m,isPast)=>{
+  const upcoming=S.meets.filter(m=>{try{const e=m.endDate?localDate(m.endDate):localDate(m.date);return e>=today;}catch(e){return false;}});
+  const past=S.meets.filter(m=>{try{const e=m.endDate?localDate(m.endDate):localDate(m.date);return e<today;}catch(e){return false;}});
+  if(countEl)countEl.textContent=S.meets.length?`${upcoming.length} upcoming${past.length?' · '+past.length+' past':''}` :'No meets yet';
+  if(!S.meets.length){el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:4px 0;">No meets added yet.</p>';return;}
+  const renderMeetRow=(m,isPast)=>{
     const ms=localDate(m.date);
     const me=m.endDate&&m.endDate!==m.date?localDate(m.endDate):null;
     const dO=Math.round((ms-today)/86400000);
@@ -5824,30 +5914,39 @@ function renderMeets(){
     const endStr=me?'–'+me.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'}):ms.toLocaleDateString('en-CA',{year:'numeric'});
     const dateStr=startStr+' '+endStr;
     const multiDay=me&&me.getTime()!==ms.getTime();
+    const priorityCol=m.priority==='A'?'var(--gold)':m.priority==='B'?'var(--accent)':'var(--muted)';
     let countdown='';
-    if(isPast){countdown='<span style="color:var(--muted)">Completed</span>';}
+    if(isPast){countdown='<span style="color:var(--muted);">Completed</span>';}
     else if(dO===0){countdown='<span style="color:var(--gold);font-weight:700;">🏁 TODAY</span>';}
-    else if(dO<0){countdown='<span style="color:var(--accent)">🏊 In progress</span>';}
+    else if(dO<0){countdown='<span style="color:var(--accent);">🏊 In progress</span>';}
     else{
       const wks=Math.floor(dO/7),days=dO%7;
       const parts=[];if(wks)parts.push(wks+'w');if(days||!wks)parts.push(days+'d');
       countdown=`<span style="color:var(--green);font-weight:700;">${parts.join(' ')} away</span>`;
     }
-    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;opacity:${isPast?0.5:1};">
-      <div style="flex:1;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-          <span style="font-size:14px;font-weight:700;">${m.name}</span>
-          <span style="font-size:10px;background:${m.priority==='A'?'var(--gold)':m.priority==='B'?'var(--muted)':'var(--border)'};color:var(--bg);padding:1px 6px;border-radius:6px;font-weight:700;">${m.priority}</span>
-          ${multiDay?'<span style="font-size:10px;color:var(--accent);">Multi-day</span>':''}
+    return`<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;opacity:${isPast?0.55:1};">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
+          <span style="font-size:14px;font-weight:700;color:var(--text);">${m.name}</span>
+          <span style="font-size:10px;background:${priorityCol};color:var(--bg);padding:1px 7px;border-radius:6px;font-weight:800;">${m.priority||'B'}</span>
+          ${multiDay?'<span style="font-size:10px;color:var(--muted);">Multi-day</span>':''}
         </div>
         <div style="font-size:12px;color:var(--muted);">${dateStr}</div>
-        <div style="font-size:12px;margin-top:2px;">${countdown}</div>
-        ${td>0&&!isPast?`<div style="font-size:11px;color:var(--orange);margin-top:2px;">⚡ Taper starts ${td}d before</div>`:''}
+        <div style="font-size:12px;margin-top:3px;">${countdown}</div>
+        ${td>0&&!isPast?`<div style="font-size:11px;color:var(--orange);margin-top:3px;">⚡ Taper starts ${td}d out</div>`:''}
       </div>
-      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;" onclick="deleteMeet(${m.id})">✕</button>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button onclick="editMeet(${m.id})" style="background:var(--surface);border:1px solid var(--border);color:var(--accent);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;">Edit</button>
+        <button onclick="deleteMeet(${m.id})" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;">✕</button>
+      </div>
     </div>`;
   };
-  el.innerHTML=upcoming.map(m=>renderMeet(m,false)).join('')+(past.length?`<div style="font-size:11px;color:var(--muted);margin-top:8px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Past</div>`+past.map(m=>renderMeet(m,true)).join(''):'');
+  let html=upcoming.map(m=>renderMeetRow(m,false)).join('');
+  if(past.length){
+    html+=`<div style="font-size:11px;color:var(--muted);margin-top:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.8px;">Past</div>`;
+    html+=past.map(m=>renderMeetRow(m,true)).join('');
+  }
+  el.innerHTML=html;
 }
 
 // ── Season Template ──
@@ -8745,6 +8844,7 @@ function showSection(name){
     renderMeetDayBanner(); // drives race mode vs normal mode toggle
     renderCalendar();
     renderSchedulePoolShortcut();
+    renderMeets();
     const phaseEl=document.getElementById('swim-phase-select');
     if(phaseEl)phaseEl.value=S.swimPhase;
     updatePhaseImpact();
