@@ -2687,11 +2687,11 @@ function renderHomeCals(){
 // ── 1RM system ──
 // Key lifts and which exercises they apply to (stored in kg internally)
 const ONE_RM_LIFTS=[
-  {key:'squat',   label:'Back Squat',          exNames:['Back Squat','Goblet Squat','Bulgarian Split Squat'],pcts:{GPP:0.65,Strength:0.85,Power:0.80,Taper:0.75}},
-  {key:'rdl',     label:'Romanian Deadlift',   exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
-  {key:'row',     label:'Bent-Over Row',        exNames:['Seated Cable Row','Single-Arm DB Row','Lat Pulldown','Bent-Over Row'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
-  {key:'pull',    label:'Pull-Ups',             exNames:['Pull-Ups','Hollow Body Pull'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72},isPullUp:true},
-  {key:'ohpress', label:'Overhead Press',       exNames:['Landmine Press','Incline DB Press','Face Pulls','Prone Y-T-W Combined'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
+  {key:'squat',   label:'Back Squat',          exNames:['Back Squat','Goblet Squat','Bulgarian Split Squat'],pcts:{GPP:0.65,Hypertrophy:0.70,Strength:0.85,Power:0.80,Taper:0.75}},
+  {key:'rdl',     label:'Romanian Deadlift',   exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Hypertrophy:0.70,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'row',     label:'Bent-Over Row',        exNames:['Seated Cable Row','Single-Arm DB Row','Lat Pulldown','Bent-Over Row'],pcts:{GPP:0.65,Hypertrophy:0.70,Strength:0.82,Power:0.78,Taper:0.72}},
+  {key:'pull',    label:'Pull-Ups',             exNames:['Pull-Ups','Hollow Body Pull'],pcts:{GPP:0.65,Hypertrophy:0.70,Strength:0.82,Power:0.78,Taper:0.72},isPullUp:true},
+  {key:'ohpress', label:'Overhead Press',       exNames:['Landmine Press','Incline DB Press','Face Pulls','Prone Y-T-W Combined'],pcts:{GPP:0.60,Hypertrophy:0.65,Strength:0.75,Power:0.70,Taper:0.65}},
 ];
 // Epley formula: estimate 1RM from a weight × reps set
 function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
@@ -3213,10 +3213,11 @@ function getScheme(phaseName,mult){
   const isPeak=wib===3;
   // Base schemes — each phase has its own loading target
   const b={
-    GPP:    {sets:3,reps:'12-15',pct:'60-70%',weekReps:['14-15','12-13','10-12','15-20']},
-    Strength:{sets:4,reps:'4-6', pct:'80-90%',weekReps:['6-8','4-6','3-5','8-10']},
-    Power:   {sets:4,reps:'3-5', pct:'explosive',weekReps:['5-6','4-5','3-4','6-8']},
-    Taper:   {sets:3,reps:'4-5', pct:'75%',weekReps:['5-6','4-5','4-5','6-8']},
+    GPP:        {sets:3,reps:'12-15',pct:'60-70%', weekReps:['14-15','12-13','10-12','15-20']},
+    Hypertrophy:{sets:4,reps:'8-12', pct:'65-75%', weekReps:['12','10-12','8-10','12-15']},
+    Strength:   {sets:4,reps:'4-6',  pct:'80-90%', weekReps:['6-8','4-6','3-5','8-10']},
+    Power:      {sets:4,reps:'3-5',  pct:'explosive',weekReps:['5-6','4-5','3-4','6-8']},
+    Taper:      {sets:3,reps:'4-5',  pct:'75%',    weekReps:['5-6','4-5','4-5','6-8']},
   };
   const base=b[phaseName]||b.GPP;
   const s={...base,reps:base.weekReps[wib-1]||base.reps,phase:phaseName,weekInBlock:wib,isDeload,isPeak};
@@ -4347,7 +4348,7 @@ function renderWorkoutTab(){
     const totalWeeks=S.offSeason.totalWeeks||1;
 
     // Phase timeline bar
-    const phColors={'Transition':'var(--muted)','GPP':'var(--green)','Strength Block':'var(--accent)','Specific Prep':'var(--purple)'};
+    const phColors={'Transition':'var(--muted)','GPP':'var(--green)','Hypertrophy':'var(--orange)','Strength Block':'var(--accent)','Specific Prep':'var(--purple)'};
     const timelineHtml=phases.map(ph=>{
       const isCurrent=osPh&&ph.name===osPh.name;
       const phStart=new Date(ph.start+'T00:00:00');
@@ -6420,7 +6421,7 @@ function renderSeasonSnapshot(){
     const weekNum=Math.max(1,Math.floor((today-osStart)/(7*86400000))+1);
     const daysLeft=Math.round((osEnd-today)/86400000);
     const nextSeason=S.offSeason.nextSeasonStart||'—';
-    const phaseColour=osPh.name==='Transition'?'var(--purple)':osPh.name==='GPP'?'var(--accent)':'var(--orange)';
+    const phaseColour=osPh.name==='Transition'?'var(--muted)':osPh.name==='GPP'?'var(--green)':osPh.name==='Hypertrophy'?'var(--orange)':osPh.name==='Strength Block'?'var(--accent)':'var(--purple)';
     el.style.display='block';
     el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;">
       <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">❄️ Off-Season Progress</div>
@@ -7042,20 +7043,24 @@ function calcOffSeasonPhases(seasonEndStr, nextSeasonStartStr){
   const totalDays = Math.round((next - end) / 86400000);
   const totalWeeks = Math.max(2, Math.round(totalDays / 7));
 
-  // 4 phases: Transition → GPP → Strength Block → Specific Prep
-  // Proportions scale to available window — minimum 1 week each
-  let tWeeks, gppWeeks, sbWeeks, spWeeks;
-  if(totalWeeks <= 4){
-    tWeeks=1; gppWeeks=1; sbWeeks=1; spWeeks=Math.max(1,totalWeeks-3);
-  } else if(totalWeeks <= 8){
-    tWeeks=1; gppWeeks=Math.round(totalWeeks*0.25);
-    sbWeeks=Math.round(totalWeeks*0.40);
-    spWeeks=totalWeeks-tWeeks-gppWeeks-sbWeeks;
+  // 5 phases: Transition → GPP → Hypertrophy → Strength Block → Specific Prep
+  // Hypertrophy sits between GPP and Strength — builds the tissue that Strength then loads.
+  // Without it, Strength phase has less muscle mass to work with. This is non-negotiable
+  // periodisation science. Proportions scale to available off-season window.
+  let tWeeks, gppWeeks, hypWeeks, sbWeeks, spWeeks;
+  if(totalWeeks <= 5){
+    tWeeks=1; gppWeeks=1; hypWeeks=1; sbWeeks=1; spWeeks=Math.max(1,totalWeeks-4);
+  } else if(totalWeeks <= 10){
+    tWeeks=1; gppWeeks=Math.round(totalWeeks*0.20);
+    hypWeeks=Math.max(2,Math.round(totalWeeks*0.25));
+    sbWeeks=Math.max(2,Math.round(totalWeeks*0.35));
+    spWeeks=Math.max(1,totalWeeks-tWeeks-gppWeeks-hypWeeks-sbWeeks);
   } else {
-    tWeeks=Math.max(1,Math.round(totalWeeks*0.12));
-    gppWeeks=Math.max(2,Math.round(totalWeeks*0.28));
-    sbWeeks=Math.max(3,Math.round(totalWeeks*0.38));
-    spWeeks=Math.max(1,totalWeeks-tWeeks-gppWeeks-sbWeeks);
+    tWeeks=Math.max(1,Math.round(totalWeeks*0.10));
+    gppWeeks=Math.max(2,Math.round(totalWeeks*0.22));
+    hypWeeks=Math.max(3,Math.round(totalWeeks*0.26));
+    sbWeeks=Math.max(3,Math.round(totalWeeks*0.30));
+    spWeeks=Math.max(1,totalWeeks-tWeeks-gppWeeks-hypWeeks-sbWeeks);
   }
 
   const phases=[];
@@ -7076,17 +7081,25 @@ function calcOffSeasonPhases(seasonEndStr, nextSeasonStartStr){
 
   // Phase 2 — GPP: aerobic base, light compound lifts 60-65% 1RM
   addPhase('GPP',gppWeeks,
-    'General Physical Prep. Build aerobic base and re-establish movement patterns.',
+    'General Physical Prep. Build aerobic base and re-establish movement patterns. Higher reps, lighter load, perfect technique.',
     {0:'lower',1:'cardio',2:'upper',3:'cardio',4:'lower',5:'cardio',6:'rest'},
     3,'GPP',false);
 
-  // Phase 3 — Strength Block: baseline testing, progressive overload 80-85% 1RM
+  // Phase 3 — Hypertrophy: build muscle mass before loading it
+  // This is the phase most swim programs skip — and it's why their Strength block underperforms.
+  // You can't maximally load tissue that isn't there yet. 8-12 reps, 65-75% 1RM, short rest.
+  addPhase('Hypertrophy',hypWeeks,
+    'Build muscle mass before loading it. 8-12 reps, moderate load, shorter rest. This is the foundation the Strength block stands on.',
+    {0:'lower',1:'upper',2:'cardio',3:'lower',4:'upper',5:'cardio',6:'rest'},
+    2,'Hypertrophy',false);
+
+  // Phase 4 — Strength Block: baseline testing, progressive overload 80-85% 1RM
   addPhase('Strength Block',sbWeeks,
-    'Peak strength phase. Baseline test at the start, then progressive overload. This is where you get strong.',
+    'Peak strength phase. Baseline test at the start, then progressive overload. Hypertrophy phase built the tissue — now load it.',
     {0:'lower',1:'upper',2:'cardio',3:'lower',4:'upper',5:'power',6:'rest'},
     1,'Strength',true); // baselinePrompt = true
 
-  // Phase 4 — Specific Prep: power, stroke-specific, bridge to season
+  // Phase 5 — Specific Prep: power, stroke-specific, bridge to season
   addPhase('Specific Prep',spWeeks,
     'Sport-specific power and speed. Bridge from off-season strength to in-season performance.',
     {0:'lower',1:'cardio',2:'upper',3:'power',4:'lower',5:'cardio',6:'rest'},
@@ -7308,12 +7321,16 @@ function generateOffSeasonWorkout(forceType){
     };
   }
 
-  // Strength sessions — use phase intensity
+  // Strength sessions — use phase intensity to drive scheme
+  // Hypertrophy is its own distinct phase: moderate load (65-75% 1RM), higher reps (8-12),
+  // shorter rest (60-75s). The goal is muscle cross-sectional area — not strength expression.
+  // This is the tissue the Strength block will then load. Skip it and Strength underperforms.
   const scheme={
-    bodyweight:{sets:3,reps:'12-15',note:'Bodyweight only. Focus on quality and range.'},
-    GPP:{sets:3,reps:'12-15',note:'60-70% 1RM. Volume focus. Build the base.'},
-    Strength:{sets:4,reps:'4-6',note:'80-85% 1RM. Quality over quantity. This is where you get strong.'},
-  }[intensity]||{sets:3,reps:'10-12',note:''};
+    bodyweight:{sets:3,reps:'12-15',pct:'BW',note:'Bodyweight only. Focus on quality and range of motion.',rest:'60s'},
+    GPP:{sets:3,reps:'12-15',pct:'60-70%',note:'60-70% 1RM. Volume focus. Build the base. Technique first.',rest:'90s'},
+    Hypertrophy:{sets:4,reps:'8-12',pct:'65-75%',note:'65-75% 1RM. Moderate load, short rest (60-75s). Building muscle mass — the foundation the Strength block stands on.',rest:'60-75s'},
+    Strength:{sets:4,reps:'4-6',pct:'80-90%',note:'80-90% 1RM. Quality over quantity. Full recovery between sets (2-3min). This is where you get strong.',rest:'2-3min'},
+  }[intensity]||{sets:3,reps:'10-12',pct:'—',note:'',rest:'90s'};
 
   // Stroke-specific exercise emphasis for Specific Prep
   const strokeEmphasis={
@@ -7326,31 +7343,91 @@ function generateOffSeasonWorkout(forceType){
   };
   const emphasisNames=intensity==='Strength'?(strokeEmphasis[sp.stroke]||[]):[];
 
+  // Hypertrophy phase descriptor for block headers
+  const isHypertrophy=ph&&ph.name==='Hypertrophy';
+  const isStrength=ph&&ph.name==='Strength Block';
+  const isGPP=ph&&ph.name==='GPP';
+  const isSpecific=ph&&ph.name==='Specific Prep';
+
+  // Sprint stroke detection — determines Nordic Ham Curl mandate
+  // Dan Daly + Sean Kao: eccentric hamstring loading non-negotiable for sprint swimmers
+  const sprintStrokes=['free','back','fly','im'];
+  const isSprintSwimmer=sprintStrokes.includes(sp.stroke);
+  const nordicEx=EX.lower.find(e=>e.name==='Nordic Ham Curls');
+
   const blocks=[];
-  // Warmup
-  blocks.push({title:'Warm-Up',exercises:pickFresh(EX.warmup,3)});
+  // Warmup — scale size with session intensity
+  const warmupCount=isHypertrophy||isStrength?4:3;
+  blocks.push({title:'Warm-Up',exercises:pickFresh(EX.warmup,warmupCount)});
 
   if(dayType==='lower'){
     let pool=[...EX.lower];
-    if(emphasisNames.length)pool.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
-    const exs=filterByEquipment(pickFresh(pool,4)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
-    blocks.push({title:`${ph?ph.name+' — ':''}Lower Body`,desc:scheme.note,exercises:exs});
-    blocks.push({title:'Core Finisher',exercises:pickFresh(EX.core||[],3)});
+    // Remove Nordic from general pool — we'll mandate it separately for sprinters
+    const poolNoNordic=pool.filter(e=>e.name!=='Nordic Ham Curls');
+    if(emphasisNames.length)poolNoNordic.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
+    const mainCount=isHypertrophy||isStrength?4:3;
+    const exs=filterByEquipment(pickFresh(poolNoNordic,mainCount)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+
+    // ── Nordic Ham Curl mandate for sprint swimmers ──
+    // Eccentric hamstring loading is non-negotiable in lower sessions for sprinters.
+    // It's the single most evidence-based injury prevention exercise for explosive athletes.
+    // Dan Daly: "Every sprint swimmer should be doing Nordics. Full stop."
+    if(isSprintSwimmer&&nordicEx&&(isHypertrophy||isStrength||isGPP)){
+      const nordicSets=isGPP?3:4;
+      const nordicReps=isHypertrophy?'6-8':isStrength?'4-6':'5';
+      exs.push({...nordicEx,sets:nordicSets,detail:`${nordicSets}×${nordicReps} — slow 5s eccentric`,
+        _mandatoryNote:'⚠️ Sprint swimmer mandate — eccentric hamstring protection'});
+    }
+
+    const blockNote=isHypertrophy
+      ?`${scheme.note} Rest ${scheme.rest} between sets — shorter rest is the stimulus.`
+      :isStrength?`${scheme.note} Rest ${scheme.rest} between sets — full recovery drives strength.`
+      :scheme.note;
+    blocks.push({title:`${ph?ph.name+' — ':''}Lower Body`,desc:blockNote,exercises:exs});
+    blocks.push({title:'Core Finisher',exercises:pickFresh(EX.core||[],isHypertrophy||isStrength?3:2)});
+
   } else if(dayType==='upper'){
     let pool=[...EX.upper];
     if(emphasisNames.length)pool.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
-    const exs=filterByEquipment(pickFresh(pool,4)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
-    blocks.push({title:`${ph?ph.name+' — ':''}Upper Body`,desc:scheme.note,exercises:exs});
-    blocks.push({title:'Shoulder Health',exercises:pickFresh(EX.warmup.filter(e=>['Band Pull-Aparts','Arm Circles','Thoracic Rotations'].includes(e.name)),3)});
+    const mainCount=isHypertrophy||isStrength?4:3;
+    const exs=filterByEquipment(pickFresh(pool,mainCount)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+
+    const blockNote=isHypertrophy
+      ?`${scheme.note} Rest ${scheme.rest} between sets.`
+      :isStrength?`${scheme.note} Rest ${scheme.rest} between sets.`
+      :scheme.note;
+    blocks.push({title:`${ph?ph.name+' — ':''}Upper Body`,desc:blockNote,exercises:exs});
+
+    // Shoulder health block — always present in off-season upper sessions
+    // More exercises in Hypertrophy/Strength (higher load = more posterior shoulder demand)
+    const shoulderEx=EX.upper.filter(e=>e.tags&&e.tags.includes('shoulder'));
+    const shoulderCount=isHypertrophy||isStrength?3:2;
+    blocks.push({
+      title:'Shoulder Health Finisher',
+      desc:'Posterior shoulder and rotator cuff. Dan Daly: non-negotiable after every pressing session.',
+      exercises:pickFresh(shoulderEx.length?shoulderEx:EX.warmup.filter(e=>['Band Pull-Aparts','Y-Raises Prone','Prone Blackburn'].includes(e.name)),shoulderCount)
+    });
+
   } else if(dayType==='power'){
-    const pool=filterByEquipment(EX.power||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
+    const pool=filterByEquipment(EX.plyos||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
     const exs=pickFresh(pool.length?pool:EX.lower,4).map(e=>({...e,sets:4,detail:'4×4-5 explosive'}));
-    blocks.push({title:'Specific Prep — Power',desc:'Explosive intent on every rep. Bar speed is the goal.',exercises:exs});
+    blocks.push({
+      title:'Specific Prep — Power',
+      desc:'Explosive intent on every rep. Bar speed is the goal, not load. Full 2-3 min rest between sets — power output degrades with fatigue.',
+      exercises:exs
+    });
   }
 
+  // Cool-down mobility — always present
+  blocks.push({title:'Cool-Down',exercises:pickFresh(EX.mobility,2).map(e=>({...e,sets:1}))});
+
   const dayLabel={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Cardio'}[dayType]||dayType;
+  // Map phase name to scheme phase for getTargetKg
+  const schemePhase=isHypertrophy?'Hypertrophy':isStrength?'Strength':isSpecific?'Power':'GPP';
+  const fullScheme=getScheme(schemePhase,_mult);
   return{
-    type:dayType,phase:_phase,mult:_mult,load:_load,scheme,
+    type:dayType,phase:_phase,mult:_mult,load:_load,
+    scheme:{...fullScheme,...scheme,phase:schemePhase},
     emp:'balanced',taperNote:null,doubleDayNote:'',offSeason:true,
     title:`${_phaseLabel} — ${dayLabel}`,subtitle:`${_load.label} · ${_phaseLabel}`,
     schedNote:'Off-Season session',blocks
