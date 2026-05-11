@@ -1056,6 +1056,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="display:flex;gap:4px;" id="rpe-btns"></div>
   <div id="rpe-desc" style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center;min-height:16px;"></div>
 </div>
+<div style="margin-bottom:16px;">
+  <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Session Notes <span style="font-weight:400;text-transform:none;">(optional)</span></div>
+  <textarea id="ss-notes" rows="3" placeholder="How did it feel? Any pain, breakthroughs, technique notes, sleep quality… anything worth remembering." style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);font-family:var(--font);resize:none;outline:none;box-sizing:border-box;line-height:1.5;" aria-label="Session notes"></textarea>
+</div>
 <button class="btn btn-primary" onclick="confirmSession()">Log Session →</button>
 <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal('session-summary-modal')" aria-label="Close dialog">Keep editing</button>
 </div></div>
@@ -3428,7 +3432,7 @@ const STROKE_FILTERS={
     sprint:{
       lowerPriority:['explosive','plyos','hinge'],
       lowerSuppress:[],
-      lowerMandatory:[],
+      lowerMandatory:['Nordic Ham Curls'], // explosive hip extension = hamstring injury risk. Dan Daly: non-negotiable.
       upperPriority:['pull'],
       upperMandatory:['Face Pulls'],
       corePriority:[],
@@ -3454,7 +3458,7 @@ const STROKE_FILTERS={
     sprint:{
       lowerPriority:['hinge','explosive'],
       lowerSuppress:[],
-      lowerMandatory:[],
+      lowerMandatory:['Nordic Ham Curls'], // explosive flutter kick = eccentric hamstring load. Mandatory for injury prevention.
       upperPriority:['pull'],
       upperSuppress:['Incline DB Press','Landmine Press'], // heavy pressing = shoulder impingement risk
       upperMandatory:['Face Pulls','Prone Y-T-W Combined'],        // posterior shoulder health non-negotiable
@@ -3512,7 +3516,7 @@ const STROKE_FILTERS={
     sprint:{
       lowerPriority:['hinge','explosive'],
       lowerSuppress:[],
-      lowerMandatory:['Hip Thrust'],
+      lowerMandatory:['Hip Thrust','Nordic Ham Curls'], // dolphin kick explosive hip ext = high hamstring demand. Both mandatory.
       upperPriority:['pull','push'],
       upperSuppress:[],
       upperMandatory:['Face Pulls','Prone Y-T-W Combined'], // posterior chain + shoulder health critical
@@ -4878,9 +4882,11 @@ function finishWorkout(){
   const setsCompleted=Object.keys(completedSets).length;
   const totalSets=w.blocks.reduce((a,b)=>a+b.exercises.reduce((x,e)=>{const ns=e.sets||w.scheme.sets;return x+ns;},0),0);
   const exCount=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
-  // Reset celebration slot — clears any stale 1RM data from previous session
+  // Reset celebration slot + notes — clears stale data from previous session
   const _celebEl=document.getElementById('ss-orm-celebration');
   if(_celebEl){_celebEl.style.display='none';_celebEl.innerHTML='';}
+  const _notesEl=document.getElementById('ss-notes');
+  if(_notesEl)_notesEl.value='';
   document.getElementById('ss-subtitle').textContent=`${w.phase.name} · ${w.load?.label||'—'} · ${w.title}`;
   document.getElementById('ss-stats').innerHTML=`
     <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
@@ -4916,6 +4922,9 @@ function confirmSession(){
   closeModal('session-summary-modal');
   const w=S.currentWorkout;
   const rpe=_pendingRPE;
+  // Capture session notes before modal closes
+  const notesEl=document.getElementById('ss-notes');
+  const sessionNotes=(notesEl&&notesEl.value.trim())||'';
   // Estimate session duration from block count (~8min per exercise average)
   const exCount=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
   const durationMin=Math.round(exCount*8);
@@ -5023,7 +5032,20 @@ function confirmSession(){
     }
   }
   // Save session to history (with rpe)
-  S.history.push({...w,date:new Date().toISOString(),rpe});DB.set('history',S.history);
+  // Save session to history — include notes and a compact exercise snapshot for detail view
+  const exerciseSnapshot=w.blocks.map(b=>({
+    title:b.title,
+    exercises:b.exercises.map(ex=>({
+      name:ex.name,
+      sets:ex.sets||w.scheme.sets||3,
+      detail:ex.detail||null,
+      weighted:ex.weighted||false,
+      // Pull last logged weights for this exercise so history shows actual loads
+      lastLog:ex.weighted?getLastLog(ex.name):null,
+    }))
+  }));
+  S.history.push({...w,date:new Date().toISOString(),rpe,notes:sessionNotes,blocks:exerciseSnapshot});
+  DB.set('history',S.history);
   if(S.history.length%3===0){
     S.programWeek++;
     if(S.programWeek>16){
@@ -8438,11 +8460,67 @@ function renderNutrition(){
 // ── More ──
 function renderHistory(){
   const hist=S.history;
-  document.getElementById('history-list').innerHTML=!hist.length?'<div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div>':[...hist].reverse().map(h=>{
+  if(!hist.length){
+    document.getElementById('history-list').innerHTML='<div class="empty-state"><div class="icon">📋</div><p>No sessions yet.</p></div>';
+    return;
+  }
+  document.getElementById('history-list').innerHTML=[...hist].reverse().map((h,i)=>{
+    const idx=hist.length-1-i; // real index in hist array
     const d=new Date(h.date);
-    const rpeTag=h.rpe?`<span style="font-size:10px;background:rgba(0,198,255,0.12);color:var(--accent);padding:1px 6px;border-radius:6px;margin-left:4px;">RPE ${h.rpe}</span>`:'';
-    return`<div class="history-item"><div style="font-size:11px;color:var(--muted);">${d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})}</div><div style="font-size:15px;font-weight:600;margin:2px 0;">${h.title}${rpeTag}</div><div style="font-size:12px;color:var(--muted);">${h.phase.name} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div></div>`;
+    const dateStr=d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+    const rpeColor=h.rpe>=8?'#ff6b6b':h.rpe>=6?'var(--gold)':'var(--accent)';
+    const rpeBg=h.rpe>=8?'rgba(255,107,107,0.12)':h.rpe>=6?'rgba(245,200,66,0.12)':'rgba(0,198,255,0.12)';
+    const rpeTag=h.rpe?`<span style="font-size:10px;background:${rpeBg};color:${rpeColor};padding:1px 6px;border-radius:6px;margin-left:4px;">RPE ${h.rpe}</span>`:'';
+    // Build exercise snapshot detail
+    let detailHTML='';
+    if(h.blocks&&h.blocks.length){
+      detailHTML=h.blocks.map(b=>{
+        const exRows=b.exercises.map(ex=>{
+          let logStr='';
+          if(ex.weighted&&ex.lastLog&&ex.lastLog.sets&&ex.lastLog.sets.length){
+            const sets=ex.lastLog.sets.filter(s=>s.weight>0||s.reps);
+            logStr=sets.map(s=>`${s.weight||''}${s.weight?'kg ':' '}×${s.reps||'?'}`).join(' · ');
+          }
+          return`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:12px;color:var(--text);">${ex.name}${ex.sets?` <span style="color:var(--muted);font-size:11px;">${ex.sets}×</span>`:''}${ex.detail?` <span style="color:var(--muted);font-size:11px;">${ex.detail}</span>`:''}</span>
+            ${logStr?`<span style="font-size:11px;color:var(--muted);text-align:right;margin-left:8px;">${logStr}</span>`:''}
+          </div>`;
+        }).join('');
+        return`<div style="margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${b.title}</div>
+          ${exRows}
+        </div>`;
+      }).join('');
+    } else {
+      detailHTML='<div style="font-size:12px;color:var(--muted);font-style:italic;">No exercise data saved (sessions logged before this update)</div>';
+    }
+    const notesHTML=h.notes?`<div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:3px solid var(--gold);">
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Session Notes</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;">${h.notes.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>`:'';
+    return`<div class="history-item" style="cursor:pointer;" onclick="toggleHistoryDetail(this,${idx})">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);">${dateStr}</div>
+          <div style="font-size:15px;font-weight:600;margin:2px 0;">${h.title}${rpeTag}</div>
+          <div style="font-size:12px;color:var(--muted);">${h.phase.name} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div>
+        </div>
+        <div class="history-chevron" style="font-size:16px;color:var(--muted);transition:transform 0.25s;flex-shrink:0;margin-left:8px;">›</div>
+      </div>
+      <div class="history-detail" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+        ${detailHTML}
+        ${notesHTML}
+      </div>
+    </div>`;
   }).join('');
+}
+function toggleHistoryDetail(el,idx){
+  const detail=el.querySelector('.history-detail');
+  const chevron=el.querySelector('.history-chevron');
+  if(!detail)return;
+  const open=detail.style.display!=='none';
+  detail.style.display=open?'none':'block';
+  if(chevron)chevron.style.transform=open?'':'rotate(90deg)';
 }
 function renderProgramTargets(){
   document.getElementById('week-display').textContent=S.programWeek;
