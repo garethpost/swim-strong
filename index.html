@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 84</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 86</div>
       </div>
     </div>
 
@@ -1981,13 +1981,28 @@ function setEquipmentMode(key){
 }
 
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
-// Rotation-aware pick — exercises used in the last 2 sessions get deprioritised
+
+// Session-level exclusion set — tracks exercises picked in the current generation run
+// Cleared at the start of each generateWorkout call so back-to-back generations differ
+let _sessionUsed=new Set();
+function clearSessionUsed(){_sessionUsed=new Set();}
+function markSessionUsed(exercises){exercises.forEach(e=>_sessionUsed.add(e.name));}
+
+// Rotation-aware pick — three tiers of freshness:
+//   1. Not used this session AND not in last 2 saved sessions (most fresh)
+//   2. Not used this session, but was in a recent saved session (ok)
+//   3. Already used in this session (last resort — only if pool is tiny)
 function pickFresh(arr,n){
   const recent=new Set((S.history.slice(-2)||[]).flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name))));
-  const fresh=arr.filter(e=>!recent.has(e.name));
-  const stale=arr.filter(e=>recent.has(e.name));
-  const pool=[...fresh,...stale]; // fresh first, stale as fallback
-  return pool.slice(0,Math.min(n,pool.length)).sort(()=>Math.random()-0.5).slice(0,n);
+  const tier1=arr.filter(e=>!_sessionUsed.has(e.name)&&!recent.has(e.name));
+  const tier2=arr.filter(e=>!_sessionUsed.has(e.name)&&recent.has(e.name));
+  const tier3=arr.filter(e=>_sessionUsed.has(e.name));
+  // Shuffle each tier independently, then concat
+  const shuffle=a=>[...a].sort(()=>Math.random()-0.5);
+  const pool=[...shuffle(tier1),...shuffle(tier2),...shuffle(tier3)];
+  const result=pool.slice(0,Math.min(n,pool.length));
+  markSessionUsed(result);
+  return result;
 }
 // Suggest next weight: if athlete hit all reps on all sets, nudge up 2.5kg
 function suggestWeight(name,schemeReps){
@@ -2668,73 +2683,226 @@ function weeksSinceRM(){
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===e.currentTarget)m.classList.remove('open');}));
 
 // Exercise Library
+// Sources: Dan Daly (Train Daly / NSCA), Sean Kao (Aquatic Sports Performance),
+//          Ross Edgley (Blueprint / SUPRA), SwimSwam S&C research
 const EX={
   warmup:[
+    // Active mobility
     {name:'Arm Circles',detail:'2×20 each direction',desc:'Full range arm circles to warm up the rotator cuff.',cue:'Keep scapula stable. Reach long through the circle.',weighted:false},
-    {name:'Band Pull-Aparts',detail:'3×20',desc:'Light band, arms straight, pull apart to T position.',cue:'Squeeze shoulder blades. No shrugging.',weighted:false},
     {name:'Hip Circles',detail:'2×10 each leg',desc:'Standing hip circles, full ROM each direction.',cue:'Slow and controlled. Feel the hip socket moving.',weighted:false},
     {name:'Leg Swings',detail:'2×15 each leg',desc:'Forward/back and lateral leg swings against a wall.',cue:'Controlled momentum, not flailing.',weighted:false},
     {name:'Inchworms',detail:'2×8',desc:'Walk hands out to push-up, walk feet back.',cue:'Core braced throughout.',weighted:false},
     {name:'Thoracic Rotations',detail:'2×10 each',desc:'Quadruped, rotate upper back open to ceiling.',cue:'Breathe into the rotation. Fly power lives here.',weighted:false},
+    // Dan Daly & Sean Kao — scapular and shoulder activation
+    {name:'Scapular Wall Slides',detail:'2×10',desc:'Back to wall, slide arms overhead maintaining contact.',cue:'Wall contact at all times. If you lose it, your overhead is broken.',weighted:false},
+    {name:'Dead Hang',detail:'2×30s',desc:'Hang from bar, completely relaxed, shoulders packed.',cue:'Decompress the spine. Activate serratus. Every swimmer needs this daily.',weighted:false},
+    {name:'Downward Dog Active',detail:'2×10',desc:'Push-up position, pike hips to sky, push floor away with hands.',cue:'Scapula upward rotation. Serratus on fire. This is your streamline prep.',weighted:false},
+    {name:'Bear Crawl',detail:'2×10m',desc:'Quadruped crawl keeping hips level and low — GPP cornerstone.',cue:'Opposite arm-leg. Hips don\'t bob. Foundation of all movement.',weighted:false},
+    // Posterior shoulder — most missed category per Dan Daly
+    {name:'Band Pull-Aparts',detail:'3×20',desc:'Light band, arms straight, pull apart to T position.',cue:'Squeeze shoulder blades. No shrugging.',weighted:false},
+    {name:'Y-Raises Prone',detail:'2×15',desc:'Face down on floor or bench, raise arms in Y shape — thumbs up.',cue:'Lead with thumbs. Squeeze at top. This is your rotator cuff insurance.',weighted:false},
+    {name:'Cat-Cow',detail:'2×10',desc:'Quadruped spinal flexion-extension through full ROM.',cue:'Breathe into flexion. Lift sternum in extension.',weighted:false},
+    {name:'Hip 90/90 Rotations',detail:'2×8 each',desc:'Seated 90/90 position, rotate front and back shin to ground.',cue:'Tall spine. Let hips move. Not a stretch — an active rotation.',weighted:false},
+    {name:'Scapular Pull-Ups',detail:'2×10',desc:'Dead hang, pull shoulder blades down without bending elbows.',cue:'Initiate from the lat. This is where your catch starts.',weighted:false},
   ],
   lower:[
-    {name:'Back Squat',sets:4,detail:null,desc:'Barbell back squat. 1RM directly predicts start performance.',cue:'Break hip and knee simultaneously. Drive the floor away.',weighted:true,tags:['squat'],tempo:'3-1-1-0'},
-    {name:'Romanian Deadlift',sets:4,detail:null,desc:'Hinge at hip, bar close to legs, soft knee.',cue:'Push hips to the wall. Hamstring stretch. Bar close to shins.',weighted:true,tags:['hinge'],tempo:'3-1-1-0'},
-    {name:'Bulgarian Split Squat',sets:3,detail:null,desc:'Rear foot elevated, front shin vertical.',cue:'Hips drop straight down. No knee cave. This one should hurt.',weighted:true,tags:['single-leg','squat'],tempo:'3-1-1-0'},
-    {name:'Hip Thrust',sets:4,detail:null,desc:'Barbell across hips, drive to ceiling from bench.',cue:'Squeeze glutes hard at top. Full hip extension. This is your fly kick.',weighted:true,tags:['hinge','explosive'],tempo:'2-1-X-0'},
-    {name:'Goblet Squat',sets:3,detail:null,desc:'Dumbbell at chest, squat deep with upright torso.',cue:'Elbows push knees out at bottom. Pause at bottom.',weighted:true,tags:['squat'],tempo:'3-2-1-0'},
-    {name:'Single-Leg RDL',sets:3,detail:null,desc:'Hinge on one leg, dumbbell opposite hand.',cue:'Hip stays square. T shape at bottom.',weighted:true,tags:['single-leg','hinge'],tempo:'3-1-1-0'},
-    {name:'Step-Ups',sets:3,detail:null,desc:'Step onto box with full hip extension at top.',cue:'Drive through heel. Full lockout. Do not push off back foot.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
-    {name:'Nordic Ham Curls',sets:3,detail:'3×5',desc:'Feet anchored, lower slowly resisting with hamstrings.',cue:'Slow eccentric is the point. Prevents hamstring tears.',weighted:false,logReps:true,tags:['hinge'],tempo:'5-0-1-0'},
+    // ── SQUAT PATTERN (Sean Kao: velocity emphasis — power, not just 1RM) ──
+    {name:'Back Squat',sets:4,detail:null,desc:'Barbell back squat. Most validated predictor of start power in Sean Kao\'s research.',cue:'Break hip and knee simultaneously. Drive the floor away. Bar speed matters.',weighted:true,tags:['squat'],tempo:'3-1-1-0'},
+    {name:'Box Squat',sets:4,detail:null,desc:'Squat to box, full stop, then explode up. Trains concentric power from dead stop.',cue:'Sit back onto box. Full stop — no bounce. DRIVE through the floor.',weighted:true,tags:['squat','explosive'],tempo:'3-2-X-0'},
+    {name:'Front Squat',sets:4,detail:null,desc:'Bar in front rack — Ross Edgley\'s preferred squat. More upright torso, safer spine.',cue:'Elbows high. Chest up. Ankle mobility is the limiting factor here.',weighted:true,tags:['squat'],tempo:'3-1-1-0'},
+    {name:'Goblet Squat',sets:3,detail:null,desc:'Dumbbell at chest — Dan Daly\'s entry-level squat for all ages.',cue:'Elbows push knees out at bottom. Pause and feel the bottom.',weighted:true,tags:['squat'],tempo:'3-2-1-0'},
+    {name:'Pause Squat',sets:3,detail:null,desc:'3-second pause at bottom. Builds positional strength and removes the stretch reflex.',cue:'Own the bottom. No bouncing. Patience here transfers to every turn.',weighted:true,tags:['squat'],tempo:'3-3-X-0'},
+    {name:'Zercher Squat',sets:3,detail:null,desc:'Bar in the crook of the elbows — core demand is brutal.',cue:'Elbows together. Torso upright. Every muscle working.',weighted:true,tags:['squat'],tempo:'3-1-1-0'},
+    // ── HINGE PATTERN (All coaches: highest swim transfer of any lower pattern) ──
+    {name:'Romanian Deadlift',sets:4,detail:null,desc:'Hip hinge with soft knee. The single best hamstring and posterior chain builder for swimmers.',cue:'Push hips to the wall. Hamstrings load the whole way. Bar stays close.',weighted:true,tags:['hinge'],tempo:'3-1-1-0'},
+    {name:'Trap Bar Deadlift',sets:4,detail:null,desc:'Hex bar deadlift — Dan Daly\'s preferred heavy hinge. Safer spine, quad + posterior chain.',cue:'Push floor away — don\'t think "pull". Sit between the handles.',weighted:true,tags:['hinge','squat'],tempo:'3-1-1-0'},
+    {name:'Conventional Deadlift',sets:4,detail:null,desc:'Floor pull — fundamental hinge strength. Directly trains start and turn push-off chain.',cue:'Lats packed. Bar against shins. Drive the floor away.',weighted:true,tags:['hinge'],tempo:'3-1-X-0'},
+    {name:'Sumo Deadlift',sets:4,detail:null,desc:'Wide stance hinge — loads adductors and posterior chain differently.',cue:'Knees track toes. Pull the floor apart. Chest up.',weighted:true,tags:['hinge'],tempo:'3-1-1-0'},
+    {name:'Hip Thrust',sets:4,detail:null,desc:'Barbell across hips — Dan Daly\'s #1 fly and dolphin kick exercise.',cue:'Squeeze glutes hard at top. Full hip extension. This is your dolphin kick.',weighted:true,tags:['hinge','explosive'],tempo:'2-1-X-0'},
+    {name:'Single-Leg Hip Thrust',sets:3,detail:null,desc:'One leg hip thrust. Unilateral glute and hamstring control for asymmetric kick patterns.',cue:'Non-working leg stays bent at 90. Drive through the heel.',weighted:true,tags:['hinge','single-leg'],tempo:'2-2-X-0'},
+    {name:'Good Mornings',sets:3,detail:null,desc:'Bar on back, hinge forward. Hamstrings under constant tension throughout.',cue:'Soft knee. Push hips BACK not down. Slow on the way down.',weighted:true,tags:['hinge'],tempo:'4-1-1-0'},
+    {name:'Glute Bridge',sets:3,detail:null,desc:'Floor-based hip thrust — accessible hinge for warm-up or bodyweight day.',cue:'Posterior pelvic tilt at top. Squeeze 2 seconds. Full extension.',weighted:true,tags:['hinge'],tempo:'2-2-1-0'},
+    {name:'Nordic Ham Curls',sets:3,detail:'3×5',desc:'Feet anchored, lower with hamstrings. Most effective hamstring injury prevention exercise.',cue:'Slow eccentric is the entire point. 5-second lower. Prevents hamstring tears.',weighted:false,logReps:true,tags:['hinge'],tempo:'5-0-1-0'},
+    {name:'Glute-Ham Raise',sets:3,detail:'3×8',desc:'GHD machine — full posterior chain from glute to hamstring under load.',cue:'Stay rigid. Squeeze glutes at top. Use arms for safety only.',weighted:false,logReps:true,tags:['hinge'],tempo:'3-1-1-0'},
+    // ── KETTLEBELL — Dan Daly signature tools ──
+    {name:'Kettlebell Swing',sets:4,detail:null,desc:'Hip-hinge explosive — Dan Daly\'s flagship drill. Power development without barbell loading.',cue:'Hips drive the bell. Arms are just a rope. SNAP glutes at top.',weighted:true,tags:['hinge','explosive'],tempo:'X-0-X-0'},
+    {name:'Kettlebell Single-Arm Swing',sets:3,detail:null,desc:'One-arm swing — adds anti-rotation demand. Trains hip drive and core simultaneously.',cue:'Don\'t let the bell pull you into rotation. Core locks out the rotation.',weighted:true,tags:['hinge','explosive'],tempo:'X-0-X-0'},
+    {name:'Hang Power Clean',sets:4,detail:null,desc:'Olympic movement — Ross Edgley staple. Full-body explosive power from hinge to overhead.',cue:'Violent hip snap. Catch with soft knees. Speed, not strength.',weighted:true,tags:['hinge','explosive'],tempo:'X-0-X-0'},
+    {name:'Clean and Press',sets:4,detail:null,desc:'Clean to overhead press — Ross Edgley\'s full-body power developer.',cue:'Clean is hip-driven. Press is strict. Two separate movements.',weighted:true,tags:['hinge','explosive'],tempo:'X-1-1-0'},
+    // ── SINGLE-LEG (Sean Kao: asymmetric turns, kick patterns) ──
+    {name:'Bulgarian Split Squat',sets:3,detail:null,desc:'Rear foot elevated, front shin vertical. Sean Kao\'s primary single-leg strength test.',cue:'Hips drop straight down. No knee cave. This is the one that should hurt.',weighted:true,tags:['single-leg','squat'],tempo:'3-1-1-0'},
+    {name:'Single-Leg RDL',sets:3,detail:null,desc:'Single-leg hinge — proprioception, hip stability, hamstring control.',cue:'Hip stays square. T-shape at bottom. Don\'t rotate.',weighted:true,tags:['single-leg','hinge'],tempo:'3-1-1-0'},
+    {name:'Step-Ups',sets:3,detail:null,desc:'Step onto box, full hip extension at top. No push from back foot.',cue:'Drive through heel. Full lockout. Don\'t cheat with the back foot.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
+    {name:'Reverse Lunge',sets:3,detail:null,desc:'Step back, lower knee, drive through front heel. Safer knee loading than forward lunge.',cue:'Torso upright. Front shin vertical. Drive the floor away.',weighted:true,tags:['single-leg','squat'],tempo:'3-0-1-0'},
+    {name:'Lateral Lunge',sets:3,detail:null,desc:'Step wide, sit into hip. Adductor load — critical for breaststroke.',cue:'Chest up. Load through heel. Feel the inner thigh work.',weighted:true,tags:['single-leg'],tempo:'3-1-1-0'},
+    {name:'Walking Lunge',sets:3,detail:null,desc:'Continuous lunge pattern — unilateral strength with locomotion.',cue:'Tall torso. Long stride. Drive back knee to ground.',weighted:true,tags:['single-leg','squat'],tempo:'2-0-1-0'},
+    {name:'Lateral Step-Up',sets:3,detail:null,desc:'Step sideways onto box. Hip abductor and glute emphasis.',cue:'Drive through outside leg. No hip drop. Full extension at top.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
+    {name:'Copenhagen Plank',detail:'3×30s each',desc:'Side plank with top leg on bench — brutal adductor load for breaststroke kick.',cue:'Hips stay high. Don\'t let the pelvis sag.',weighted:false,tags:['single-leg']},
+    // ── GPP / WORK CAPACITY — Ross Edgley ──
+    {name:'Duck Walk',detail:'3×15m',desc:'Walk in squat hold position — Ross Edgley staple for leg endurance.',cue:'Heels down. Thighs parallel. Shuffle forward. No standing up.',weighted:false,tags:['squat']},
+    {name:'Sled Push',detail:'4×20m',desc:'Load sled, drive forward with explosive leg drive.',cue:'Forward lean, drive knees, full extension. Power through the floor.',weighted:false,tags:['hinge','explosive']},
+    {name:'Sled Drag',detail:'4×20m',desc:'Face the sled, drive backwards. Quad-dominant, low spinal load.',cue:'Upright posture. Drive legs, not arms. Short powerful steps.',weighted:false,tags:['squat']},
   ],
   upper:[
-    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar. Pronated grip.',cue:'Pull elbows to hips. Initiate with lats. Full dead hang each rep.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
-    {name:'Seated Cable Row',sets:4,detail:null,desc:'Row to lower sternum, elbows track body.',cue:'Squeeze scapula before pulling. Control the return.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
-    {name:'Incline DB Press',sets:4,detail:null,desc:'Moderate incline, press from shoulder height.',cue:'Control the eccentric. Feel chest stretch at bottom.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
-    {name:'Lat Pulldown',sets:4,detail:null,desc:'Wide grip pulldown to upper chest.',cue:'Lean back slightly. Pull elbows to pockets.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
-    {name:'Single-Arm DB Row',sets:4,detail:null,desc:'Knee on bench, heavy DB, pull to hip.',cue:'Elbow drives back and up. No spinal rotation.',weighted:true,tags:['pull'],tempo:'3-0-1-0'},
-    {name:'Landmine Press',sets:3,detail:null,desc:'Single arm press with barbell in landmine at 45 degrees.',cue:'Shoulder-safe pressing. Rotate slightly at top.',weighted:true,tags:['push','shoulder'],tempo:'3-1-1-0'},
-    {name:'Tricep Pushdown',sets:3,detail:null,desc:'Cable pushdown with rope.',cue:'Elbows stay at sides. Full extension.',weighted:true,tags:['push'],tempo:'2-1-1-0'},
-    {name:'Face Pulls',sets:3,detail:'3×20 light',desc:'Cable at face height, pull to ears with external rotation.',cue:'Elbows high and wide. Non-negotiable for shoulder health.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
-    {name:'Prone Y-T-W',sets:3,detail:'3×10 each, very light',desc:'Incline bench, raise in Y, T, W shapes with very light DBs.',cue:'Thumbs up. Slow. Injury prevention, not strength.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
-    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body, slow lat activation.',cue:'Core tight. Mimics your streamline.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
+    // ── VERTICAL PULL — #1 category for all coaches ──
+    // Sean Kao research: weighted pull-up is the strongest predictor of sprint freestyle time
+    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar, pronated grip. Sean Kao\'s top-ranked sprint predictor.',cue:'Pull elbows to hips. Initiate with lats. FULL dead hang each rep.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Weighted Pull-Ups',sets:4,detail:null,desc:'Pull-ups with added load — Sean Kao\'s research shows strongest correlation to sprint time.',cue:'All pull-up cues apply. Quality over quantity. No kipping.',weighted:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Chin-Ups',sets:4,detail:null,desc:'Supinated grip — more bicep involvement, same lat chain.',cue:'Biceps and lats together. Full dead hang each rep.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Neutral-Grip Pull-Ups',sets:3,detail:null,desc:'Parallel grip pull-up — shoulder-friendly, strong lat activation.',cue:'Elbows track behind the body. Full lockout at bottom.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Lat Pulldown',sets:4,detail:null,desc:'Wide grip pulldown — foundation when athlete cannot do full pull-ups.',cue:'Lean back slightly. Pull elbows to pockets. Lats, not biceps.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Close-Grip Pulldown',sets:3,detail:null,desc:'Neutral narrow grip — deeper lat stretch at top.',cue:'Chest up. Elbows drive to hips. Full stretch every rep.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body position — Dan Daly. Mimics streamline under load.',cue:'Core tight. Ribs down. This is your streamline position with gravity fighting you.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Scapular Pull-Ups',sets:3,detail:'3×12',desc:'Dead hang — pull shoulders down without bending elbows. Activates serratus and lats.',cue:'Shoulder blades pack DOWN. This is your catch initiation pattern.',weighted:false,tags:['pull'],tempo:'2-1-2-0'},
+    // ── HORIZONTAL PULL ──
+    {name:'Seated Cable Row',sets:4,detail:null,desc:'Row to lower sternum, elbows track body. Mid-back foundation.',cue:'Squeeze scapula BEFORE pulling. Control the return.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Single-Arm DB Row',sets:4,detail:null,desc:'Knee on bench, heavy DB, pull to hip. Ross Edgley: 5×10 standard.',cue:'Elbow drives back and up. No spinal rotation.',weighted:true,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Barbell Row',sets:4,detail:null,desc:'Bent-over row, bar to lower sternum. Builds the entire posterior pulling chain.',cue:'Chest up. Elbows drive back. Squeeze hard at top.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Chest-Supported Row',sets:3,detail:null,desc:'Incline bench DB row — removes lower back compensation.',cue:'Full stretch at bottom. Squeeze hard at top. No cheat.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'TRX/Ring Row',sets:3,detail:null,desc:'Bodyweight row — angle controls difficulty. Sean Kao foundation movement.',cue:'Body rigid. Pull chest to hands. Scale by foot position.',weighted:false,logReps:true,tags:['pull'],tempo:'3-1-1-0'},
+    {name:'Inverted Row',sets:3,detail:null,desc:'Under a bar, row chest up. Horizontal pulling pattern accessible anywhere.',cue:'Stay rigid. No hip sag. Pull sternum to bar.',weighted:false,logReps:true,tags:['pull'],tempo:'3-1-1-0'},
+    // ── POSTERIOR SHOULDER — Dan Daly: most missed category for swimmers ──
+    {name:'Face Pulls',sets:3,detail:'3×20 light',desc:'Cable at face height, pull to ears with external rotation. Dan Daly: non-negotiable.',cue:'Elbows HIGH and wide. Rotate into external rotation. Light load, high reps.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Y-Raises',sets:3,detail:'3×15 light',desc:'Prone or incline, raise arms in Y shape thumbs up — serratus + upper trap.',cue:'Reach LONG. Lead with thumbs. 1.5 million shoulder rotations a year need this.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'T-Raises',sets:3,detail:'3×15 light',desc:'Prone, arms straight out to T — lower trapezius, scapular control.',cue:'Thumbs up. Squeeze scapula. Slow and deliberate. Lower trap prevents impingement.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'W-Raises',sets:3,detail:'3×12 light',desc:'Prone, pull arms into W shape — full external rotation.',cue:'Lead with elbows high. Feel the posterior capsule work. No momentum.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Prone Y-T-W Combined',sets:3,detail:'3×10 each',desc:'Sequence Y, T, W without resting — complete posterior shoulder sequence.',cue:'Thumbs up throughout. Very light. This is rehab and prehab in one.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Band Pull-Aparts',sets:3,detail:'3×25',desc:'Arms straight, pull band apart to T. Posterior deltoid and rhomboid.',cue:'Squeeze shoulder blades. No shrugging. Can do 100 a day.',weighted:false,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'External Rotation 90/90',sets:3,detail:'3×15 each',desc:'Elbow at 90, rotate forearm up. Infraspinatus and teres minor directly.',cue:'Elbow stays fixed. Slow rotation. The rotator cuff doing its actual job.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'External Rotation Standing',sets:3,detail:'3×15 each',desc:'Cable or band ER at side. Direct rotator cuff loading in functional position.',cue:'Elbow at 90 pressed to ribs. Rotate out. Control the return.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
+    {name:'Prone Blackburn',sets:3,detail:'3×10s hold each position',desc:'Prone on bench — hold Y, T, W positions. Isometric posterior shoulder endurance.',cue:'Hold each position 10 seconds. Don\'t rush. Endurance, not strength.',weighted:false,tags:['shoulder'],tempo:'2-10-2-0'},
+    // ── PUSH — de-emphasised per Sean Kao (1:2 or 1:3 push:pull ratio) ──
+    {name:'Incline DB Press',sets:3,detail:null,desc:'Moderate incline — safer shoulder position than flat bench.',cue:'Control the eccentric. Feel the chest stretch at bottom.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
+    {name:'DB Floor Press',sets:3,detail:null,desc:'Lie on floor, press DBs — limited ROM protects shoulder joint.',cue:'Elbows touch floor each rep. Safe and effective.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
+    {name:'Landmine Press',sets:3,detail:null,desc:'Single arm press at 45 degrees — shoulder-safe pressing pattern.',cue:'Shoulder-safe. Rotate slightly at top. Anti-rotation demand.',weighted:true,tags:['push','shoulder'],tempo:'3-1-1-0'},
+    {name:'DB Shoulder Press',sets:3,detail:null,desc:'Seated or standing dumbbell overhead. Full ROM overhead.',cue:'Lock out overhead. No lower back arch.',weighted:true,tags:['push','shoulder'],tempo:'3-1-1-0'},
+    {name:'Push-Up Variations',sets:3,detail:null,desc:'Standard, wide, or diamond with full intention. Sean Kao foundation movement.',cue:'Body rigid. Chest to floor. Full lockout at top.',weighted:false,logReps:true,tags:['push'],tempo:'3-0-1-0'},
+    {name:'Dips',sets:3,detail:null,desc:'Parallel bar dips — Ross Edgley includes in GPP circuits.',cue:'Control the descent. Chest forward for pec emphasis, upright for tricep.',weighted:false,logReps:true,tags:['push'],tempo:'3-1-1-0'},
+    {name:'Bench Press',sets:4,detail:null,desc:'Barbell bench — Ross Edgley: 5×5 in standard strength block.',cue:'Tight arch. Bar to chest. Drive up and back. Leg drive matters.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
+    // ── CARRIES AND STABILITY — Dan Daly, Ross Edgley ──
+    {name:'Overhead Carry',sets:3,detail:'3×20m each',desc:'Single-arm KB overhead walk — shoulder stability, core, posture.',cue:'Lock elbow. Ribs down. Don\'t let the hip flare out.',weighted:true,tags:['shoulder','pull'],tempo:'slow'},
+    {name:'Suitcase Carry',sets:3,detail:'3×20m each',desc:'KB at side — anti-lateral flexion, grip, posture.',cue:'Stand tall. Don\'t lean into the load. Core resists it.',weighted:true,tags:['pull'],tempo:'slow'},
+    // ── ACCESSORY ──
+    {name:'Tricep Pushdown',sets:3,detail:null,desc:'Cable rope pushdown — elbow lockout strength.',cue:'Elbows stay at sides. Full extension.',weighted:true,tags:['push'],tempo:'2-1-1-0'},
+    {name:'Hammer Curl',sets:3,detail:null,desc:'Neutral grip curl — brachialis and grip strength.',cue:'No swinging. Full ROM. Control the eccentric.',weighted:true,tags:['pull'],tempo:'2-1-2-0'},
+    {name:'Rope Climb',sets:3,detail:'3×full climb',desc:'Full rope climb — Ross Edgley climbed Everest height by rope. Grip + lat + bicep endurance.',cue:'Use legs for efficiency but build to arms-only. Grip strength transfers to stroke.',weighted:false,logReps:true,tags:['pull'],tempo:'slow'},
   ],
   plyos:[
-    {name:'Box Jumps',sets:4,detail:null,desc:'Jump onto box, land soft, step down. Full reset between reps.',cue:'Full extension at take-off. Land quarter squat. Step down never jump down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Broad Jumps',sets:4,detail:null,desc:'Jump forward for max distance, stick the landing.',cue:'Swing arms aggressively. Stick 2 full seconds.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Depth Jumps',sets:3,detail:null,desc:'Step off box, land and immediately explode up.',cue:'Hot floor. Minimum ground contact. Readiness 4+ only.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Bounding',sets:3,detail:'3×20m',desc:'Exaggerated strides for max distance per stride.',cue:'Drive knee aggressively. Full hip extension.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Tuck Jumps',sets:4,detail:null,desc:'Jump and pull knees to chest at peak.',cue:'Pull knees UP. Do not bring chest down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Med Ball Slam',sets:4,detail:null,desc:'Overhead slam as hard as possible.',cue:'Reach tall, violently contract everything. Slam it.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Med Ball Chest Pass',sets:4,detail:null,desc:'Explosive chest pass into wall.',cue:'Full arm extension at release. Mimics butterfly pull-through.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
-    {name:'Jump Squat',sets:4,detail:null,desc:'Load into squat then explode to full jump, land soft.',cue:'Full hip extension at take-off. Land softly. Reset fully.',weighted:false,tags:['explosive','plyos'],tempo:'3-0-X-0'},
-    {name:'Lateral Bounds',sets:3,detail:null,desc:'Jump side to side on single leg, stick each landing.',cue:'Stick 2 seconds each side.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-2-X-0'},
-    {name:'Clap Push-Ups',sets:3,detail:null,desc:'Push-up with force to clap between reps.',cue:'Land with soft elbows. Drop to standard if form breaks.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    // ── LOWER BODY — Countermovement vs Non-Countermovement (Sean Kao research) ──
+    {name:'Countermovement Jump',sets:4,detail:null,desc:'Dip then jump — uses elastic energy. Mimics push-off mechanics.',cue:'Fast dip. Violent arm swing. Full extension at take-off.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Non-Countermovement Jump',sets:4,detail:null,desc:'Squat hold then jump — Sean Kao research: #3 predictor of sprint time. Pure concentric power.',cue:'Sit in squat. HOLD 3 seconds. No dip before jump. This is harder than it looks.',weighted:false,tags:['explosive','plyos'],tempo:'3-X-0'},
+    {name:'Box Jumps',sets:4,detail:null,desc:'Jump onto box, land soft, STEP down. Quality not quantity.',cue:'Full extension at take-off. Land quarter squat. STEP down. Never jump down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Single-Leg Box Jump',sets:3,detail:null,desc:'One leg take-off onto box. Asymmetric power for turns and kick.',cue:'Drive trail knee up. Land balanced. Full extension at take-off.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-0-X-0'},
+    {name:'Depth Jump',sets:3,detail:null,desc:'Step off box, land and IMMEDIATELY explode up. Readiness 4+ only.',cue:'Hot floor. Minimum ground contact. Stiff ankle. NOT for tired athletes.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Depth Drop',sets:3,detail:null,desc:'Step off box, land and absorb — landing quality and deceleration training.',cue:'Stick the landing. Soft knees. Athletic position. No buckle.',weighted:false,tags:['explosive','plyos'],tempo:'X-3-0-0'},
+    {name:'Broad Jump',sets:4,detail:null,desc:'Jump for max horizontal distance, stick landing 2 full seconds.',cue:'Swing arms aggressively. Reach forward. Stick it.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Bounding',sets:3,detail:'3×20m',desc:'Exaggerated single-leg strides for max distance per stride.',cue:'Drive knee aggressively. Full hip extension. Long contact time. Not sprinting.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Lateral Bounds',sets:3,detail:null,desc:'Single-leg lateral jump, stick each landing.',cue:'Stick 2 full seconds each side. Single-leg power for turns.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-2-X-0'},
+    {name:'Tuck Jumps',sets:4,detail:null,desc:'Jump and pull knees to chest at peak.',cue:'Pull knees UP. Don\'t bring chest down to meet them.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Split Jump',sets:4,detail:null,desc:'Jump lunge — alternating legs in air.',cue:'Land in same lunge position you left. Soft landing. Powerful drive.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-0-X-0'},
+    {name:'Hurdle Hops',sets:4,detail:null,desc:'Consecutive bilateral hops over mini hurdles — ankle stiffness and reactivity.',cue:'Stiff ankles. Think springs not squats. Minimum ground contact.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Pogo Jumps',sets:3,detail:'3×20',desc:'Continuous ankle-driven jumps — pure ankle stiffness and elastic storage.',cue:'Minimal knee bend. Ankles do the work. Jump Rope cousin but bigger.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Speed Skaters',sets:3,detail:null,desc:'Lateral single-leg leap, crossover land.',cue:'Drive off outside foot. Reach opposite hand to floor. Lateral power.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-0-X-0'},
+    {name:'Streamline Jump Squat',sets:4,detail:null,desc:'Dan Daly signature — jump from squat with arms in streamline overhead.',cue:'Arms overhead before you leave the ground. Full extension. Mimic the block start.',weighted:false,tags:['explosive','plyos'],tempo:'3-0-X-0'},
+    {name:'Single-Leg Streamline Jump',sets:3,detail:null,desc:'Dan Daly — single-leg take-off in streamline. Turn push-off specific.',cue:'One-leg drive, arms shoot overhead. Stick landing. Asymmetric power.',weighted:false,tags:['explosive','plyos','single-leg'],tempo:'X-0-X-0'},
+    // ── UPPER BODY POWER ──
+    {name:'Med Ball Chest Pass',sets:4,detail:null,desc:'Explosive chest pass into wall. Upper body power expression.',cue:'Full arm extension at release. Mimics butterfly pull-through force.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Med Ball Overhead Throw',sets:4,detail:null,desc:'Slam overhead med ball forward for distance. Full body chain.',cue:'Reach tall. Violent core contraction. Drive through the ground.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Med Ball Slam',sets:4,detail:null,desc:'Overhead slam downward as hard as possible.',cue:'Reach tall. Violently contract everything. SLAM it.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Rotational Med Ball Throw',sets:4,detail:null,desc:'Side-on to wall, rotate and throw explosively. Freestyle rotation under load.',cue:'Hips lead. Arm follows. Mimics the force of freestyle rotation.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Med Ball Hip Toss',sets:3,detail:null,desc:'Lateral hip-driven throw — glute and core power in rotation.',cue:'Drive from the hip not the arms. Explosive rotation.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    {name:'Plyo Push-Ups',sets:3,detail:null,desc:'Explosive push-up, hands leave floor.',cue:'Full extension into air. Land soft with bent elbows.',weighted:false,tags:['explosive','plyos','push'],tempo:'X-0-X-0'},
+    {name:'Clap Push-Ups',sets:3,detail:null,desc:'Push-up with clap at top — upper body rate of force.',cue:'Land soft. Drop to standard if form breaks.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
+    // ── GPP & WORK CAPACITY — Ross Edgley ──
+    {name:'Bear Crawl Circuit',sets:3,detail:'3×20m',desc:'Quadruped crawl — Ross Edgley foundation. GPP and core endurance.',cue:'Opposite arm-leg. Hips level. Slow and deliberate beats fast and sloppy.',weighted:false,tags:['plyos'],tempo:'slow'},
+    {name:'Farmer\'s Walk',sets:3,detail:'3×30m',desc:'Heavy bilateral carry. Grip, posture, core, work capacity.',cue:'Shoulder blades packed. Tall spine. Don\'t lean.',weighted:false,tags:['plyos'],tempo:'slow'},
+    {name:'Sandbag Carry',sets:3,detail:'3×20m',desc:'Carry sandbag bear-hug style. Awkward load = total body stability demand.',cue:'Hug it tight. Tall spine. Own the awkward weight.',weighted:false,tags:['plyos'],tempo:'slow'},
+    {name:'Battle Rope Waves',sets:4,detail:'4×20s max',desc:'Bilateral or alternating rope waves — conditioning and grip.',cue:'Drive from the hips. Arms are the conduit not the engine.',weighted:false,tags:['plyos','explosive'],tempo:'X-0-X-0'},
+    {name:'Sled Push Sprint',sets:4,detail:'4×20m',desc:'Load sled, sprint forward. Power output + leg conditioning.',cue:'Forward lean. Drive knees. Full extension each stride.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
   ],
   core:[
-    {name:'Dead Bug',detail:'3×10 each',desc:'Opposite arm and leg lower slowly, lower back flat.',cue:'Push lower back INTO floor. Shorten range if it arches.',weighted:false},
-    {name:'Hollow Body Hold',detail:'3×30s',desc:'Arms overhead, lower back flat, hover off ground.',cue:'Squeeze ribs down.',weighted:false},
-    {name:'Pallof Press',detail:'3×12 each',desc:'Cable at hip height, press out and resist rotation.',cue:'No hips turning. All tension through core.',weighted:false},
-    {name:'Ab Wheel Rollout',detail:'3×8',desc:'Roll out slowly, come back under control.',cue:'Hips in line. Do not let lower back sag.',weighted:false},
-    {name:'Hanging Leg Raise',detail:'3×10',desc:'Dead hang, raise straight legs to 90.',cue:'No swinging. Slow down.',weighted:false},
-    {name:'Plank',detail:'3×45s',desc:'Straight line head to heels on forearms.',cue:'Squeeze glutes. Push elbows into ground.',weighted:false},
-    {name:'Side Plank',detail:'3×30s each',desc:'Straight line on one forearm.',cue:'Hip stays high.',weighted:false},
+    // ── ANTI-EXTENSION — primary category per Dan Daly and Sean Kao ──
+    {name:'Dead Bug',detail:'3×10 each',desc:'Opposite arm and leg lower slowly, lower back FLAT. Dan Daly foundational drill.',cue:'Push lower back INTO floor. Shorten range if it arches. This builds your freestyle rotation.',weighted:false,tags:['anti-extension']},
+    {name:'Dead Bug with Band',detail:'3×10 each',desc:'Band adds tension to the arm — increases anti-extension demand.',cue:'Same as standard dead bug but fight the band. Harder than it looks.',weighted:false,tags:['anti-extension']},
+    {name:'Hollow Body Hold',detail:'3×30s',desc:'Arms overhead, lower back flat, hover off ground. Dan Daly and Sean Kao streamline drill.',cue:'Squeeze ribs DOWN. Lower back contact. This IS your streamline position.',weighted:false,tags:['anti-extension']},
+    {name:'Hollow Body Rock',detail:'3×20',desc:'Rock forward and back from hollow body — Dan Daly. Streamline endurance.',cue:'Never lose lower back contact. Reset if you pike. Controlled.',weighted:false,tags:['anti-extension']},
+    {name:'Ab Wheel Rollout',detail:'3×8',desc:'Roll out fully, return under control. High lat-core integration — Dan Daly essential.',cue:'Hips in line throughout. No lower back sag. Lats initiate the return.',weighted:false,tags:['anti-extension']},
+    {name:'Barbell Rollout',detail:'3×6',desc:'Barbell version — longer moment arm = harder.',cue:'Same as ab wheel but even more brutal. Only for advanced.',weighted:false,tags:['anti-extension']},
+    {name:'RKC Plank',detail:'3×20s',desc:'Forearm plank with maximal body tension — glutes, quads, everything squeezed.',cue:'Squeeze every muscle. Posterior pelvic tilt. Harder than a normal plank.',weighted:false,tags:['anti-extension']},
+    {name:'Plank',detail:'3×45s',desc:'Forearm plank. Foundation of anti-extension.',cue:'Squeeze glutes. Push elbows into ground. Don\'t let hips sag.',weighted:false,tags:['anti-extension']},
+    {name:'Plank Feet Elevated',detail:'3×45s',desc:'Plank with feet on bench — increases load on the upper body.',cue:'Hips in line. Don\'t pike. Harder than floor plank.',weighted:false,tags:['anti-extension']},
+    {name:'Dragon Flag',detail:'3×5',desc:'Lie on bench, body as rigid plank lowering from shoulders — Ross Edgley + Dan Daly.',cue:'Full body tension. No pike. SLOW eccentric. Advanced streamline endurance.',weighted:false,tags:['anti-extension']},
+    // ── ANTI-ROTATION — second pillar of swim-specific core ──
+    {name:'Pallof Press',detail:'3×12 each',desc:'Cable at hip height, press out resist rotation. Sean Kao: the anti-rotation exercise.',cue:'No hips turning. All tension through core. The cable WANTS you to rotate.',weighted:false,tags:['anti-rotation']},
+    {name:'Pallof Press Band',detail:'3×12 each',desc:'Band version of Pallof press — accessible anywhere.',cue:'Step far enough out that the band has real tension.',weighted:false,tags:['anti-rotation']},
+    {name:'Pallof Hold',detail:'3×20s each',desc:'Pallof press position held isometrically — endurance version.',cue:'Don\'t rotate. Don\'t hold your breath. Own the position.',weighted:false,tags:['anti-rotation']},
+    {name:'Single-Arm Plank',detail:'3×20s each',desc:'Remove one arm from plank position — anti-rotation demand.',cue:'Hips stay level. Don\'t rotate. Other arm stays at side.',weighted:false,tags:['anti-rotation']},
+    {name:'Copenhagen Plank',detail:'3×30s each',desc:'Side plank with top leg on bench. Adductor + lateral core. Breaststroke essential.',cue:'Hips stay high. Don\'t let pelvis drop.',weighted:false,tags:['anti-rotation','lateral']},
+    // ── ANTI-LATERAL FLEXION ──
+    {name:'Side Plank',detail:'3×35s each',desc:'Straight line on one forearm. Lateral core endurance.',cue:'Hip stays high. Stack feet. Don\'t rotate.',weighted:false,tags:['lateral']},
+    {name:'Side Plank Hip Abduction',detail:'3×12 each',desc:'Side plank with top leg raise. Adds glute med activation.',cue:'Stay stable. Don\'t let hip drop when leg lifts.',weighted:false,tags:['lateral']},
+    {name:'Side Plank Reach-Through',detail:'3×10 each',desc:'Side plank, rotate top arm under body. Thoracic rotation under load.',cue:'Stay high. Rotate from thoracic. Don\'t collapse.',weighted:false,tags:['lateral','rotation']},
+    {name:'Suitcase Deadlift',detail:'3×10 each',desc:'Deadlift with load on one side — anti-lateral flexion under load.',cue:'Stand tall. Don\'t lean into the load. Spine stays neutral.',weighted:false,tags:['lateral']},
+    // ── ROTATIONAL — freestyle and backstroke rotation power ──
+    {name:'Cable Woodchop',detail:'3×12 each',desc:'High-to-low cable rotation — rotational power in the swim plane.',cue:'Full rotation. Follow through. Core decelerates at end range.',weighted:false,tags:['rotation']},
+    {name:'Cable Lift',detail:'3×12 each',desc:'Low-to-high cable rotation. Opposite to woodchop.',cue:'Drive from hip. Arm follows. Rotate through thoracic.',weighted:false,tags:['rotation']},
+    {name:'Landmine Rotation',detail:'3×10 each',desc:'Arc the bar side to side at hip height. Hips forward throughout.',cue:'Hips face forward. Shoulders drive the arc. Power from the floor.',weighted:false,tags:['rotation']},
+    {name:'Russian Twist',detail:'3×15 each',desc:'Seated rotation with feet off floor. Control the spine.',cue:'Rotate from thoracic, not just arms. Slow and deliberate.',weighted:false,tags:['rotation']},
+    {name:'Pallof Press with Rotation',detail:'3×10 each',desc:'Press out, rotate, return. Progressive anti-rotation challenge.',cue:'Keep arms straight throughout. Small rotation. This is difficult.',weighted:false,tags:['anti-rotation','rotation']},
+    // ── HANGING CORE — Sean Kao, Dan Daly ──
+    {name:'Hanging Leg Raise',detail:'3×10',desc:'Dead hang, raise straight legs to 90. High difficulty anti-extension.',cue:'No swinging. Slow down. Don\'t use momentum.',weighted:false,tags:['anti-extension']},
+    {name:'Hanging Knee Raise',detail:'3×12',desc:'Dead hang, pull knees to chest. Scaled version of leg raise.',cue:'Control the swing. Core compression in lengthened-lat position.',weighted:false,tags:['anti-extension']},
+    {name:'Toes to Bar',detail:'3×8',desc:'Dead hang, raise toes to bar. Extreme core demand.',cue:'Hollow body position. Slow down. No kipping.',weighted:false,tags:['anti-extension']},
+    // ── ISOMETRIC L-SIT / V-SIT — Ross Edgley, Dan Daly ──
+    {name:'L-Sit',detail:'3×15s',desc:'Parallel bars or floor, legs parallel to ground — compressed streamline position.',cue:'Press down through hands. Legs absolutely straight. Streamline position from a different angle.',weighted:false,tags:['anti-extension']},
+    {name:'V-Sit',detail:'3×10s',desc:'Sit with legs and torso at V angle — Ross Edgley. High core demand.',cue:'Legs and chest both up. Arms alongside. Advanced.',weighted:false,tags:['anti-extension']},
+    // ── POSTERIOR CHAIN CORE — often missed ──
+    {name:'Bird Dog',detail:'3×10 each',desc:'Quadruped, extend opposite arm and leg. Lumbar stability foundation.',cue:'Level hips. Don\'t rotate. Slow and deliberate. Pause at extension.',weighted:false,tags:['anti-extension']},
+    {name:'Superman Hold',detail:'3×10s each',desc:'Prone, lift arm and opposite leg. Lumbar extensor endurance.',cue:'Hold 10 seconds each side. No jerking.',weighted:false,tags:['anti-extension']},
+    {name:'Back Extension',detail:'3×12',desc:'GHD or hyperextension bench — lumbar + glute endurance.',cue:'Control the eccentric. Don\'t hyperextend at top.',weighted:false,tags:['anti-extension']},
+    {name:'Stir the Pot',detail:'3×10 each',desc:'Forearms on Swiss ball, make small circles — isometric with instability.',cue:'Pelvis neutral throughout. SMALL circles.',weighted:false,tags:['anti-extension']},
+    // ── TURKISH GET-UP — Dan Daly signature ──
+    {name:'Turkish Get-Up',detail:'3×3 each',desc:'From floor to standing holding KB overhead — Dan Daly full-body coordination + shoulder stability.',cue:'Eyes on the bell throughout. Every step deliberate. Most complete exercise there is.',weighted:false,tags:['rotation','anti-extension']},
   ],
   mobility:[
-    {name:'Couch Stretch',detail:'2×90s each',desc:'Rear foot on wall in lunge, squeeze back glute.',cue:'No lower back arch. Tuck pelvis under.',weighted:false},
-    {name:'Pigeon Pose',detail:'2×90s each',desc:'Front shin across mat, lower to forearms.',cue:'Square hips. Breathe and relax.',weighted:false},
-    {name:'Doorway Chest Stretch',detail:'2×60s',desc:'Arm at 90 against doorframe, lean through.',cue:'Feel stretch across chest and front shoulder.',weighted:false},
-    {name:'Lat Stretch on Bar',detail:'2×60s each',desc:'Hang from bar, shift hips to stretch one lat.',cue:'Tight lats kill your streamline.',weighted:false},
-    {name:'Foam Roll Thoracic',detail:'3min',desc:'Foam roller across upper back, extend over it.',cue:'Slow. Pause on tight spots.',weighted:false},
-    {name:'Ankle Mobility',detail:'2×20 each',desc:'Knee-to-wall drill, ankle circles, calf stretch.',cue:'More ankle mobility = better dolphin kick.',weighted:false},
-    {name:'Shoulder Sleeper Stretch',detail:'2×60s each',desc:'Side-lying, arm across body, gentle press.',cue:'Gentle only. Prevents shoulder injuries.',weighted:false},
-    {name:'Hip Flexor Lunge',detail:'2×60s each',desc:'Deep lunge, arms overhead, slight back lean.',cue:'Feel stretch in front of rear hip.',weighted:false},
+    // ── HIP COMPLEX — most coaches rate this as primary limiter ──
+    {name:'Couch Stretch',detail:'2×90s each',desc:'Rear foot on wall in lunge — hip flexor length. All coaches.',cue:'No lower back arch. Tuck pelvis under. Breathe into it.',weighted:false},
+    {name:'Pigeon Pose',detail:'2×90s each',desc:'Front shin across mat — piriformis and external rotator release.',cue:'Square hips. Lower to forearms. Breathe and relax.',weighted:false},
+    {name:'90/90 Hip Stretch',detail:'2×90s each',desc:'Both legs at 90 degrees — targets internal and external rotation simultaneously.',cue:'Drive front shin into floor. Sit tall. Breathe.',weighted:false},
+    {name:'Hip Flexor Lunge',detail:'2×60s each',desc:'Deep lunge, arms overhead — hip flexor + thoracic extension.',cue:'Feel the stretch in front of the rear hip. Slight back lean.',weighted:false},
+    {name:'Hip 90/90 Active Rotations',detail:'2×10 each',desc:'Active 90/90 — rotate front and back shin to ground. Not static.',cue:'Controlled movement. Tall spine. Let hips move through full range.',weighted:false},
+    {name:'Banded Hip Distraction',detail:'2×90s each',desc:'Band around hip crease — adds joint distraction for greater ROM.',cue:'Move into the bind. More effective than static stretch alone.',weighted:false},
+    {name:'World\'s Greatest Stretch',detail:'2×8 each',desc:'Lunge + thoracic rotation + hamstring reach — Dan Daly and Ross Edgley.',cue:'Elbow to floor, rotate open. Three movements in one. Slow.',weighted:false},
+    {name:'Lateral Lunge Stretch',detail:'2×8 each',desc:'Deep lateral lunge with slow sink and shift. Adductor and hip complex.',cue:'Long stride. Sink into hip. Push through at end range.',weighted:false},
+    // ── THORACIC SPINE — prerequisite for overhead and stroke mechanics ──
+    {name:'Foam Roll Thoracic',detail:'3min',desc:'Foam roller across upper back — thoracic extension. Dan Daly essential.',cue:'Slow. Pause on tight spots. Arms crossed or overhead.',weighted:false},
+    {name:'Thoracic Rotations Quadruped',detail:'2×10 each',desc:'Quadruped, hand behind head, rotate open.',cue:'Breathe into the rotation. Reach elbow to ceiling. Fly power lives here.',weighted:false},
+    {name:'Thread the Needle',detail:'2×60s each',desc:'Quadruped, reach arm under body — thoracic rotation.',cue:'Follow your hand with your eyes. Let the thoracic move.',weighted:false},
+    {name:'Open Book',detail:'2×10 each',desc:'Side-lying thoracic rotation — controlled and safe.',cue:'Knees stay stacked. Only the thoracic rotates. Arm sweeps to floor.',weighted:false},
+    // ── SHOULDER / POSTERIOR CAPSULE ──
+    {name:'Shoulder Sleeper Stretch',detail:'2×60s each',desc:'Side-lying, arm across body — posterior capsule release.',cue:'Gentle press only. Prevents shoulder injuries.',weighted:false},
+    {name:'Doorway Chest Stretch',detail:'2×60s each',desc:'Arm at 90 against doorframe — anterior shoulder and pec.',cue:'Feel stretch across chest and front shoulder. Not the bicep.',weighted:false},
+    {name:'Pec Minor Stretch',detail:'2×60s each',desc:'Arm at 90 on wall, step through and rotate chest open.',cue:'Feel the FRONT of the shoulder, not just the chest.',weighted:false},
+    {name:'Lat Stretch on Bar',detail:'2×60s each',desc:'Hang and shift hips — lat lengthening. Tight lats kill your streamline.',cue:'Shift hips one way and breathe into the stretch.',weighted:false},
+    {name:'Downward Dog Hold',detail:'2×45s',desc:'Active downward dog — serratus and shoulder girdle active stretch.',cue:'Push floor away. Scapula upward rotation. Active, not passive.',weighted:false},
+    {name:'Child\'s Pose Lat Reach',detail:'2×60s each',desc:'Child\'s pose, walk hands to each side.',cue:'Drop chest to floor. Breathe into the lat.',weighted:false},
+    // ── ANKLE — most overlooked limiter per Dan Daly (50-70° plantar flexion needed) ──
+    {name:'Ankle Mobility Drill',detail:'2×20 each',desc:'Knee-to-wall, ankle circles, calf stretch — plantar flexion range.',cue:'More ankle mobility = more kick propulsion. Non-negotiable.',weighted:false},
+    {name:'Ankle Circles Active',detail:'2×15 each direction',desc:'Active ankle circles — full plantar and dorsiflexion range.',cue:'Make the biggest circles you can. Every direction.',weighted:false},
+    {name:'Calf Smash on Roller',detail:'2min per leg',desc:'Foam roll the calf — gastrocnemius and soleus.',cue:'Work the full length. Pause on tight spots.',weighted:false},
+    // ── HAMSTRING AND POSTERIOR CHAIN ──
+    {name:'Active Straight-Leg Raise',detail:'2×10 each',desc:'Supine, raise one leg as high as possible without pelvis tilting.',cue:'Lower back stays flat. Raise the LEG not the pelvis.',weighted:false},
+    {name:'Seated Hamstring Floss',detail:'2×30s each',desc:'Long sit, reach forward on exhale, relax on inhale.',cue:'Breath drives the stretch. Not force.',weighted:false},
+    {name:'90/90 Hamstring Stretch',detail:'2×60s each',desc:'On back, leg at 90 — contract and relax for PNF effect.',cue:'Flex hamstring against hand for 6s. Relax. Reach further.',weighted:false},
   ],
   cardio:[
-    {name:'Sprint Intervals',detail:'8×40m at 95%+',desc:'8 sprints at 95%+ with full 90s+ recovery.',cue:'Each one like a race. Quality over quantity.',weighted:false},
-    {name:'Assault Bike',detail:'10×20s max/40s rest',desc:'20s absolute max effort, 40s complete rest.',cue:'Every interval is MAX.',weighted:false},
-    {name:'Sled Push',detail:'6×20m',desc:'Load sled, drive hard for 20m, rest 90s.',cue:'Forward lean, drive knees, full extension.',weighted:false},
-    {name:'Jump Rope',detail:'5×2min/30s rest',desc:'5 rounds of 2 minutes continuous.',cue:'Light on feet. Builds ankle stiffness.',weighted:false},
+    {name:'Sprint Intervals',detail:'8×40m at 95%+',desc:'8 sprints at 95%+ effort with 90s+ full recovery.',cue:'Each one like a race start. Quality not quantity.',weighted:false},
+    {name:'Assault Bike Intervals',detail:'10×20s max/40s rest',desc:'20s absolute maximum effort, 40s complete rest.',cue:'Every interval is MAX. If it doesn\'t hurt it doesn\'t count.',weighted:false},
+    {name:'Sled Push',detail:'6×20m',desc:'Drive sled for 20m — power endurance. Low spinal load.',cue:'Forward lean. Drive knees. Full leg extension each step.',weighted:false},
+    {name:'Jump Rope',detail:'5×2min/30s rest',desc:'5 rounds continuous — ankle stiffness and conditioning.',cue:'Light on feet. Minimal wrist movement. Ankle-driven.',weighted:false},
+    {name:'Zone 2 Cycling',detail:'30-45min 120-135bpm',desc:'Ross Edgley: polarised training demands true Zone 2. Aerobic base outside the pool.',cue:'If you can\'t hold a conversation you\'re too hard. 120-135bpm. Not a workout.',weighted:false},
+    {name:'Rowing Intervals',detail:'6×500m/2min rest',desc:'Rowing machine intervals — hip hinge endurance under load.',cue:'Drive from legs. Lean back slightly. Arms last.',weighted:false},
+    {name:'Stair Climb',detail:'4×5min steady',desc:'Stair climber or actual stairs — sustained lower body endurance.',cue:'Full step. Don\'t grip the rails. Upright posture.',weighted:false},
   ],
 };
 
@@ -2936,20 +3104,79 @@ function getStrokeProfile(){
 
 // Exercise equipment requirements: 'bw'=bodyweight, 'minimal'=bands/bar, 'gym'=barbell/cable/machine
 const EX_EQUIP={
-  'Back Squat':'gym','Romanian Deadlift':'gym','Bulgarian Split Squat':'gym',
-  'Hip Thrust':'gym','Goblet Squat':'minimal','Single-Leg RDL':'minimal',
-  'Step-Ups':'minimal','Nordic Ham Curls':'bw',
-  'Pull-Ups':'minimal','Seated Cable Row':'gym','Incline DB Press':'gym',
-  'Lat Pulldown':'gym','Single-Arm DB Row':'gym','Landmine Press':'gym',
-  'Tricep Pushdown':'gym','Face Pulls':'gym','Prone Y-T-W':'minimal',
-  'Hollow Body Pull':'minimal',
-  'Box Jumps':'minimal','Broad Jumps':'bw','Depth Jumps':'minimal',
-  'Bounding':'bw','Tuck Jumps':'bw','Med Ball Slam':'minimal',
-  'Med Ball Chest Pass':'minimal','Jump Squat':'bw','Lateral Bounds':'bw',
-  'Clap Push-Ups':'bw',
-  'Dead Bug':'bw','Hollow Body Hold':'bw','Pallof Press':'gym',
-  'Ab Wheel Rollout':'minimal','Hanging Leg Raise':'minimal',
-  'Plank':'bw','Side Plank':'bw',
+  // ── WARMUP ──
+  'Arm Circles':'bw','Hip Circles':'bw','Leg Swings':'bw','Inchworms':'bw',
+  'Thoracic Rotations':'bw','Scapular Wall Slides':'bw','Dead Hang':'minimal',
+  'Downward Dog Active':'bw','Bear Crawl':'bw','Band Pull-Aparts':'minimal',
+  'Y-Raises Prone':'bw','Cat-Cow':'bw','Hip 90/90 Rotations':'bw',
+  'Scapular Pull-Ups':'minimal',
+  // ── LOWER — squat ──
+  'Back Squat':'gym','Box Squat':'gym','Front Squat':'gym','Goblet Squat':'minimal',
+  'Pause Squat':'gym','Zercher Squat':'gym',
+  // ── LOWER — hinge ──
+  'Romanian Deadlift':'gym','Trap Bar Deadlift':'gym','Conventional Deadlift':'gym',
+  'Sumo Deadlift':'gym','Hip Thrust':'gym','Single-Leg Hip Thrust':'minimal',
+  'Good Mornings':'gym','Glute Bridge':'bw','Nordic Ham Curls':'bw',
+  'Glute-Ham Raise':'gym','Kettlebell Swing':'minimal','Kettlebell Single-Arm Swing':'minimal',
+  'Hang Power Clean':'gym','Clean and Press':'gym',
+  // ── LOWER — single-leg ──
+  'Bulgarian Split Squat':'gym','Single-Leg RDL':'minimal','Step-Ups':'minimal',
+  'Lateral Step-Up':'minimal','Reverse Lunge':'minimal','Lateral Lunge':'minimal',
+  'Walking Lunge':'minimal','Copenhagen Plank':'bw','Duck Walk':'bw',
+  'Sled Push':'gym','Sled Drag':'gym',
+  // ── UPPER — vertical pull ──
+  'Pull-Ups':'minimal','Weighted Pull-Ups':'minimal','Chin-Ups':'minimal',
+  'Neutral-Grip Pull-Ups':'minimal','Lat Pulldown':'gym','Close-Grip Pulldown':'gym',
+  'Hollow Body Pull':'minimal','Scapular Pull-Ups':'minimal',
+  // ── UPPER — horizontal pull ──
+  'Seated Cable Row':'gym','Single-Arm DB Row':'minimal','Barbell Row':'gym',
+  'Chest-Supported Row':'minimal','TRX/Ring Row':'minimal','Inverted Row':'minimal',
+  // ── UPPER — shoulder health ──
+  'Face Pulls':'gym','Y-Raises':'bw','T-Raises':'bw','W-Raises':'bw',
+  'Prone Y-T-W Combined':'minimal','Prone Blackburn':'bw',
+  'External Rotation 90/90':'minimal','External Rotation Standing':'minimal',
+  // ── UPPER — push ──
+  'Incline DB Press':'gym','DB Floor Press':'minimal','Landmine Press':'gym',
+  'DB Shoulder Press':'minimal','Push-Up Variations':'bw','Dips':'minimal',
+  'Bench Press':'gym',
+  // ── UPPER — carries / accessory ──
+  'Overhead Carry':'minimal','Suitcase Carry':'minimal',
+  'Tricep Pushdown':'gym','Hammer Curl':'minimal','Rope Climb':'minimal',
+  // ── PLYOS — lower ──
+  'Countermovement Jump':'bw','Non-Countermovement Jump':'bw',
+  'Box Jumps':'minimal','Single-Leg Box Jump':'minimal',
+  'Depth Jump':'minimal','Depth Drop':'minimal',
+  'Broad Jump':'bw','Bounding':'bw','Lateral Bounds':'bw',
+  'Tuck Jumps':'bw','Split Jump':'bw','Hurdle Hops':'minimal',
+  'Pogo Jumps':'bw','Speed Skaters':'bw',
+  'Streamline Jump Squat':'bw','Single-Leg Streamline Jump':'bw',
+  // ── PLYOS — upper power ──
+  'Med Ball Chest Pass':'minimal','Med Ball Overhead Throw':'minimal',
+  'Med Ball Slam':'minimal','Rotational Med Ball Throw':'minimal',
+  'Med Ball Hip Toss':'minimal','Plyo Push-Ups':'bw','Clap Push-Ups':'bw',
+  // ── PLYOS — GPP ──
+  'Bear Crawl Circuit':'bw',"Farmer's Walk":'minimal',
+  'Sandbag Carry':'minimal','Battle Rope Waves':'gym','Sled Push Sprint':'gym',
+  // ── CORE ──
+  'Dead Bug':'bw','Dead Bug with Band':'minimal','Hollow Body Hold':'bw',
+  'Hollow Body Rock':'bw','Ab Wheel Rollout':'minimal','Barbell Rollout':'gym',
+  'RKC Plank':'bw','Plank':'bw','Plank Feet Elevated':'minimal',
+  'Dragon Flag':'minimal','Pallof Press':'gym','Pallof Press Band':'minimal',
+  'Pallof Hold':'gym','Pallof Press with Rotation':'gym',
+  'Single-Arm Plank':'bw','Copenhagen Plank':'bw','Side Plank':'bw',
+  'Side Plank Hip Abduction':'bw','Side Plank Reach-Through':'bw',
+  'Suitcase Deadlift':'minimal','Cable Woodchop':'gym','Cable Lift':'gym',
+  'Landmine Rotation':'gym','Russian Twist':'minimal',
+  'Hanging Leg Raise':'minimal','Hanging Knee Raise':'minimal',
+  'Toes to Bar':'minimal','L-Sit':'bw','V-Sit':'bw',
+  'Bird Dog':'bw','Superman Hold':'bw','Back Extension':'gym',
+  'Stir the Pot':'minimal','Turkish Get-Up':'minimal',
+  'Copenhagen Adductor':'minimal',
+  // ── CARDIO ──
+  'Sprint Intervals':'bw','Assault Bike Intervals':'gym','Sled Push':'gym',
+  'Jump Rope':'minimal','Zone 2 Cycling':'gym','Rowing Intervals':'gym',
+  'Stair Climb':'gym',
+  // ── MOBILITY (all bodyweight unless noted) ──
 };
 const EQUIP_RANK={gym:3,minimal:2,bw:1,bodyweight:1};
 function equipOk(exName){
@@ -3126,6 +3353,7 @@ function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTape
   if(sectionType==='lower'){
     const suppress=new Set(f.lowerSuppress||[]);
     const mandatory=(f.lowerMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
+    markSessionUsed(mandatory); // lock mandatories into session so they don't repeat on regenerate
     const priorityTags=new Set(f.lowerPriority||[]);
     const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
     const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
@@ -3138,6 +3366,7 @@ function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTape
   if(sectionType==='upper'){
     const suppress=new Set(f.upperSuppress||[]);
     const mandatory=(f.upperMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
+    markSessionUsed(mandatory); // lock mandatories into session so they don't repeat on regenerate
     const priorityTags=new Set(f.upperPriority||[]);
     const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
     const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
@@ -3314,6 +3543,7 @@ function showTempoInfo(tempo){
 }
 
 function generateWorkout(forceType){
+  clearSessionUsed(); // fresh generation — guarantee different exercises from previous run
   const phase=getPhase(S.programWeek);
   const mult=getLoadMult();
   const load=getLoadDesc(mult);
@@ -3855,6 +4085,7 @@ function confirmDeactivate(){
 }
 
 function generateGoalWorkout(forceType){
+  clearSessionUsed(); // fresh generation — guarantee different exercises from previous run
   const gp=S.goalProgram;
   const meet=gp?S.meets.find(m=>String(m.id)===String(gp.meetId)):null;
   const weeks=meet?weeksToMeet(meet):S.programWeek;
@@ -6410,6 +6641,7 @@ function activateOffSeasonFromCard(){
 
 // ── Off-Season Workout Generation ──
 function generateOffSeasonWorkout(forceType){
+  clearSessionUsed(); // fresh generation — guarantee different exercises from previous run
   const ph=getCurrentOffSeasonPhase();
   const dayType=forceType||getOffSeasonDayType()||'lower';
   const sp=getStrokeProfile();
