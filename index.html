@@ -2695,12 +2695,23 @@ function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
 // Get the 1RM lift config for a given exercise name
 function getLiftFor(exName){return ONE_RM_LIFTS.find(l=>l.exNames.includes(exName))||null;}
 // Get target kg for an exercise given current phase
-function getTargetKg(exName,phaseName){
+// Get target kg for an exercise — applies phase %, week-in-block loading, and readiness multiplier.
+// This is the single source of truth for what weight to prescribe today.
+function getTargetKg(exName,phaseName,scheme){
   const lift=getLiftFor(exName);if(!lift)return null;
   const orm=S.oneRM[lift.key];if(!orm)return null;
-  const pct=lift.pcts[phaseName]||0.70;
+  const basePct=lift.pcts[phaseName]||0.70;
+  // Week-in-block load modifiers — matches the progressive overload intent of getScheme()
+  const wib=scheme?scheme.weekInBlock:(weekInBlock());
+  const wibMod=[0.90,1.00,1.05,0.60]; // W1 intro, W2 standard, W3 peak, W4 deload
+  const weekMod=wibMod[(wib-1)||0];
+  // Readiness multiplier — never push heavy on a bad readiness day
+  const readinessMod=getLoadMult();
+  // On deload, ignore readiness bonus — floor is already set by wibMod
+  const effectiveMod=scheme&&scheme.isDeload?weekMod:weekMod*readinessMod;
+  const finalPct=Math.min(basePct*effectiveMod,basePct*1.05); // cap at 5% over base phase pct
   // Round to nearest 2.5kg
-  return Math.round(orm*pct/2.5)*2.5;
+  return Math.round(orm*finalPct/2.5)*2.5;
 }
 // Weeks since 1RM was set
 function weeksSinceRM(){
@@ -3061,12 +3072,114 @@ function getTodayDrylandType(){
   // Swim-only day — use day-of-week default for dryland type but flag as optional
   return getDayType(today.getDay());
 }
+// ── Week-in-block tracker ──
+// Returns 1-4 representing position within current 4-week mesocycle.
+// Week 4 is always a deload regardless of phase.
+// Uses programWeek and phase boundaries from getPhase().
+function weekInBlock(){
+  const w=S.programWeek||1;
+  const c=S.programCycle||1;
+  let phaseStart=1;
+  // Mirror the phase boundaries in getPhase() to find where this phase starts
+  if(c===1){
+    if(w<=4)phaseStart=1;
+    else if(w<=8)phaseStart=5;
+    else if(w<=12)phaseStart=9;
+    else phaseStart=13;
+  } else if(c===2){
+    if(w<=2)phaseStart=1;
+    else if(w<=7)phaseStart=3;
+    else if(w<=12)phaseStart=8;
+    else phaseStart=13;
+  } else {
+    if(w<=2)phaseStart=1;
+    else if(w<=6)phaseStart=3;
+    else if(w<=13)phaseStart=7;
+    else phaseStart=14;
+  }
+  return Math.max(1,Math.min(4,(w-phaseStart)%4+1));
+}
+
+// ── Intra-block scheme progression ──
+// Week 1: Introduction (lighter, more reps — neural prep)
+// Week 2: Build (standard loading)
+// Week 3: Peak (heaviest week — maximum stimulus)
+// Week 4: Deload (mandatory recovery — supercompensation happens here)
 function getScheme(phaseName,mult){
-  const b={GPP:{sets:3,reps:'12-15',pct:'60-70%'},Strength:{sets:4,reps:'4-6',pct:'80-90%'},Power:{sets:4,reps:'5-6',pct:'explosive'},Taper:{sets:3,reps:'4-5',pct:'75%'}};
-  const s={...b[phaseName]||b.GPP,phase:phaseName};
-  if(mult<0.7){s.sets=Math.max(2,s.sets-1);s.note='⚠️ Reduced load.';}
-  else if(mult>1.15){s.sets=s.sets+1;s.note='🔥 Extra set — you\'re fresh.';}
+  const wib=weekInBlock();
+  const isDeload=wib===4;
+  const isPeak=wib===3;
+  // Base schemes — each phase has its own loading target
+  const b={
+    GPP:    {sets:3,reps:'12-15',pct:'60-70%',weekReps:['14-15','12-13','10-12','15-20']},
+    Strength:{sets:4,reps:'4-6', pct:'80-90%',weekReps:['6-8','4-6','3-5','8-10']},
+    Power:   {sets:4,reps:'3-5', pct:'explosive',weekReps:['5-6','4-5','3-4','6-8']},
+    Taper:   {sets:3,reps:'4-5', pct:'75%',weekReps:['5-6','4-5','4-5','6-8']},
+  };
+  const base=b[phaseName]||b.GPP;
+  const s={...base,reps:base.weekReps[wib-1]||base.reps,phase:phaseName,weekInBlock:wib,isDeload,isPeak};
+  // Deload: cut sets by 1, drop load ~40%
+  if(isDeload){
+    s.sets=Math.max(2,base.sets-1);
+    s.note='♻️ Deload week — active recovery. Lower load, quality reps.';
+    s.deloadMult=0.6; // signals getTargetKg to cut weight
+  }
+  // Peak: optional extra set on good readiness
+  if(isPeak&&mult>=1.0){s.sets=base.sets+1;s.peakBonus=true;}
+  // Readiness modifiers ON TOP of week structure
+  if(mult<0.7&&!isDeload){s.sets=Math.max(2,s.sets-1);s.note='⚠️ Reduced load — recovery day.';}
+  else if(mult>1.15&&!isDeload&&!isPeak){s.sets=s.sets+1;s.note='🔥 Extra set — you\'re fresh.';}
   return s;
+}
+
+// ── Adaptive pattern detection ──
+// Analyses recent history for stall patterns, RPE trends, completion rates
+function getAdaptiveFlags(){
+  const flags=[];
+  const hist=S.history||[];
+  const rpeLog=S.sessionRPELog||[];
+  if(hist.length<3)return flags;
+
+  // 1) RPE trend — consistently high means accumulated fatigue
+  const recentRPE=rpeLog.slice(-5).map(r=>r.rpe);
+  if(recentRPE.length>=3){
+    const avgRPE=recentRPE.reduce((a,b)=>a+b,0)/recentRPE.length;
+    if(avgRPE>=8.5)flags.push({type:'fatigue',icon:'😴',msg:`Avg RPE ${avgRPE.toFixed(1)} over last ${recentRPE.length} sessions. Your body is signalling accumulated fatigue. Deload week or extra sleep urgently needed.`,urgency:'red'});
+    else if(avgRPE<=5.5&&recentRPE.length>=4)flags.push({type:'undertrained',icon:'📈',msg:`RPE averaging ${avgRPE.toFixed(1)} — sessions feel too easy. Time to increase load or intensity.`,urgency:'orange'});
+  }
+
+  // 2) Completion rate — consistently bailing on sets
+  const recentSessions=hist.slice(-4);
+  // We can't measure completion rate directly, but we can flag low-RPE + many sessions
+  // as a sign the swimmer is coasting
+
+  // 3) Weight stagnation per lift — no improvement in 3+ sessions
+  ONE_RM_LIFTS.forEach(lift=>{
+    const logs=[];
+    hist.slice(-8).forEach(h=>{
+      (h.blocks||[]).forEach(b=>{
+        b.exercises.forEach(ex=>{
+          if(lift.exNames.includes(ex.name)&&ex._log&&ex._log.length){
+            const maxW=Math.max(...ex._log.map(s=>s.weight||0));
+            if(maxW>0)logs.push(maxW);
+          }
+        });
+      });
+    });
+    // Also check the exercise log directly
+    const logKey='log_'+lift.exNames[0];
+    const exLog=DB.get(logKey,[]);
+    if(exLog.length>=3){
+      const recent=exLog.slice(-4);
+      const weights=recent.map(session=>session.sets?Math.max(...session.sets.map(s=>s.weight||0)):0).filter(w=>w>0);
+      if(weights.length>=3){
+        const allSame=weights.every(w=>Math.abs(w-weights[0])<1.0);
+        if(allSame)flags.push({type:'stall',icon:'📊',liftKey:lift.key,liftLabel:lift.label,msg:`${lift.label} hasn't moved in ${weights.length} sessions. If reps are all hitting, bump weight by 2.5${S.useKg?'kg':'lb'}.`,urgency:'orange'});
+      }
+    }
+  });
+
+  return flags;
 }
 
 // Adaptive emphasis from gaps
@@ -3658,17 +3771,32 @@ function buildCard(ex,bi,ei,scheme){
   const ns=ex.sets||((!ex.weighted&&!ex.logReps)?parseSetsFromDetail(ex.detail)||scheme.sets:scheme.sets);
   const last=ex.weighted?getLastLog(ex.name):null;
   const sugg=ex.weighted?suggestWeight(ex.name,scheme.reps):null;
-  const rmTarget=ex.weighted?getTargetKg(ex.name,scheme.phase):null;
+  // Pass full scheme so getTargetKg can apply week-in-block modifier + readiness
+  const rmTarget=ex.weighted?getTargetKg(ex.name,scheme.phase,scheme):null;
+  // Stall detection — flag if weight hasn't moved in 3+ consecutive sessions
+  const stallFlag=(()=>{
+    if(!ex.weighted)return false;
+    const logs=S.weightLog[ex.name];
+    if(!logs||logs.length<3)return false;
+    const recent=logs.slice(-4);
+    const weights=recent.map(l=>l.sets&&l.sets[0]?l.sets[0].weight:0).filter(w=>w>0);
+    if(weights.length<3)return false;
+    return weights.slice(-3).every(w=>Math.abs(w-weights[weights.length-1])<1.0);
+  })();
   let lastHtml='';
   if(last){
     const ds=new Date(last.date).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
     const setsStr=last.sets.map((s,i)=>`S${i+1} ${s.weight?dW(s.weight).toFixed(1)+uL():'BW'}×${s.reps||'?'}`).join(' · ');
     const targStr=sugg?` &nbsp;<span style="color:var(--green);font-weight:700;">${sugg.progressed?'↑':'→'} ${dW(sugg.kg).toFixed(1)}${uL()}</span>`:'';
-    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}</div>`;
+    const stallHtml=stallFlag?` <span style="color:var(--orange);font-size:10px;font-weight:700;" title="Weight stagnant — consider increasing load">⚡ Stuck?</span>`:'';
+    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}${stallHtml}</div>`;
   } else if(rmTarget){
     const lift=getLiftFor(ex.name);
-    const pct=lift?Math.round((lift.pcts[scheme.phase]||0.70)*100):70;
-    lastHtml=`<div class="ex-last">🎯 Start here: <b style="color:var(--accent);">${dW(rmTarget).toFixed(1)} ${uL()}</b> <span style="color:var(--muted);font-size:10px;">(${pct}% of your 1RM)</span></div>`;
+    const wib=scheme.weekInBlock||weekInBlock();
+    const wibLabel=['Intro','Build','Peak','Deload'][wib-1]||'';
+    const wibColor=scheme.isDeload?'var(--muted)':scheme.isPeak?'var(--red)':'var(--accent)';
+    const wibNote=wibLabel?` <span style="font-size:10px;color:${wibColor};font-weight:700;">[${wibLabel} wk]</span>`:'';
+    lastHtml=`<div class="ex-last">🎯 Start here: <b style="color:var(--accent);">${dW(rmTarget).toFixed(1)} ${uL()}</b>${wibNote}</div>`;
   }
   // Bug fix: for weighted exercises with a custom detail (e.g. Face Pulls "3×20 light"),
   // extract the rep count from ex.detail rather than always falling back to scheme.reps.
@@ -4570,6 +4698,16 @@ function renderWorkout(w){
   }
   if(w.isGoal&&w.goals&&w.goals.length)html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Goal Program:</strong> ${w.goals.slice(0,2).join(' · ')}</div>`;
   else if(w.emp!=='balanced')html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--purple);color:var(--text);">🎯 <strong style="color:var(--purple);">Adaptive focus:</strong> ${w.emp==='fly'?'Butterfly pull & power':'Freestyle speed'}</div>`;
+  // Week-in-block banner — tells the swimmer exactly where they are in the mesocycle
+  const _wib=w.scheme&&w.scheme.weekInBlock?w.scheme.weekInBlock:weekInBlock();
+  const _wibLabels=['Intro Week','Build Week','Peak Week 🔥','Deload Week ♻️'];
+  const _wibDescs=['Establishing movement patterns. Keep technique sharp.',
+    'Progressive load increase. Push past last week.',
+    'Heaviest week of the block. Maximum stimulus.',
+    'Active recovery. Lower load, quality reps. Adaptation happens NOW.'];
+  const _wibColors=['var(--muted)','var(--accent)','var(--red)','var(--green)'];
+  const _wibBg=['rgba(255,255,255,0.04)','rgba(0,198,255,0.08)','rgba(255,56,56,0.08)','rgba(0,230,118,0.08)'];
+  html+=`<div class="alert-banner" style="background:${_wibBg[_wib-1]};border:1px solid ${_wibColors[_wib-1]};color:var(--text);">📅 <strong style="color:${_wibColors[_wib-1]};">Block Wk ${_wib}/4 — ${_wibLabels[_wib-1]}</strong><span style="color:var(--muted);"> · ${_wibDescs[_wib-1]}</span></div>`;
   html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--accent);color:var(--text);">📊 <strong style="color:var(--accent);">${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?'<span style="color:var(--muted);"> · '+w.scheme.note+'</span>':''}</div>`;
   if(w.schedNote)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:5px 8px;background:var(--surface);border-radius:6px;">📅 Session type: <b style="color:var(--text);">${w.schedNote}</b></div>`;
   if(w.doubleDayNote)html+=`<div style="font-size:11px;color:var(--gold);margin-bottom:8px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);">⚡ ${w.doubleDayNote}</div>`;
@@ -4657,6 +4795,34 @@ function confirmSession(){
     DB.set('mobilityLog',S.mobilityLog);
   }
   DB.set('sessionRPELog',S.sessionRPELog);
+  // ── Auto 1RM update from this session's logged sets ──
+  // For each weighted exercise where the user logged data, check if they hit all reps
+  // at a given weight. If so, recalculate 1RM via Epley and update. No user action needed.
+  let oneRMUpdated=false;
+  w.blocks.forEach(block=>{
+    block.exercises.forEach(ex=>{
+      if(!ex.weighted)return;
+      const lift=getLiftFor(ex.name);if(!lift)return;
+      const log=getLastLog(ex.name);if(!log||!log.sets||!log.sets.length)return;
+      const targetReps=parseInt((w.scheme&&w.scheme.reps||'5').split('-')[0]);
+      // Check: did they complete ALL sets at or above target reps with a non-zero weight?
+      const completeSets=log.sets.filter(s=>s.weight>0&&parseInt(s.reps||'0')>=targetReps);
+      if(completeSets.length===0)return;
+      // Use the heaviest completed set to estimate 1RM
+      const heaviest=completeSets.reduce((best,s)=>s.weight>best.weight?s:best,completeSets[0]);
+      const newORM=epley(heaviest.weight,parseInt(heaviest.reps));
+      const existing=S.oneRM[lift.key]||0;
+      // Only update upward — never reduce 1RM from a single session (could be a bad day)
+      if(newORM>existing*1.005){ // must be >0.5% improvement to trigger update
+        S.oneRM[lift.key]=Math.round(newORM*10)/10;
+        oneRMUpdated=true;
+      }
+    });
+  });
+  if(oneRMUpdated){
+    S.oneRMDate=new Date().toISOString();
+    DB.set('oneRM',S.oneRM);DB.set('oneRMDate',S.oneRMDate);
+  }
   // Save session to history (with rpe)
   S.history.push({...w,date:new Date().toISOString(),rpe});DB.set('history',S.history);
   if(S.history.length%3===0){
@@ -4914,11 +5080,18 @@ function renderTimesContent(){
     }
     // Training guidance — uses shared avgRPE/hasDryland/recentKm from outer scope
     const guidanceTips=[];
+    // ── Adaptive pattern flags (strength progression, fatigue, stalls) ──
+    const adaptiveFlags=getAdaptiveFlags();
+    adaptiveFlags.forEach(f=>guidanceTips.push({icon:f.icon,tip:f.msg,urgency:f.urgency}));
+    // ── Week-in-block awareness ──
+    const wib=weekInBlock();
+    if(wib===4)guidanceTips.push({icon:'♻️',tip:'This is your deload week. Load is intentionally reduced. Resist the urge to push harder — this week is where adaptation from the last 3 weeks actually happens.',urgency:'green'});
+    else if(wib===3)guidanceTips.push({icon:'🔥',tip:'Peak week. This is your heaviest session of the block. If readiness is high, push every set — this stimulus drives the next 4 weeks of adaptation.',urgency:'orange'});
     if(gapLCM!==null&&gapLCM>0){
       if(rate!==null&&rate<0.05)guidanceTips.push({icon:'📈',tip:'Improvement rate is very low — check you\'re logging all races, not just PBs. If the data is accurate, the program needs a shakeup.',urgency:'red'});
       else if(rate!==null&&rate<0.2)guidanceTips.push({icon:'🔧',tip:`At ${rate.toFixed(2)}s/mo you have the trajectory — but need to accelerate. One more quality LCM race per block sharpens the trend line.`,urgency:'orange'});
-      if(avgRPE!==null&&avgRPE<6)guidanceTips.push({icon:'⚡',tip:`Avg session RPE is ${avgRPE.toFixed(1)}/10 — too comfortable for a ${gapLCM.toFixed(2)}s gap. Push harder in race-pace sets.`,urgency:'orange'});
-      if(avgRPE!==null&&avgRPE>8.5)guidanceTips.push({icon:'😴',tip:`RPE averaging ${avgRPE.toFixed(1)}/10 — deep in the red. Without proper recovery weeks adaptation stalls and times plateau.`,urgency:'orange'});
+      if(avgRPE!==null&&avgRPE<6&&!adaptiveFlags.find(f=>f.type==='undertrained'))guidanceTips.push({icon:'⚡',tip:`Avg session RPE is ${avgRPE.toFixed(1)}/10 — too comfortable for a ${gapLCM.toFixed(2)}s gap. Push harder in race-pace sets.`,urgency:'orange'});
+      if(avgRPE!==null&&avgRPE>8.5&&!adaptiveFlags.find(f=>f.type==='fatigue'))guidanceTips.push({icon:'😴',tip:`RPE averaging ${avgRPE.toFixed(1)}/10 — deep in the red. Without proper recovery weeks adaptation stalls and times plateau.`,urgency:'orange'});
       if(!hasDryland)guidanceTips.push({icon:'🏋️',tip:'No dryland logged in 4 weeks. Strength training drives starts, turns, and underwaters — the cheapest seconds available.',urgency:'orange'});
       if(recentKm>0&&recentKm<20)guidanceTips.push({icon:'🌊',tip:`Only ${recentKm.toFixed(1)} km in the pool this month. Volume underwrites speed — aerobic base needs to be there first.`,urgency:'red'});
       if(gapLCM<=1)guidanceTips.push({icon:'🎯',tip:`Only ${gapLCM.toFixed(2)}s to go. Close it with race-specific work: 2-3 race-pace reps per session, perfect taper execution, clean meet warm-up.`,urgency:'green'});
