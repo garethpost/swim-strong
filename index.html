@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 82</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 83</div>
       </div>
     </div>
 
@@ -3174,7 +3174,15 @@ let completedSets={};
 
 function buildCard(ex,bi,ei,scheme){
   const id=`ex-${bi}-${ei}`;
-  const ns=ex.sets||scheme.sets;
+  // For bodyweight exercises without an explicit sets property, extract set count from
+  // the detail string (e.g. "3×10 each" → 3, "2×20 each direction" → 2).
+  // Falls back to scheme.sets only if detail doesn't contain a set count.
+  function parseSetsFromDetail(detail){
+    if(!detail)return null;
+    const m=detail.match(/^(\d+)[×x]/);
+    return m?parseInt(m[1],10):null;
+  }
+  const ns=ex.sets||((!ex.weighted&&!ex.logReps)?parseSetsFromDetail(ex.detail)||scheme.sets:scheme.sets);
   const last=ex.weighted?getLastLog(ex.name):null;
   const sugg=ex.weighted?suggestWeight(ex.name,scheme.reps):null;
   const rmTarget=ex.weighted?getTargetKg(ex.name,scheme.phase):null;
