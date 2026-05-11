@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 86</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 88</div>
       </div>
     </div>
 
@@ -1982,24 +1982,53 @@ function setEquipmentMode(key){
 
 function pick(arr,n){return[...arr].sort(()=>Math.random()-0.5).slice(0,n);}
 
-// Session-level exclusion set — tracks exercises picked in the current generation run
-// Cleared at the start of each generateWorkout call so back-to-back generations differ
+// ── Exercise rotation tracking ──
+// Two layers of exclusion to guarantee variety:
+//
+// Layer 1 — _sessionUsed (in-memory, per-generate-call):
+//   Tracks every exercise picked in the CURRENT generation run.
+//   Cleared at the START of each generateWorkout call so re-generating gives a fresh draw.
+//   BUT — before clearing, the current set is saved to _lastGenerated so the NEXT
+//   generation can still avoid repeating what was just shown.
+//
+// Layer 2 — _lastGenerated (in-memory, persists across generate calls):
+//   Holds the exercises from the most recent completed generation.
+//   Survives the clearSessionUsed() call so re-generating always differs from what was shown.
+//   Cleared only when the athlete COMPLETES a workout (at that point history takes over).
+//
+// Layer 3 — S.history (persisted to DB):
+//   Last 4 saved sessions are excluded from tier-1 fresh picks.
+//   Extended from 2 to 4 so exercises stay out of rotation longer.
+
 let _sessionUsed=new Set();
-function clearSessionUsed(){_sessionUsed=new Set();}
+let _lastGenerated=new Set(); // persists across generate calls within the same day
+
+function clearSessionUsed(){
+  // Before wiping, carry the current session into _lastGenerated
+  // so the next generation avoids repeating what was just displayed
+  if(_sessionUsed.size>0)_lastGenerated=new Set(_sessionUsed);
+  _sessionUsed=new Set();
+}
 function markSessionUsed(exercises){exercises.forEach(e=>_sessionUsed.add(e.name));}
 
-// Rotation-aware pick — three tiers of freshness:
-//   1. Not used this session AND not in last 2 saved sessions (most fresh)
-//   2. Not used this session, but was in a recent saved session (ok)
-//   3. Already used in this session (last resort — only if pool is tiny)
+// Call this when a workout is actually completed — clears the last-generated cache
+// because history now covers it
+function clearLastGenerated(){_lastGenerated=new Set();}
+
+// Rotation-aware pick — four tiers of freshness:
+//   Tier 1 — not used this session, not last-generated, not in last 4 saved sessions
+//   Tier 2 — not used this session, not last-generated, but in a saved session
+//   Tier 3 — not used this session, was in last-generated (same block, different run)
+//   Tier 4 — already used this session (absolute last resort)
 function pickFresh(arr,n){
-  const recent=new Set((S.history.slice(-2)||[]).flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name))));
-  const tier1=arr.filter(e=>!_sessionUsed.has(e.name)&&!recent.has(e.name));
-  const tier2=arr.filter(e=>!_sessionUsed.has(e.name)&&recent.has(e.name));
-  const tier3=arr.filter(e=>_sessionUsed.has(e.name));
-  // Shuffle each tier independently, then concat
+  // Last 4 saved sessions (extended from 2 — wider exclusion window)
+  const recent=new Set((S.history.slice(-4)||[]).flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name))));
+  const tier1=arr.filter(e=>!_sessionUsed.has(e.name)&&!_lastGenerated.has(e.name)&&!recent.has(e.name));
+  const tier2=arr.filter(e=>!_sessionUsed.has(e.name)&&!_lastGenerated.has(e.name)&&recent.has(e.name));
+  const tier3=arr.filter(e=>!_sessionUsed.has(e.name)&&_lastGenerated.has(e.name));
+  const tier4=arr.filter(e=>_sessionUsed.has(e.name));
   const shuffle=a=>[...a].sort(()=>Math.random()-0.5);
-  const pool=[...shuffle(tier1),...shuffle(tier2),...shuffle(tier3)];
+  const pool=[...shuffle(tier1),...shuffle(tier2),...shuffle(tier3),...shuffle(tier4)];
   const result=pool.slice(0,Math.min(n,pool.length));
   markSessionUsed(result);
   return result;
@@ -2659,7 +2688,7 @@ const ONE_RM_LIFTS=[
   {key:'rdl',     label:'Romanian Deadlift',   exNames:['Romanian Deadlift','Single-Leg RDL','Hip Thrust','Step-Ups'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
   {key:'row',     label:'Bent-Over Row',        exNames:['Seated Cable Row','Single-Arm DB Row','Lat Pulldown','Bent-Over Row'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72}},
   {key:'pull',    label:'Pull-Ups',             exNames:['Pull-Ups','Hollow Body Pull'],pcts:{GPP:0.65,Strength:0.82,Power:0.78,Taper:0.72},isPullUp:true},
-  {key:'ohpress', label:'Overhead Press',       exNames:['Landmine Press','Incline DB Press','Face Pulls','Prone Y-T-W'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
+  {key:'ohpress', label:'Overhead Press',       exNames:['Landmine Press','Incline DB Press','Face Pulls','Prone Y-T-W Combined'],pcts:{GPP:0.60,Strength:0.75,Power:0.70,Taper:0.65}},
 ];
 // Epley formula: estimate 1RM from a weight × reps set
 function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
@@ -3221,7 +3250,7 @@ const STROKE_FILTERS={
       lowerMandatory:[],
       upperPriority:['pull'],
       upperSuppress:['Incline DB Press','Landmine Press'], // heavy pressing = shoulder impingement risk
-      upperMandatory:['Face Pulls','Prone Y-T-W'],        // posterior shoulder health non-negotiable
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],        // posterior shoulder health non-negotiable
       corePriority:['rotational'],
     },
     mid:{
@@ -3230,7 +3259,7 @@ const STROKE_FILTERS={
       lowerMandatory:[],
       upperPriority:['pull'],
       upperSuppress:['Incline DB Press','Landmine Press'],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:['rotational'],
     },
     distance:{
@@ -3239,7 +3268,7 @@ const STROKE_FILTERS={
       lowerMandatory:[],
       upperPriority:['pull'],
       upperSuppress:['Incline DB Press','Landmine Press'],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:[],
     },
   },
@@ -3279,7 +3308,7 @@ const STROKE_FILTERS={
       lowerMandatory:['Hip Thrust'],
       upperPriority:['pull','push'],
       upperSuppress:[],
-      upperMandatory:['Face Pulls','Prone Y-T-W'], // posterior chain + shoulder health critical
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'], // posterior chain + shoulder health critical
       corePriority:['rotational'],
     },
     mid:{
@@ -3288,7 +3317,7 @@ const STROKE_FILTERS={
       lowerMandatory:['Hip Thrust'],
       upperPriority:['pull','push'],
       upperSuppress:[],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:['rotational'],
     },
     distance:{
@@ -3297,7 +3326,7 @@ const STROKE_FILTERS={
       lowerMandatory:['Hip Thrust'],
       upperPriority:['pull'],
       upperSuppress:[],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:[],
     },
   },
@@ -3308,7 +3337,7 @@ const STROKE_FILTERS={
       lowerMandatory:['Hip Thrust'],
       upperPriority:['pull','push'],
       upperSuppress:[],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:['rotational'],
     },
     mid:{
@@ -3317,7 +3346,7 @@ const STROKE_FILTERS={
       lowerMandatory:['Hip Thrust'],
       upperPriority:['pull'],
       upperSuppress:[],
-      upperMandatory:['Face Pulls','Prone Y-T-W'],
+      upperMandatory:['Face Pulls','Prone Y-T-W Combined'],
       corePriority:['rotational'],
     },
     distance:{
@@ -4433,6 +4462,7 @@ function confirmSession(){
     DB.set('programWeek',S.programWeek);
   }
   S.currentWorkout=null;completedSets={};
+  clearLastGenerated(); // history now covers this session — clear the last-generated cache
   document.getElementById('workout-content').innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Session logged. Rest up.</p></div>';
   document.getElementById('workout-actions').style.display='none';
   showSection('home');renderHome();
