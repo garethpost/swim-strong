@@ -1746,6 +1746,8 @@ let S={
   sessionRPELog:DB.get('sessionRPELog',[]), // [{date,rpe,load}]
   rpeCalibrationBias:DB.get('rpeCalibrationBias',0), // accumulated RPE vs readiness correction
   rpeCalibrationNote:DB.get('rpeCalibrationNote',null), // coaching message if miscalibrated
+  lastBaselineDate:DB.get('lastBaselineDate',null), // ISO date of last formal baseline test
+  autoDeload:DB.get('autoDeload',false), // true when fatigue auto-trigger fires
   weightTrendLog:DB.get('weightTrendLog',[]), // [{date,wtKg}] — logged each time body stats saved
   poolLog:DB.get('poolLog',[]), // [{date,feel,timedSwim,timedTime,distKm,notes}]
   mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
@@ -2803,6 +2805,12 @@ function getTargetKg(exName,phaseName,scheme){
   const lift=getLiftFor(exName);if(!lift)return null;
   const orm=S.oneRM[lift.key];if(!orm)return null;
   const basePct=lift.pcts[phaseName]||0.70;
+  // Auto-deload override — if fatigue accumulation detected, apply deload modifier immediately
+  const autoDeload=getAutoDeloadStatus();
+  if(autoDeload&&autoDeload.active){
+    // Use week-4 deload modifier (0.60) scaled back to 0.65 so it's still meaningful
+    return Math.round(orm*basePct*0.65/2.5)*2.5;
+  }
   // Week-in-block load modifiers — matches the progressive overload intent of getScheme()
   const wib=scheme?scheme.weekInBlock:(weekInBlock());
   const wibMod=[0.90,1.00,1.05,0.60]; // W1 intro, W2 standard, W3 peak, W4 deload
@@ -3076,6 +3084,33 @@ function getLoadDesc(m){
   if(m<1.1)return{label:'Standard',color:'var(--accent)',msg:'Full session — let\'s work.'};
   if(m<1.2)return{label:'Hard',color:'var(--orange)',msg:'Push every set.'};
   return{label:'Maximum',color:'var(--red)',msg:'Peak readiness. Take it.'};
+}
+// ── Auto-deload trigger ──
+// Fires when rolling RPE >= 9 in 3 of the last 4 dryland sessions, outside a scheduled deload week.
+// Returns {active, avgRPE, sessionCount} or null.
+function getAutoDeloadStatus(){
+  const wib=weekInBlock();
+  if(wib===4)return null; // already in scheduled deload — no need to flag
+  const rpeLog=S.sessionRPELog||[];
+  if(rpeLog.length<3)return null;
+  const recent=rpeLog.slice(-4);
+  const highRPE=recent.filter(r=>r.rpe>=9);
+  if(highRPE.length<3)return null;
+  const avgRPE=recent.reduce((a,r)=>a+r.rpe,0)/recent.length;
+  return{active:true,avgRPE,sessionCount:recent.length};
+}
+// ── Baseline re-test check ──
+// Returns true if swimmer should be prompted to re-test their strength baseline.
+// Conditions: has prior baseline, 8+ weeks since last test, 4+ dryland sessions since then.
+function shouldPromptRetest(){
+  if(!S.lastBaselineDate)return false;
+  if(Object.keys(S.oneRM).length===0)return false;
+  const lastDate=new Date(S.lastBaselineDate);
+  const weeksSince=(new Date()-lastDate)/604800000;
+  if(weeksSince<8)return false;
+  // Count dryland sessions completed after the baseline date
+  const sessionsAfter=(S.history||[]).filter(h=>h.date&&new Date(h.date)>lastDate).length;
+  return sessionsAfter>=4;
 }
 function getPhase(w){
   // Cycle 1: GPP focus, Cycle 2+: shorter GPP, longer power/strength
@@ -4343,6 +4378,42 @@ function renderWorkoutTab(){
   if(gate)gate.innerHTML='';
   if(bcard)bcard.innerHTML='';
 
+  // ── Shared banner checks (used in both OOS and in-season paths) ──
+  const _autoDeload=getAutoDeloadStatus();
+  const _retestDue=shouldPromptRetest();
+  const _weeksSinceBaseline=S.lastBaselineDate?Math.round((new Date()-new Date(S.lastBaselineDate))/604800000):0;
+  const _fatigueBanner=_autoDeload?`
+    <div class="card" style="margin-bottom:12px;border:2px solid var(--red);background:rgba(255,107,107,0.07);">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:28px;flex-shrink:0;">🚨</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:4px;">Fatigue Accumulation Detected</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:10px;">Avg RPE <strong>${_autoDeload.avgRPE.toFixed(1)}</strong> across your last ${_autoDeload.sessionCount} sessions. Your CNS is telling you something — prescribed loads have been automatically reduced by ~35% this session. Don't fight it. One proper deload week returns more adaptation than grinding through fatigue.</div>
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;background:var(--surface);border-radius:8px;padding:8px 10px;text-align:center;">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Today's load</div>
+              <div style="font-size:15px;font-weight:800;color:var(--red);">65% 1RM</div>
+            </div>
+            <div style="flex:1;background:var(--surface);border-radius:8px;padding:8px 10px;text-align:center;">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:2px;">Reps</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text);">Full sets</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`:'';
+  const _retestBanner=(ag!=='youth'&&_retestDue)?`
+    <div class="card" style="margin-bottom:12px;border:1px solid var(--gold);background:rgba(245,200,66,0.06);">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="font-size:28px;flex-shrink:0;">📊</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:4px;">Strength Re-Test Due</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:10px;">It's been <strong>${_weeksSinceBaseline} weeks</strong> since your last baseline. After a full block of training your actual 1RM has likely moved — re-testing keeps your load prescriptions accurate and ensures progressive overload is real, not assumed.</div>
+          <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="showBaselineForm()">Re-Test Baseline Now →</button>
+        </div>
+      </div>
+    </div>`:'';
+
   // ─────────────────────────────────────────────
   // PATH 1: OFF-SEASON ACTIVE
   // ─────────────────────────────────────────────
@@ -4389,7 +4460,7 @@ function renderWorkoutTab(){
     const isRestDay=todayDayType==='rest'||todayDayType==='meet';
     const sessionLabels={lower:'Lower Body',upper:'Upper Body',power:'Power & Plyos',mobility:'Mobility',cardio:'Cardio',oos_cardio:'Cardio'};
 
-    el.innerHTML=`
+    el.innerHTML=`${_fatigueBanner}${_retestBanner}
       <div class="card" style="margin-bottom:12px;border:1px solid ${phCol};">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
@@ -4547,7 +4618,7 @@ function renderWorkoutTab(){
       <button class="btn btn-ghost" onclick="confirmDeactivate()" style="width:100%;font-size:12px;margin-bottom:8px;">Deactivate Goal Program</button>`;
   }
 
-  el.innerHTML=baselinePromptHtml+goalToggleHtml+modeHtml;
+  el.innerHTML=_fatigueBanner+_retestBanner+baselinePromptHtml+goalToggleHtml+modeHtml;
 
   // Populate today's session label
   if(!isGoal){
@@ -8859,7 +8930,9 @@ function saveBaseline(){
   });
   if(!saved){alert('Enter at least one weight and rep count.');return;}
   S.oneRMDate=new Date().toISOString();
+  S.lastBaselineDate=S.oneRMDate;
   DB.set('oneRM',S.oneRM);DB.set('oneRMDate',S.oneRMDate);
+  DB.set('lastBaselineDate',S.lastBaselineDate);
   renderWorkoutTab();
 }
 
