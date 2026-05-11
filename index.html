@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 80</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 81</div>
       </div>
     </div>
 
@@ -2685,10 +2685,10 @@ const EX={
     {name:'Goblet Squat',sets:3,detail:null,desc:'Dumbbell at chest, squat deep with upright torso.',cue:'Elbows push knees out at bottom. Pause at bottom.',weighted:true,tags:['squat'],tempo:'3-2-1-0'},
     {name:'Single-Leg RDL',sets:3,detail:null,desc:'Hinge on one leg, dumbbell opposite hand.',cue:'Hip stays square. T shape at bottom.',weighted:true,tags:['single-leg','hinge'],tempo:'3-1-1-0'},
     {name:'Step-Ups',sets:3,detail:null,desc:'Step onto box with full hip extension at top.',cue:'Drive through heel. Full lockout. Do not push off back foot.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
-    {name:'Nordic Ham Curls',sets:3,detail:'3×5',desc:'Feet anchored, lower slowly resisting with hamstrings.',cue:'Slow eccentric is the point. Prevents hamstring tears.',weighted:false,tags:['hinge'],tempo:'5-0-1-0'},
+    {name:'Nordic Ham Curls',sets:3,detail:'3×5',desc:'Feet anchored, lower slowly resisting with hamstrings.',cue:'Slow eccentric is the point. Prevents hamstring tears.',weighted:false,logReps:true,tags:['hinge'],tempo:'5-0-1-0'},
   ],
   upper:[
-    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar. Pronated grip.',cue:'Pull elbows to hips. Initiate with lats. Full dead hang each rep.',weighted:false,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Pull-Ups',sets:4,detail:null,desc:'Dead hang to chin over bar. Pronated grip.',cue:'Pull elbows to hips. Initiate with lats. Full dead hang each rep.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
     {name:'Seated Cable Row',sets:4,detail:null,desc:'Row to lower sternum, elbows track body.',cue:'Squeeze scapula before pulling. Control the return.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
     {name:'Incline DB Press',sets:4,detail:null,desc:'Moderate incline, press from shoulder height.',cue:'Control the eccentric. Feel chest stretch at bottom.',weighted:true,tags:['push'],tempo:'3-1-1-0'},
     {name:'Lat Pulldown',sets:4,detail:null,desc:'Wide grip pulldown to upper chest.',cue:'Lean back slightly. Pull elbows to pockets.',weighted:true,tags:['pull'],tempo:'3-1-1-0'},
@@ -2697,7 +2697,7 @@ const EX={
     {name:'Tricep Pushdown',sets:3,detail:null,desc:'Cable pushdown with rope.',cue:'Elbows stay at sides. Full extension.',weighted:true,tags:['push'],tempo:'2-1-1-0'},
     {name:'Face Pulls',sets:3,detail:'3×20 light',desc:'Cable at face height, pull to ears with external rotation.',cue:'Elbows high and wide. Non-negotiable for shoulder health.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
     {name:'Prone Y-T-W',sets:3,detail:'3×10 each, very light',desc:'Incline bench, raise in Y, T, W shapes with very light DBs.',cue:'Thumbs up. Slow. Injury prevention, not strength.',weighted:true,tags:['shoulder'],tempo:'2-1-2-0'},
-    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body, slow lat activation.',cue:'Core tight. Mimics your streamline.',weighted:false,tags:['pull'],tempo:'3-0-1-0'},
+    {name:'Hollow Body Pull',sets:3,detail:'3×8',desc:'Hang from bar in hollow body, slow lat activation.',cue:'Core tight. Mimics your streamline.',weighted:false,logReps:true,tags:['pull'],tempo:'3-0-1-0'},
   ],
   plyos:[
     {name:'Box Jumps',sets:4,detail:null,desc:'Jump onto box, land soft, step down. Full reset between reps.',cue:'Full extension at take-off. Land quarter squat. Step down never jump down.',weighted:false,tags:['explosive','plyos'],tempo:'X-0-X-0'},
@@ -3189,6 +3189,12 @@ function buildCard(ex,bi,ei,scheme){
     const pct=lift?Math.round((lift.pcts[scheme.phase]||0.70)*100):70;
     lastHtml=`<div class="ex-last">🎯 Start here: <b style="color:var(--accent);">${dW(rmTarget).toFixed(1)} ${uL()}</b> <span style="color:var(--muted);font-size:10px;">(${pct}% of your 1RM)</span></div>`;
   }
+  // Bug fix: for weighted exercises with a custom detail (e.g. Face Pulls "3×20 light"),
+  // extract the rep count from ex.detail rather than always falling back to scheme.reps.
+  function exRepsPlaceholder(){
+    if(ex.detail){const m=ex.detail.match(/×(\d+)/);if(m)return m[1];}
+    return scheme.reps.split('-')[0];
+  }
   let sHtml='';
   if(ex.weighted){
     sHtml=`<div class="set-labels"><div class="set-label">Set</div><div class="set-label">${uL()}</div><div class="set-label">Reps</div><div class="set-label">✓</div></div><div class="set-log-grid">`;
@@ -3196,12 +3202,25 @@ function buildCard(ex,bi,ei,scheme){
       // Priority: 1) progression from log, 2) 1RM target, 3) blank
       const prefill=sugg&&sugg.kg?dW(sugg.kg).toFixed(1):rmTarget?dW(rmTarget).toFixed(1):'';
       const lr=last&&last.sets[s-1]?last.sets[s-1].reps:'';
-      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${prefill||'—'}" value="${prefill}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||scheme.reps.split('-')[0]}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
+      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${prefill||'—'}" value="${prefill}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||exRepsPlaceholder()}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
+    }
+    sHtml+=`</div>`;
+  } else if(ex.logReps){
+    // Bodyweight exercises that need rep tracking (Pull-Ups, Nordic Ham Curls, etc.)
+    // Reps-only grid: Set | Reps | ✓
+    const exRepHint=ex.detail?ex.detail.match(/×(\d+)/):null;
+    const repHint=exRepHint?exRepHint[1]:'';
+    sHtml=`<div class="set-labels" style="grid-template-columns:26px 1fr 30px;"><div class="set-label">Set</div><div class="set-label">Reps</div><div class="set-label">✓</div></div><div class="set-log-grid">`;
+    for(let s=1;s<=ns;s++){
+      const lr=last&&last.sets&&last.sets[s-1]?last.sets[s-1].reps:'';
+      sHtml+=`<div class="set-row" style="grid-template-columns:26px 1fr 30px;"><div class="set-num">${s}</div><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||repHint||'Reps'}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
     }
     sHtml+=`</div>`;
   } else {
+    // Pure bodyweight / timed / untracked — just show set checkboxes
+    // Detail is already shown in the subtitle, so just label rows "Set 1", "Set 2" etc.
     sHtml=`<div class="set-log-grid">`;
-    for(let s=1;s<=ns;s++)sHtml+=`<div class="set-row" style="grid-template-columns:26px 1fr 30px;"><div class="set-num">${s}</div><div style="font-size:12px;color:var(--muted);padding:6px 0;">${ex.detail||`Set ${s}`}</div><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
+    for(let s=1;s<=ns;s++)sHtml+=`<div class="set-row" style="grid-template-columns:26px 1fr 30px;"><div class="set-num">${s}</div><div style="font-size:12px;color:var(--muted);padding:6px 0;">Set ${s}</div><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
     sHtml+=`</div>`;
   }
   const hBtn=ex.weighted?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;flex-shrink:0;" onclick="showWH('${esc(ex.name)}')">Log</button>`:'';
