@@ -1050,6 +1050,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div id="ss-subtitle" style="font-size:12px;color:var(--muted);"></div>
 </div>
 <div id="ss-stats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;"></div>
+<div id="ss-orm-celebration" style="display:none;margin-bottom:16px;"></div>
 <div style="margin-bottom:16px;">
   <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">How hard was that? (Session RPE)</div>
   <div style="display:flex;gap:4px;" id="rpe-btns"></div>
@@ -1739,6 +1740,8 @@ let S={
   hydrationLog:DB.get('hydrationLog',{}), // {YYYY-MM-DD: count}
   seasonKmTarget:DB.get('seasonKmTarget',500), // km target for the season
   sessionRPELog:DB.get('sessionRPELog',[]), // [{date,rpe,load}]
+  rpeCalibrationBias:DB.get('rpeCalibrationBias',0), // accumulated RPE vs readiness correction
+  rpeCalibrationNote:DB.get('rpeCalibrationNote',null), // coaching message if miscalibrated
   weightTrendLog:DB.get('weightTrendLog',[]), // [{date,wtKg}] — logged each time body stats saved
   poolLog:DB.get('poolLog',[]), // [{date,feel,timedSwim,timedTime,distKm,notes}]
   mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
@@ -2694,6 +2697,101 @@ const ONE_RM_LIFTS=[
 function epley(weightKg,reps){return reps===1?weightKg:weightKg*(1+reps/30);}
 // Get the 1RM lift config for a given exercise name
 function getLiftFor(exName){return ONE_RM_LIFTS.find(l=>l.exNames.includes(exName))||null;}
+
+// ── Swimmer-specific progression type map ──
+// 'load'     — compound lifts where progressive load increase is valid and desirable
+//              (strength phase ceiling exists — see getProgressionResponse())
+// 'velocity' — power/Olympic movements where bar SPEED is the adaptation target, not load
+//              Adding weight to these past a threshold makes the swimmer slower, not stronger
+// 'rep'      — injury prevention and accessory work. Rep progression only. Never chase load.
+//              These protect the shoulder, rotator cuff, hamstring. Load is irrelevant.
+const PROGRESSION_TYPE={
+  // ── LOAD — compound posterior chain and pulling ──
+  'Back Squat':'load','Front Squat':'load','Pause Squat':'load','Box Squat':'load',
+  'Zercher Squat':'load','Goblet Squat':'load',
+  'Romanian Deadlift':'load','Trap Bar Deadlift':'load','Conventional Deadlift':'load',
+  'Sumo Deadlift':'load','Good Mornings':'load',
+  'Hip Thrust':'load','Single-Leg Hip Thrust':'load','Glute Bridge':'load',
+  'Bulgarian Split Squat':'load','Step-Ups':'load','Reverse Lunge':'load',
+  'Walking Lunge':'load','Lateral Step-Up':'load',
+  'Weighted Pull-Ups':'load','Lat Pulldown':'load','Close-Grip Pulldown':'load',
+  'Seated Cable Row':'load','Single-Arm DB Row':'load','Barbell Row':'load',
+  'Chest-Supported Row':'load',
+  'Incline DB Press':'load','DB Floor Press':'load','Landmine Press':'load',
+  'DB Shoulder Press':'load',
+  'Tricep Pushdown':'load','Hammer Curl':'load',
+  'Farmer\'s Walk':'load','Suitcase Carry':'load',
+  // ── VELOCITY — power and Olympic movements ──
+  // Goal: same load, faster bar speed. Adding weight past ~80% kills the adaptation.
+  'Hang Power Clean':'velocity','Clean and Press':'velocity',
+  'Kettlebell Swing':'velocity','Kettlebell Single-Arm Swing':'velocity',
+  'Box Squat':'velocity', // box squat sits in both — DRIVE out of the hole
+  'Countermovement Jump':'velocity','Non-Countermovement Jump':'velocity',
+  'Box Jumps':'velocity','Single-Leg Box Jump':'velocity',
+  'Depth Jump':'velocity','Depth Drop':'velocity',
+  'Broad Jump':'velocity','Bounding':'velocity','Lateral Bounds':'velocity',
+  'Split Jump':'velocity','Hurdle Hops':'velocity','Pogo Jumps':'velocity',
+  'Speed Skaters':'velocity','Streamline Jump Squat':'velocity',
+  'Single-Leg Streamline Jump':'velocity',
+  'Med Ball Chest Pass':'velocity','Med Ball Overhead Throw':'velocity',
+  'Med Ball Slam':'velocity','Rotational Med Ball Throw':'velocity',
+  'Med Ball Hip Toss':'velocity','Plyo Push-Ups':'velocity',
+  'Battle Rope Waves':'velocity','Sled Push Sprint':'velocity',
+  'Sled Push':'velocity','Sled Drag':'velocity',
+  // ── REP — rotator cuff, posterior shoulder, injury prevention, core ──
+  // Never load chase. High reps, perfect form, protect the shoulder.
+  'Face Pulls':'rep','Y-Raises':'rep','W-Raises':'rep','Y-Raises Prone':'rep',
+  'Prone Y-T-W Combined':'rep','Band Pull-Aparts':'rep','Prone Blackburn':'rep',
+  'External Rotation 90/90':'rep','External Rotation Standing':'rep',
+  'Nordic Ham Curls':'rep','Glute-Ham Raise':'rep',
+  'Pull-Ups':'rep','Chin-Ups':'rep','Neutral-Grip Pull-Ups':'rep',
+  'Hollow Body Pull':'rep','Scapular Pull-Ups':'rep','TRX/Ring Row':'rep',
+  'Inverted Row':'rep','Push-Up Variations':'rep','Dips':'rep',
+  'Dead Bug':'rep','Hollow Body Hold':'rep','Hollow Body Rock':'rep',
+  'Ab Wheel Rollout':'rep','Barbell Rollout':'rep',
+  'RKC Plank':'rep','Plank':'rep','Plank Feet Elevated':'rep','Dragon Flag':'rep',
+  'L-Sit':'rep','V-Sit':'rep',
+  'Pallof Press':'rep','Pallof Press Band':'rep','Pallof Hold':'rep',
+  'Single-Arm Plank':'rep','Side Plank':'rep','Side Plank Reach-Through':'rep',
+  'Suitcase Deadlift':'rep',
+  'Cable Woodchop':'rep','Cable Lift':'rep','Landmine Rotation':'rep','Russian Twist':'rep',
+  'Bear Crawl':'rep','Bear Crawl Circuit':'rep','Duck Walk':'rep',
+  'Turkish Get-Up':'rep',
+};
+
+function getProgressionType(exName){return PROGRESSION_TYPE[exName]||'load';}
+
+// Analyse weight and rep logs to determine stall type — returns null if no stall
+// A stall is only real if BOTH weight AND reps have stopped progressing.
+// If reps are still climbing at the same weight, that's double progression — not a stall.
+function getStallAnalysis(exName,scheme){
+  // Never call a deload week a stall — load is intentionally low
+  if(scheme&&scheme.isDeload)return null;
+  const logs=S.weightLog[exName];
+  if(!logs||logs.length<3)return null;
+  const recent=logs.slice(-4);
+  // Pull max weight and max reps from each session (across all sets, not just set 1)
+  const sessions=recent.map(l=>{
+    if(!l.sets||!l.sets.length)return null;
+    const weights=l.sets.map(s=>parseFloat(s.weight)||0).filter(w=>w>0);
+    const reps=l.sets.map(s=>parseInt(s.reps)||0).filter(r=>r>0);
+    if(!weights.length)return null;
+    return{maxW:Math.max(...weights),maxR:reps.length?Math.max(...reps):0};
+  }).filter(Boolean);
+  if(sessions.length<3)return null;
+  const last3=sessions.slice(-3);
+  // Check weight stagnation — within 1kg across last 3 sessions
+  const weightStagnant=last3.every(s=>Math.abs(s.maxW-last3[last3.length-1].maxW)<1.0);
+  if(!weightStagnant)return null; // weight is moving — no stall
+  // Check rep stagnation — if reps are climbing, double progression is happening, NOT a stall
+  const repProgression=last3[last3.length-1].maxR>last3[0].maxR;
+  if(repProgression)return null; // reps still climbing — double progression in play
+  // Both weight and reps are flat — genuine stall
+  const pType=getProgressionType(exName);
+  const lastWeight=last3[last3.length-1].maxW;
+  const lastReps=last3[last3.length-1].maxR;
+  return{type:pType,lastWeight,lastReps,sessionCount:last3.length};
+}
 // Get target kg for an exercise given current phase
 // Get target kg for an exercise — applies phase %, week-in-block loading, and readiness multiplier.
 // This is the single source of truth for what weight to prescribe today.
@@ -2961,6 +3059,10 @@ function getLoadMult(){
   if(ph==='taper')mult-=0.25;else if(ph==='rest')mult-=0.5;
   const tp=isTaperWeek();
   if(tp.yes){if(tp.meet.priority==='A')mult-=0.4;else if(tp.meet.priority==='B')mult-=0.25;}
+  // RPE calibration bias — adjusts targets when self-reported readiness is consistently
+  // misaligned with actual session difficulty (accumulated from RPE feedback loop)
+  const bias=S.rpeCalibrationBias||0;
+  if(bias!==0)mult+=bias;
   return Math.max(0.3,Math.min(1.3,mult));
 }
 function getLoadDesc(m){
@@ -3148,34 +3250,25 @@ function getAdaptiveFlags(){
     else if(avgRPE<=5.5&&recentRPE.length>=4)flags.push({type:'undertrained',icon:'📈',msg:`RPE averaging ${avgRPE.toFixed(1)} — sessions feel too easy. Time to increase load or intensity.`,urgency:'orange'});
   }
 
-  // 2) Completion rate — consistently bailing on sets
-  const recentSessions=hist.slice(-4);
-  // We can't measure completion rate directly, but we can flag low-RPE + many sessions
-  // as a sign the swimmer is coasting
-
-  // 3) Weight stagnation per lift — no improvement in 3+ sessions
+  // 2) Lift stagnation — use getStallAnalysis for each key compound lift
+  // Produces type-specific coaching messages (load vs velocity vs rep)
   ONE_RM_LIFTS.forEach(lift=>{
-    const logs=[];
-    hist.slice(-8).forEach(h=>{
-      (h.blocks||[]).forEach(b=>{
-        b.exercises.forEach(ex=>{
-          if(lift.exNames.includes(ex.name)&&ex._log&&ex._log.length){
-            const maxW=Math.max(...ex._log.map(s=>s.weight||0));
-            if(maxW>0)logs.push(maxW);
-          }
-        });
-      });
-    });
-    // Also check the exercise log directly
-    const logKey='log_'+lift.exNames[0];
-    const exLog=DB.get(logKey,[]);
-    if(exLog.length>=3){
-      const recent=exLog.slice(-4);
-      const weights=recent.map(session=>session.sets?Math.max(...session.sets.map(s=>s.weight||0)):0).filter(w=>w>0);
-      if(weights.length>=3){
-        const allSame=weights.every(w=>Math.abs(w-weights[0])<1.0);
-        if(allSame)flags.push({type:'stall',icon:'📊',liftKey:lift.key,liftLabel:lift.label,msg:`${lift.label} hasn't moved in ${weights.length} sessions. If reps are all hitting, bump weight by 2.5${S.useKg?'kg':'lb'}.`,urgency:'orange'});
-      }
+    // Check the primary exercise for this lift
+    const primaryEx=lift.exNames[0];
+    const logs=S.weightLog[primaryEx];
+    if(!logs||logs.length<3)return;
+    const stall=getStallAnalysis(primaryEx,null); // null scheme = deload check skipped here
+    if(!stall)return;
+    const pType=stall.type;
+    if(pType==='load'){
+      flags.push({type:'stall',icon:'📊',liftKey:lift.key,liftLabel:lift.label,
+        msg:`${lift.label} weight hasn't moved in ${stall.sessionCount} sessions. If you're hitting all reps, add 2.5${S.useKg?'kg':'lb'} next session — the app will auto-suggest it on the card.`,urgency:'orange'});
+    } else if(pType==='velocity'){
+      flags.push({type:'stall',icon:'⚡',liftKey:lift.key,liftLabel:lift.label,
+        msg:`${lift.label} looks stagnant — but don't add load. Focus on moving the same weight FASTER. Bar speed is the adaptation for swim power, not heavier lifts.`,urgency:'orange'});
+    } else if(pType==='rep'){
+      flags.push({type:'stall',icon:'🛡️',liftKey:lift.key,liftLabel:lift.label,
+        msg:`${lift.label} reps are plateaued. Add 2–3 reps per set before considering any load increase. Protecting the shoulder is the priority here.`,urgency:'orange'});
     }
   });
 
@@ -3773,25 +3866,47 @@ function buildCard(ex,bi,ei,scheme){
   const sugg=ex.weighted?suggestWeight(ex.name,scheme.reps):null;
   // Pass full scheme so getTargetKg can apply week-in-block modifier + readiness
   const rmTarget=ex.weighted?getTargetKg(ex.name,scheme.phase,scheme):null;
-  // Stall detection — flag if weight hasn't moved in 3+ consecutive sessions
-  const stallFlag=(()=>{
-    if(!ex.weighted)return false;
-    const logs=S.weightLog[ex.name];
-    if(!logs||logs.length<3)return false;
-    const recent=logs.slice(-4);
-    const weights=recent.map(l=>l.sets&&l.sets[0]?l.sets[0].weight:0).filter(w=>w>0);
-    if(weights.length<3)return false;
-    return weights.slice(-3).every(w=>Math.abs(w-weights[weights.length-1])<1.0);
+  // Swimmer-specific stall analysis — checks all sets, rep progression, deload awareness
+  const stall=ex.weighted?getStallAnalysis(ex.name,scheme):null;
+  // Auto-bump: if load stall detected + last session hit all target reps, push weight up 2.5kg
+  const stallAutoBump=(()=>{
+    if(!stall||stall.type!=='load')return null;
+    const targetReps=parseInt((scheme.reps||'5').split('-')[0]);
+    if(last&&last.sets&&last.sets.every(s=>parseInt(s.reps||'0')>=targetReps)){
+      return Math.round((stall.lastWeight+2.5)/2.5)*2.5; // next 2.5kg increment
+    }
+    return null;
   })();
   let lastHtml='';
+  // Build stall guidance HTML — different message per progression type
+  const stallGuidanceHtml=(()=>{
+    if(!stall)return'';
+    if(stall.type==='load'){
+      if(stallAutoBump){
+        return`<div style="margin-top:5px;padding:6px 8px;background:rgba(0,230,118,0.1);border-left:3px solid var(--green);border-radius:6px;font-size:11px;color:var(--green);font-weight:700;">↑ Auto-bump: try ${dW(stallAutoBump).toFixed(1)}${uL()} today — you've hit your rep target ${stall.sessionCount} sessions straight.</div>`;
+      }
+      return`<div style="margin-top:5px;padding:6px 8px;background:rgba(255,165,0,0.1);border-left:3px solid var(--orange);border-radius:6px;font-size:11px;color:var(--orange);">⚡ Weight stagnant ${stall.sessionCount} sessions. Hit all reps first — then bump 2.5${S.useKg?'kg':'lb'} next session.</div>`;
+    }
+    if(stall.type==='velocity'){
+      return`<div style="margin-top:5px;padding:6px 8px;background:rgba(0,198,255,0.1);border-left:3px solid var(--accent);border-radius:6px;font-size:11px;color:var(--accent);">⚡ Don't chase load here — chase bar SPEED. Same weight, faster movement. That's the swim transfer.</div>`;
+    }
+    if(stall.type==='rep'){
+      return`<div style="margin-top:5px;padding:6px 8px;background:rgba(165,130,255,0.1);border-left:3px solid var(--purple);border-radius:6px;font-size:11px;color:var(--purple);">⚡ Add 2–3 reps before considering any load increase. This exercise protects your shoulder — rep quality is everything.</div>`;
+    }
+    return'';
+  })();
   if(last){
     const ds=new Date(last.date).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
     const setsStr=last.sets.map((s,i)=>`S${i+1} ${s.weight?dW(s.weight).toFixed(1)+uL():'BW'}×${s.reps||'?'}`).join(' · ');
-    const targStr=sugg?` &nbsp;<span style="color:var(--green);font-weight:700;">${sugg.progressed?'↑':'→'} ${dW(sugg.kg).toFixed(1)}${uL()}</span>`:'';
-    const stallHtml=stallFlag?` <span style="color:var(--orange);font-size:10px;font-weight:700;" title="Weight stagnant — consider increasing load">⚡ Stuck?</span>`:'';
-    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}${stallHtml}</div>`;
+    // For load type: show sugg or auto-bump. For velocity/rep: suppress weight suggestion arrow.
+    const targKg=stallAutoBump||( sugg&&sugg.kg?sugg.kg:null );
+    const targColor=stallAutoBump?'var(--green)':sugg&&sugg.progressed?'var(--green)':'var(--accent)';
+    const targArrow=stallAutoBump?'↑':sugg&&sugg.progressed?'↑':'→';
+    const pType=getProgressionType(ex.name);
+    const showWeightSugg=pType==='load'&&targKg;
+    const targStr=showWeightSugg?` &nbsp;<span style="color:${targColor};font-weight:700;">${targArrow} ${dW(targKg).toFixed(1)}${uL()}</span>`:'';
+    lastHtml=`<div class="ex-last">📌 Last (${ds}): ${setsStr}${targStr}</div>${stallGuidanceHtml}`;
   } else if(rmTarget){
-    const lift=getLiftFor(ex.name);
     const wib=scheme.weekInBlock||weekInBlock();
     const wibLabel=['Intro','Build','Peak','Deload'][wib-1]||'';
     const wibColor=scheme.isDeload?'var(--muted)':scheme.isPeak?'var(--red)':'var(--accent)';
@@ -3808,10 +3923,27 @@ function buildCard(ex,bi,ei,scheme){
   if(ex.weighted){
     sHtml=`<div class="set-labels"><div class="set-label">Set</div><div class="set-label">${uL()}</div><div class="set-label">Reps</div><div class="set-label">✓</div></div><div class="set-log-grid">`;
     for(let s=1;s<=ns;s++){
-      // Priority: 1) progression from log, 2) 1RM target, 3) blank
-      const prefill=sugg&&sugg.kg?dW(sugg.kg).toFixed(1):rmTarget?dW(rmTarget).toFixed(1):'';
+      // Weight prefill priority:
+      // 1) Auto-bump (load stall + all reps hit last session) — shows bumped weight
+      // 2) suggestWeight advisory (+2.5kg if all reps hit, same if not)
+      // 3) 1RM target (phase % × week-in-block × readiness)
+      // 4) blank
+      // For velocity/rep exercises: never auto-fill bumped weight — only show last weight as reference
+      const pType=getProgressionType(ex.name);
+      let prefill='';
+      if(pType==='load'&&stallAutoBump){
+        prefill=dW(stallAutoBump).toFixed(1); // auto-bumped — swimmer needs to go heavier
+      } else if(pType==='load'&&sugg&&sugg.kg){
+        prefill=dW(sugg.kg).toFixed(1); // last weight ± 2.5kg
+      } else if(rmTarget){
+        prefill=dW(rmTarget).toFixed(1); // 1RM-based target
+      }
+      // For velocity/rep: show last weight as placeholder only (not pre-filled value)
+      const showAsValue=pType==='load';
+      const weightVal=showAsValue&&prefill?prefill:'';
+      const weightPlaceholder=prefill||'—';
       const lr=last&&last.sets[s-1]?last.sets[s-1].reps:'';
-      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${prefill||'—'}" value="${prefill}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||exRepsPlaceholder()}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
+      sHtml+=`<div class="set-row"><div class="set-num">${s}</div><input class="set-input" type="number" id="w-${id}-${s}" placeholder="${weightPlaceholder}" value="${weightVal}" step="2.5" min="0"><input class="set-input" type="number" id="r-${id}-${s}" placeholder="${lr||exRepsPlaceholder()}"><div class="set-check" id="sc-${id}-${s}" onclick="toggleSet('${id}',${s})"></div></div>`;
     }
     sHtml+=`</div>`;
   } else if(ex.logReps){
@@ -4745,6 +4877,9 @@ function finishWorkout(){
   const setsCompleted=Object.keys(completedSets).length;
   const totalSets=w.blocks.reduce((a,b)=>a+b.exercises.reduce((x,e)=>{const ns=e.sets||w.scheme.sets;return x+ns;},0),0);
   const exCount=w.blocks.reduce((a,b)=>a+b.exercises.length,0);
+  // Reset celebration slot — clears any stale 1RM data from previous session
+  const _celebEl=document.getElementById('ss-orm-celebration');
+  if(_celebEl){_celebEl.style.display='none';_celebEl.innerHTML='';}
   document.getElementById('ss-subtitle').textContent=`${w.phase.name} · ${w.load?.label||'—'} · ${w.title}`;
   document.getElementById('ss-stats').innerHTML=`
     <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
@@ -4795,33 +4930,96 @@ function confirmSession(){
     DB.set('mobilityLog',S.mobilityLog);
   }
   DB.set('sessionRPELog',S.sessionRPELog);
+
+  // ── RPE feedback loop — readiness calibration check ──
+  // If the swimmer consistently logs low RPE vs high readiness (or vice versa),
+  // the prescribed weights are miscalibrated. Flag it as an adaptive coaching note.
+  // We store this as a transient warning — it clears once the pattern breaks.
+  (()=>{
+    const rpeLog=S.sessionRPELog||[];
+    if(rpeLog.length<4)return;
+    const recent=rpeLog.slice(-5);
+    const avgRPE=recent.reduce((a,b)=>a+b.rpe,0)/recent.length;
+    const curMult=getLoadMult();
+    // Consistently easy (RPE ≤5.5) on good readiness → weights too light
+    if(avgRPE<=5.5&&curMult>=0.9){
+      S.rpeCalibrationNote={type:'undertrained',msg:`Sessions averaging RPE ${avgRPE.toFixed(1)} but readiness is good. Your prescribed weights may be too conservative — the app will nudge them up next session.`,ts:new Date().toISOString()};
+      // Apply a subtle upward correction to the load multiplier stored for next session
+      // We do this by temporarily boosting the readiness signal — not by changing 1RM
+      S.rpeCalibrationBias=(S.rpeCalibrationBias||0)+0.05; // accumulates until RPE normalises
+      if(S.rpeCalibrationBias>0.2)S.rpeCalibrationBias=0.2; // cap at +20%
+    }
+    // Consistently hard (RPE ≥8.5) on normal readiness → targets may be too high
+    else if(avgRPE>=8.5&&curMult>=0.85){
+      S.rpeCalibrationNote={type:'overtrained',msg:`Sessions averaging RPE ${avgRPE.toFixed(1)} — consistently in the red. Prescribed weights may be too aggressive for your current fitness. Consider a deload week.`,ts:new Date().toISOString()};
+      S.rpeCalibrationBias=(S.rpeCalibrationBias||0)-0.05;
+      if(S.rpeCalibrationBias<-0.15)S.rpeCalibrationBias=-0.15; // cap at -15%
+    }
+    // Pattern broken — decay the bias back toward zero
+    else{
+      S.rpeCalibrationBias=(S.rpeCalibrationBias||0)*0.7; // decay 30% each normal session
+      if(Math.abs(S.rpeCalibrationBias)<0.02)S.rpeCalibrationBias=0;
+      S.rpeCalibrationNote=null;
+    }
+    DB.set('rpeCalibrationBias',S.rpeCalibrationBias||0);
+    DB.set('rpeCalibrationNote',S.rpeCalibrationNote||null);
+  })();
+
   // ── Auto 1RM update from this session's logged sets ──
-  // For each weighted exercise where the user logged data, check if they hit all reps
-  // at a given weight. If so, recalculate 1RM via Epley and update. No user action needed.
-  let oneRMUpdated=false;
+  // Uses the BEST single set (not all sets) — any set at or above target reps qualifies.
+  // This is more accurate: a swimmer who nails sets 1-3 at a new weight but grinds set 4
+  // still produced valid 1RM data from those first three sets.
+  const ormImprovements=[]; // collect all improvements for celebration display
   w.blocks.forEach(block=>{
     block.exercises.forEach(ex=>{
       if(!ex.weighted)return;
       const lift=getLiftFor(ex.name);if(!lift)return;
       const log=getLastLog(ex.name);if(!log||!log.sets||!log.sets.length)return;
       const targetReps=parseInt((w.scheme&&w.scheme.reps||'5').split('-')[0]);
-      // Check: did they complete ALL sets at or above target reps with a non-zero weight?
-      const completeSets=log.sets.filter(s=>s.weight>0&&parseInt(s.reps||'0')>=targetReps);
-      if(completeSets.length===0)return;
-      // Use the heaviest completed set to estimate 1RM
-      const heaviest=completeSets.reduce((best,s)=>s.weight>best.weight?s:best,completeSets[0]);
-      const newORM=epley(heaviest.weight,parseInt(heaviest.reps));
+      // Any set at or above target reps with non-zero weight is valid data
+      const validSets=log.sets.filter(s=>s.weight>0&&parseInt(s.reps||'0')>=targetReps);
+      if(validSets.length===0)return;
+      // Best set = highest estimated 1RM (weight × reps combo that projects highest)
+      const bestSet=validSets.reduce((best,s)=>{
+        const e=epley(s.weight,parseInt(s.reps));
+        return e>epley(best.weight,parseInt(best.reps))?s:best;
+      },validSets[0]);
+      const newORM=Math.round(epley(bestSet.weight,parseInt(bestSet.reps))*10)/10;
       const existing=S.oneRM[lift.key]||0;
-      // Only update upward — never reduce 1RM from a single session (could be a bad day)
-      if(newORM>existing*1.005){ // must be >0.5% improvement to trigger update
-        S.oneRM[lift.key]=Math.round(newORM*10)/10;
-        oneRMUpdated=true;
+      // Only update upward, must be >0.5% improvement to filter noise
+      if(newORM>existing*1.005){
+        const oldORM=existing;
+        S.oneRM[lift.key]=newORM;
+        ormImprovements.push({lift,oldORM,newORM,weight:bestSet.weight,reps:parseInt(bestSet.reps)});
       }
     });
   });
-  if(oneRMUpdated){
+  if(ormImprovements.length>0){
     S.oneRMDate=new Date().toISOString();
     DB.set('oneRM',S.oneRM);DB.set('oneRMDate',S.oneRMDate);
+    // Show celebration in the session summary modal
+    const celebEl=document.getElementById('ss-orm-celebration');
+    if(celebEl){
+      const msgs=['New strength record. The work is paying off.','Stronger than last time. Keep building.','Personal best strength. This is how it happens.','New 1RM. Every session is adding up.'];
+      const msg=msgs[Math.floor(Math.random()*msgs.length)];
+      celebEl.style.display='block';
+      celebEl.innerHTML=`<div style="background:linear-gradient(135deg,rgba(245,200,66,0.12),rgba(0,198,255,0.08));border:1px solid rgba(245,200,66,0.4);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:22px;margin-bottom:6px;">🏆</div>
+        <div style="font-size:14px;font-weight:800;color:#f5c842;margin-bottom:8px;">New Strength 1RM${ormImprovements.length>1?'s':''}!</div>
+        ${ormImprovements.map(imp=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.2);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">${imp.lift.label}</div>
+              <div style="font-size:11px;color:var(--muted);">${dW(imp.weight).toFixed(1)}${uL()} × ${imp.reps} reps</div>
+            </div>
+            <div style="text-align:right;">
+              ${imp.oldORM>0?`<div style="font-size:10px;color:var(--muted);text-decoration:line-through;">${dW(imp.oldORM).toFixed(1)}${uL()}</div>`:''}
+              <div style="font-size:16px;font-weight:800;color:#f5c842;">${dW(imp.newORM).toFixed(1)}${uL()}</div>
+            </div>
+          </div>`).join('')}
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">${msg}</div>
+      </div>`;
+    }
   }
   // Save session to history (with rpe)
   S.history.push({...w,date:new Date().toISOString(),rpe});DB.set('history',S.history);
