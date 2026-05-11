@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 88</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 89</div>
       </div>
     </div>
 
@@ -3412,6 +3412,211 @@ function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTape
   return pickFresh(available,mainCount);
 }
 
+// ── Exercise Alternatives ──
+// Each entry lists scientifically equivalent substitutes — same movement pattern,
+// same muscle group, same training adaptation. Order = preference (best first).
+// Used by the swap button on each exercise card.
+const EX_ALTS={
+  // ── VERTICAL PULL ──
+  'Rope Climb':           ['Pull-Ups','Weighted Pull-Ups','Chin-Ups','Lat Pulldown','Inverted Row'],
+  'Weighted Pull-Ups':    ['Pull-Ups','Chin-Ups','Neutral-Grip Pull-Ups','Lat Pulldown','Close-Grip Pulldown'],
+  'Pull-Ups':             ['Weighted Pull-Ups','Chin-Ups','Neutral-Grip Pull-Ups','Lat Pulldown','TRX/Ring Row'],
+  'Chin-Ups':             ['Pull-Ups','Neutral-Grip Pull-Ups','Lat Pulldown','Close-Grip Pulldown','Inverted Row'],
+  'Neutral-Grip Pull-Ups':['Pull-Ups','Chin-Ups','Close-Grip Pulldown','Lat Pulldown'],
+  'Lat Pulldown':         ['Pull-Ups','Chin-Ups','Close-Grip Pulldown','TRX/Ring Row'],
+  'Close-Grip Pulldown':  ['Lat Pulldown','Neutral-Grip Pull-Ups','Chin-Ups','Seated Cable Row'],
+  'Hollow Body Pull':     ['Scapular Pull-Ups','Dead Hang','Pull-Ups','Hanging Knee Raise'],
+  'Scapular Pull-Ups':    ['Dead Hang','Hollow Body Pull','Band Pull-Aparts'],
+  // ── HORIZONTAL PULL ──
+  'Seated Cable Row':     ['Barbell Row','Single-Arm DB Row','Chest-Supported Row','Inverted Row','TRX/Ring Row'],
+  'Barbell Row':          ['Seated Cable Row','Single-Arm DB Row','Chest-Supported Row','Inverted Row'],
+  'Single-Arm DB Row':    ['Chest-Supported Row','Barbell Row','Seated Cable Row','TRX/Ring Row'],
+  'Chest-Supported Row':  ['Single-Arm DB Row','Seated Cable Row','Inverted Row','TRX/Ring Row'],
+  'TRX/Ring Row':         ['Inverted Row','Chest-Supported Row','Single-Arm DB Row','Seated Cable Row'],
+  'Inverted Row':         ['TRX/Ring Row','Chest-Supported Row','Single-Arm DB Row'],
+  // ── POSTERIOR SHOULDER (all target the same rotator cuff / scapular stabiliser demand) ──
+  'Face Pulls':           ['Band Pull-Aparts','Y-Raises','External Rotation 90/90','W-Raises','Prone Blackburn'],
+  'Y-Raises':             ['Prone Y-T-W Combined','T-Raises','W-Raises','Prone Blackburn','Face Pulls'],
+  'T-Raises':             ['Y-Raises','Prone Y-T-W Combined','Band Pull-Aparts','Prone Blackburn'],
+  'W-Raises':             ['Prone Y-T-W Combined','Y-Raises','External Rotation 90/90','Face Pulls'],
+  'Prone Y-T-W Combined': ['Y-Raises','T-Raises','W-Raises','Prone Blackburn','Face Pulls'],
+  'Prone Blackburn':      ['Prone Y-T-W Combined','Y-Raises','T-Raises','W-Raises'],
+  'Band Pull-Aparts':     ['Face Pulls','Y-Raises','External Rotation 90/90','Prone Blackburn'],
+  'External Rotation 90/90':['External Rotation Standing','Face Pulls','Band Pull-Aparts','Y-Raises'],
+  'External Rotation Standing':['External Rotation 90/90','Face Pulls','Band Pull-Aparts'],
+  // ── PUSH ──
+  'Bench Press':          ['Incline DB Press','DB Floor Press','Push-Up Variations','Dips'],
+  'Incline DB Press':     ['Bench Press','DB Floor Press','Landmine Press','Push-Up Variations'],
+  'DB Floor Press':       ['Incline DB Press','Push-Up Variations','Dips','Bench Press'],
+  'Landmine Press':       ['DB Shoulder Press','Incline DB Press','DB Floor Press'],
+  'DB Shoulder Press':    ['Landmine Press','Incline DB Press','Push-Up Variations'],
+  'Push-Up Variations':   ['DB Floor Press','Incline DB Press','Dips','Plyo Push-Ups'],
+  'Dips':                 ['Push-Up Variations','DB Floor Press','Tricep Pushdown'],
+  // ── CARRIES ──
+  'Overhead Carry':       ['Suitcase Carry','DB Shoulder Press','Single-Arm DB Row'],
+  'Suitcase Carry':       ['Overhead Carry',"Farmer's Walk",'Suitcase Deadlift'],
+  // ── LOWER — HINGE ──
+  'Romanian Deadlift':    ['Trap Bar Deadlift','Conventional Deadlift','Single-Leg RDL','Good Mornings','Kettlebell Swing'],
+  'Trap Bar Deadlift':    ['Conventional Deadlift','Romanian Deadlift','Goblet Squat','Back Squat'],
+  'Conventional Deadlift':['Trap Bar Deadlift','Romanian Deadlift','Sumo Deadlift','Good Mornings'],
+  'Sumo Deadlift':        ['Conventional Deadlift','Trap Bar Deadlift','Romanian Deadlift'],
+  'Good Mornings':        ['Romanian Deadlift','Single-Leg RDL','Nordic Ham Curls','Glute-Ham Raise'],
+  'Hip Thrust':           ['Single-Leg Hip Thrust','Glute Bridge','Kettlebell Swing','Romanian Deadlift'],
+  'Single-Leg Hip Thrust':['Hip Thrust','Glute Bridge','Single-Leg RDL'],
+  'Glute Bridge':         ['Hip Thrust','Single-Leg Hip Thrust','Kettlebell Swing'],
+  'Nordic Ham Curls':     ['Glute-Ham Raise','Good Mornings','Single-Leg RDL','Romanian Deadlift'],
+  'Glute-Ham Raise':      ['Nordic Ham Curls','Good Mornings','Romanian Deadlift'],
+  'Kettlebell Swing':     ['Hang Power Clean','Hip Thrust','Romanian Deadlift','Kettlebell Single-Arm Swing'],
+  'Kettlebell Single-Arm Swing':['Kettlebell Swing','Hip Thrust','Single-Leg RDL'],
+  'Hang Power Clean':     ['Kettlebell Swing','Clean and Press','Box Jumps','Countermovement Jump'],
+  'Clean and Press':      ['Hang Power Clean','Kettlebell Swing','DB Shoulder Press'],
+  // ── LOWER — SQUAT ──
+  'Back Squat':           ['Front Squat','Goblet Squat','Box Squat','Trap Bar Deadlift','Pause Squat'],
+  'Front Squat':          ['Back Squat','Goblet Squat','Box Squat','Zercher Squat'],
+  'Box Squat':            ['Back Squat','Front Squat','Goblet Squat','Pause Squat'],
+  'Goblet Squat':         ['Front Squat','Back Squat','Box Squat','Bulgarian Split Squat'],
+  'Pause Squat':          ['Box Squat','Back Squat','Front Squat'],
+  'Zercher Squat':        ['Front Squat','Goblet Squat','Back Squat'],
+  // ── LOWER — SINGLE-LEG ──
+  'Bulgarian Split Squat':['Reverse Lunge','Walking Lunge','Step-Ups','Lateral Lunge','Single-Leg RDL'],
+  'Single-Leg RDL':       ['Single-Leg Hip Thrust','Nordic Ham Curls','Bulgarian Split Squat','Good Mornings'],
+  'Step-Ups':             ['Lateral Step-Up','Reverse Lunge','Bulgarian Split Squat','Walking Lunge'],
+  'Lateral Step-Up':      ['Step-Ups','Lateral Lunge','Bulgarian Split Squat'],
+  'Reverse Lunge':        ['Bulgarian Split Squat','Walking Lunge','Step-Ups','Goblet Squat'],
+  'Walking Lunge':        ['Reverse Lunge','Bulgarian Split Squat','Step-Ups'],
+  'Lateral Lunge':        ['Lateral Step-Up','Reverse Lunge','Copenhagen Plank'],
+  'Copenhagen Plank':     ['Side Plank','Copenhagen Adductor','Lateral Lunge'],
+  // ── LOWER — GPP ──
+  'Sled Push':            ['Duck Walk','Box Jumps','Broad Jump','Countermovement Jump'],
+  'Sled Drag':            ['Reverse Lunge','Duck Walk','Step-Ups'],
+  'Duck Walk':            ['Goblet Squat','Box Squat','Sled Push'],
+  // ── PLYOS — LOWER ──
+  'Depth Jump':           ['Box Jumps','Countermovement Jump','Hurdle Hops','Depth Drop'],
+  'Depth Drop':           ['Depth Jump','Box Jumps','Countermovement Jump'],
+  'Box Jumps':            ['Countermovement Jump','Broad Jump','Streamline Jump Squat','Non-Countermovement Jump'],
+  'Single-Leg Box Jump':  ['Single-Leg Streamline Jump','Speed Skaters','Lateral Bounds'],
+  'Broad Jump':           ['Countermovement Jump','Box Jumps','Bounding','Non-Countermovement Jump'],
+  'Non-Countermovement Jump':['Countermovement Jump','Box Squat','Box Jumps'],
+  'Countermovement Jump': ['Box Jumps','Broad Jump','Streamline Jump Squat','Non-Countermovement Jump'],
+  'Tuck Jumps':           ['Countermovement Jump','Box Jumps','Jump Squat','Split Jump'],
+  'Hurdle Hops':          ['Box Jumps','Pogo Jumps','Countermovement Jump','Tuck Jumps'],
+  'Pogo Jumps':           ['Hurdle Hops','Jump Rope','Box Jumps'],
+  'Bounding':             ['Lateral Bounds','Speed Skaters','Broad Jump'],
+  'Lateral Bounds':       ['Speed Skaters','Bounding','Single-Leg Box Jump'],
+  'Speed Skaters':        ['Lateral Bounds','Bounding','Single-Leg Box Jump'],
+  'Split Jump':           ['Tuck Jumps','Countermovement Jump','Reverse Lunge'],
+  'Streamline Jump Squat':['Countermovement Jump','Box Jumps','Non-Countermovement Jump'],
+  'Single-Leg Streamline Jump':['Single-Leg Box Jump','Speed Skaters','Split Jump'],
+  // ── PLYOS — UPPER ──
+  'Med Ball Slam':        ['Med Ball Overhead Throw','Med Ball Chest Pass','Plyo Push-Ups'],
+  'Med Ball Chest Pass':  ['Med Ball Slam','Plyo Push-Ups','Clap Push-Ups'],
+  'Med Ball Overhead Throw':['Med Ball Slam','Rotational Med Ball Throw','Med Ball Chest Pass'],
+  'Rotational Med Ball Throw':['Med Ball Slam','Med Ball Hip Toss','Med Ball Overhead Throw'],
+  'Med Ball Hip Toss':    ['Rotational Med Ball Throw','Kettlebell Swing','Med Ball Slam'],
+  'Plyo Push-Ups':        ['Clap Push-Ups','Push-Up Variations','Med Ball Chest Pass'],
+  'Clap Push-Ups':        ['Plyo Push-Ups','Push-Up Variations','Bench Press'],
+  // ── PLYOS — GPP ──
+  'Battle Rope Waves':    ['Med Ball Slam','Sled Push Sprint','Bear Crawl Circuit'],
+  "Farmer's Walk":        ['Suitcase Carry','Overhead Carry','Sandbag Carry'],
+  'Sandbag Carry':        ["Farmer's Walk",'Suitcase Carry','Overhead Carry'],
+  'Bear Crawl Circuit':   ['Duck Walk','Inchworms','Bear Crawl'],
+  'Sled Push Sprint':     ['Box Jumps','Countermovement Jump','Sled Push'],
+  // ── CORE ──
+  'Dead Bug':             ['Dead Bug with Band','Bird Dog','Hollow Body Hold','Hollow Body Rock'],
+  'Dead Bug with Band':   ['Dead Bug','Hollow Body Hold','Bird Dog'],
+  'Hollow Body Hold':     ['Hollow Body Rock','Dead Bug','Plank','Dragon Flag'],
+  'Hollow Body Rock':     ['Hollow Body Hold','Dead Bug','Ab Wheel Rollout'],
+  'Ab Wheel Rollout':     ['Barbell Rollout','Hollow Body Rock','Dragon Flag','Dead Bug'],
+  'Barbell Rollout':      ['Ab Wheel Rollout','Dragon Flag','Hollow Body Hold'],
+  'Dragon Flag':          ['Ab Wheel Rollout','Hollow Body Hold','Hanging Leg Raise'],
+  'Plank':                ['RKC Plank','Plank Feet Elevated','Dead Bug','Hollow Body Hold'],
+  'RKC Plank':            ['Plank','Plank Feet Elevated','Dead Bug'],
+  'Plank Feet Elevated':  ['RKC Plank','Plank','Ab Wheel Rollout'],
+  'Pallof Press':         ['Pallof Press Band','Pallof Hold','Pallof Press with Rotation','Single-Arm Plank'],
+  'Pallof Press Band':    ['Pallof Press','Pallof Hold','Single-Arm Plank'],
+  'Pallof Hold':          ['Pallof Press','Pallof Press Band','Single-Arm Plank'],
+  'Pallof Press with Rotation':['Pallof Press','Landmine Rotation','Cable Woodchop'],
+  'Single-Arm Plank':     ['Pallof Press Band','Side Plank','Copenhagen Plank'],
+  'Side Plank':           ['Side Plank Hip Abduction','Side Plank Reach-Through','Copenhagen Plank','Single-Arm Plank'],
+  'Side Plank Hip Abduction':['Side Plank','Side Plank Reach-Through','Copenhagen Plank'],
+  'Side Plank Reach-Through':['Side Plank','Thread the Needle','Side Plank Hip Abduction'],
+  'Copenhagen Plank':     ['Side Plank','Copenhagen Adductor','Lateral Lunge'],
+  'Copenhagen Adductor':  ['Copenhagen Plank','Side Plank','Lateral Lunge'],
+  'Cable Woodchop':       ['Cable Lift','Landmine Rotation','Rotational Med Ball Throw','Russian Twist'],
+  'Cable Lift':           ['Cable Woodchop','Landmine Rotation','Russian Twist'],
+  'Landmine Rotation':    ['Cable Woodchop','Cable Lift','Rotational Med Ball Throw'],
+  'Russian Twist':        ['Cable Woodchop','Landmine Rotation','Pallof Press with Rotation'],
+  'Suitcase Deadlift':    ['Suitcase Carry','Side Plank','Copenhagen Plank'],
+  'Hanging Leg Raise':    ['Toes to Bar','Hanging Knee Raise','Dragon Flag','L-Sit'],
+  'Hanging Knee Raise':   ['Hanging Leg Raise','L-Sit','Hollow Body Hold'],
+  'Toes to Bar':          ['Hanging Leg Raise','Dragon Flag','L-Sit'],
+  'L-Sit':                ['V-Sit','Hanging Knee Raise','Hollow Body Hold'],
+  'V-Sit':                ['L-Sit','Hanging Leg Raise','Hollow Body Hold'],
+  'Bird Dog':             ['Dead Bug','Superman Hold','Back Extension'],
+  'Superman Hold':        ['Bird Dog','Back Extension','Glute Bridge'],
+  'Back Extension':       ['Glute-Ham Raise','Nordic Ham Curls','Good Mornings','Superman Hold'],
+  'Stir the Pot':         ['Plank','RKC Plank','Ab Wheel Rollout'],
+  'Turkish Get-Up':       ['Overhead Carry','Single-Arm Plank','Dead Bug'],
+};
+
+// Returns the best available alternative for an exercise, avoiding recently used ones
+function getSwapFor(exName){
+  const alts=EX_ALTS[exName]||[];
+  // Build set of exercises currently in the workout
+  const inWorkout=new Set(
+    (S.currentWorkout&&S.currentWorkout.blocks||[])
+      .flatMap(b=>b.exercises.map(e=>e.name))
+  );
+  // Build set of recently used (last 4 sessions)
+  const recent=new Set(
+    (S.history.slice(-4)||[])
+      .flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name)))
+  );
+  // Find from EX library by name
+  const allEx=[...EX.warmup,...EX.lower,...EX.upper,...EX.core,...EX.plyos,...EX.mobility,...EX.cardio];
+  const findEx=name=>allEx.find(e=>e.name===name);
+  // Tier 1: not in workout, not recent
+  for(const alt of alts){
+    if(!inWorkout.has(alt)&&!recent.has(alt)){const ex=findEx(alt);if(ex)return ex;}
+  }
+  // Tier 2: not in workout, but was recent
+  for(const alt of alts){
+    if(!inWorkout.has(alt)){const ex=findEx(alt);if(ex)return ex;}
+  }
+  // Tier 3: any valid alt (last resort)
+  for(const alt of alts){
+    const ex=findEx(alt);if(ex)return ex;
+  }
+  return null;
+}
+
+// Swap an exercise in the live workout and re-render its card
+function swapExercise(bi,ei){
+  if(!S.currentWorkout)return;
+  const block=S.currentWorkout.blocks[bi];
+  if(!block)return;
+  const ex=block.exercises[ei];
+  if(!ex)return;
+  const swap=getSwapFor(ex.name);
+  if(!swap){
+    // No alt available — show brief message on the card
+    const card=document.getElementById(`ecard-ex-${bi}-${ei}`);
+    if(card){
+      const btn=card.querySelector('.swap-btn');
+      if(btn){btn.textContent='No alt';setTimeout(()=>{btn.textContent='⇄';},1500);}
+    }
+    return;
+  }
+  // Preserve sets count from the original exercise
+  const swapped={...swap,sets:ex.sets};
+  block.exercises[ei]=swapped;
+  // Re-render just this card
+  const card=document.getElementById(`ecard-ex-${bi}-${ei}`);
+  if(card){
+    card.outerHTML=buildCard(swapped,bi,ei,S.currentWorkout.scheme);
+  }
+}
+
 // ── Weight log ──
 function getLastLog(name){const l=S.weightLog[name];return(l&&l.length)?l[l.length-1]:null;}
 function saveLog(name,sets){if(!S.weightLog[name])S.weightLog[name]=[];S.weightLog[name].push({date:new Date().toISOString(),sets});if(S.weightLog[name].length>20)S.weightLog[name]=S.weightLog[name].slice(-20);DB.set('weightLog',S.weightLog);}
@@ -3504,6 +3709,8 @@ function buildCard(ex,bi,ei,scheme){
     sHtml+=`</div>`;
   }
   const hBtn=ex.weighted?`<button class="btn-ghost" style="font-size:11px;padding:4px 8px;flex-shrink:0;" onclick="showWH('${esc(ex.name)}')">Log</button>`:'';
+  const hasAlts=EX_ALTS[ex.name]&&EX_ALTS[ex.name].length>0;
+  const swapBtn=hasAlts?`<button class="swap-btn btn-ghost" title="Swap exercise" style="font-size:13px;padding:3px 7px;flex-shrink:0;color:var(--muted);border-color:var(--border);" onclick="swapExercise(${bi},${ei})">⇄</button>`:'';
   const schemeStr=ex.detail||`${ns}×${scheme.reps}`;
   const tempoTag=ex.tempo?`<span onclick="showTempoInfo('${ex.tempo}')" style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(0,198,255,0.12);color:var(--accent);font-size:10px;font-weight:700;margin-left:4px;cursor:pointer;">⏱ ${ex.tempo} <span style="font-size:9px;opacity:0.7;">ⓘ</span></span>`:'';
   return`<div class="exercise-card" id="ecard-${id}">
@@ -3514,7 +3721,7 @@ function buildCard(ex,bi,ei,scheme){
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${schemeStr}${ex.weighted&&scheme.pct?' · '+scheme.pct:''}${tempoTag}</div>
         ${ex.note?`<div class="ex-note">${ex.note}</div>`:''}
       </div>
-      ${hBtn}
+      <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">${swapBtn}${hBtn}</div>
     </div>
     ${lastHtml}${sHtml}
   </div>`;
