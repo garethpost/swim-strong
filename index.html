@@ -244,6 +244,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <p style="font-size:30px;font-weight:900;color:var(--text);margin:0 0 3px 0;line-height:1.1;">Dryland.</p>
       <p id="dryland-subtitle" style="font-size:13px;color:var(--muted);margin:0 0 18px 0;">—</p>
       <div id="baseline-gate"></div>
+      <div id="dryland-profile-hint"></div>
       <div id="workout-top"></div>
       <div id="workout-content"></div>
       <div id="baseline-card"></div>
@@ -268,6 +269,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div id="times-content"></div>
+      <!-- Performance Insights panel — built by Performance Correlation Engine -->
+      <div id="perf-insights-times" style="margin-top:4px;"></div>
       <!-- Custom Target Meets — qualifying time standards -->
       <div id="custom-target-meets" style="margin-top:4px;"></div>
     </div>
@@ -1762,6 +1765,7 @@ let S={
   activeMeetId:DB.get('activeMeetId',null), // currently open meet in Meet Day mode
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
   customTargetMeets:DB.get('customTargetMeets',[]), // [{id,meetId,name,times:{event:{lcm,scm}}}] — up to 3
+  performanceProfile:DB.get('performanceProfile',null), // gated correlation engine output
 };
 
 // Units
@@ -3625,11 +3629,16 @@ function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTape
   // Equipment filter first
   let available=pool.filter(e=>equipOk(e.name));
 
+  // ── Performance profile exercise boosts (Gate 2+, non-mandatory) ──
+  const _ppBoostLower=new Set((sp._ppLowerBoost)||[]);
+  const _ppBoostUpper=new Set((sp._ppUpperBoost)||[]);
+  const _ppBoostCore=new Set((sp._ppCoreBoost)||[]);
+
   if(sectionType==='lower'){
     const suppress=new Set(f.lowerSuppress||[]);
     const mandatory=(f.lowerMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
     markSessionUsed(mandatory); // lock mandatories into session so they don't repeat on regenerate
-    const priorityTags=new Set(f.lowerPriority||[]);
+    const priorityTags=new Set([...(f.lowerPriority||[]),..._ppBoostLower]); // merge profile boosts
     const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
     const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
     const other=optional.filter(e=>!(e.tags||[]).some(t=>priorityTags.has(t)));
@@ -3642,7 +3651,7 @@ function filterExercises(pool, sectionType, strokeProfile, trainingLevel, isTape
     const suppress=new Set(f.upperSuppress||[]);
     const mandatory=(f.upperMandatory||[]).map(n=>available.find(e=>e.name===n)).filter(Boolean);
     markSessionUsed(mandatory); // lock mandatories into session so they don't repeat on regenerate
-    const priorityTags=new Set(f.upperPriority||[]);
+    const priorityTags=new Set([...(f.upperPriority||[]),..._ppBoostUpper]); // merge profile boosts
     const optional=available.filter(e=>!suppress.has(e.name)&&!mandatory.find(m=>m.name===e.name));
     const priority=optional.filter(e=>(e.tags||[]).some(t=>priorityTags.has(t)));
     const other=optional.filter(e=>!(e.tags||[]).some(t=>priorityTags.has(t)));
@@ -4086,6 +4095,16 @@ function generateWorkout(forceType){
   const tp=isTaperWeek();
   const emp=getEmphasis();
   const sp=getStrokeProfile();
+  // ── Performance Profile exercise boosts (Gate 2+) ──
+  // Merges pp prescription tags into stroke profile for filterExercises().
+  // Never overrides mandatories or suppressed exercises — only nudges priority bucket.
+  const _pp=S.performanceProfile;
+  if(!forceType&&_pp&&_pp.gate>=2&&_pp.prescription){
+    const em=_pp.prescription.exEmphasis;
+    if(em.lowerBoost&&em.lowerBoost.length)sp._ppLowerBoost=em.lowerBoost;
+    if(em.upperBoost&&em.upperBoost.length)sp._ppUpperBoost=em.upperBoost;
+    if(em.coreBoost&&em.coreBoost.length)sp._ppCoreBoost=em.coreBoost;
+  }
   const trainingLevel=getTrainingLevel();
   const isTaper=tp.yes&&!forceType&&tp.meet.priority!=='C';
   const counts=LEVEL_COUNTS[trainingLevel]||LEVEL_COUNTS.intermediate;
@@ -4180,6 +4199,25 @@ function generateWorkout(forceType){
         reason:`Avg session RPE ${rpeAvg.toFixed(1)}/10 over last ${recentRPE.length} sessions. You're in the red zone. Today's session is on schedule but consider a deload week if this continues.`,
         color:'var(--red)'
       };
+    }
+  }
+
+  // ── Gate 3: Performance Profile session type hint ──
+  // Only fires when: Gate 3, no forceType, no existing adaptNote, readiness is adequate.
+  // Can elevate lower → power when race data shows explosive power is the gap.
+  if(!forceType&&!adaptNote&&_pp&&_pp.gate===3&&_pp.prescription&&_pp.prescription.sessionTypeHint){
+    const hint=_pp.prescription.sessionTypeHint;
+    const effR=S.readiness||3;
+    if(effR>=3&&baseDayType!=='rest'&&baseDayType!=='mobility'){
+      if(hint==='power'&&(baseDayType==='lower')){
+        dayType='power';
+        adaptNote={
+          icon:'📈',
+          label:'Session Adjusted — Profile Insight',
+          reason:`Race data shows ${_pp.prescription.reasoning[0]||'explosive power is a key gap'}. Shifting to power session today.`,
+          color:'var(--accent)'
+        };
+      }
     }
   }
 
@@ -4414,6 +4452,7 @@ function renderWorkoutTab(){
       </div>
     </div>`:'';
 
+  renderDrylandProfileHint(); // performance correlation hint strip
   // ─────────────────────────────────────────────
   // PATH 1: OFF-SEASON ACTIVE
   // ─────────────────────────────────────────────
@@ -4686,6 +4725,14 @@ function generateGoalWorkout(forceType){
   const wantsPower=extraTypes.includes('power');
   const wantsMobility=extraTypes.includes('mobility');
   const sp=getStrokeProfile();
+  // Apply performance profile exercise boosts to goal workout generator too
+  const _ppG=S.performanceProfile;
+  if(!forceType&&_ppG&&_ppG.gate>=2&&_ppG.prescription){
+    const emG=_ppG.prescription.exEmphasis;
+    if(emG.lowerBoost&&emG.lowerBoost.length)sp._ppLowerBoost=emG.lowerBoost;
+    if(emG.upperBoost&&emG.upperBoost.length)sp._ppUpperBoost=emG.upperBoost;
+    if(emG.coreBoost&&emG.coreBoost.length)sp._ppCoreBoost=emG.coreBoost;
+  }
   const trainingLevel=getTrainingLevel();
   const counts=LEVEL_COUNTS[trainingLevel]||LEVEL_COUNTS.intermediate;
   const isTaper=(phaseName==='Taper'||phaseName==='Sharpen');
@@ -5117,6 +5164,7 @@ function confirmSession(){
   }));
   S.history.push({...w,date:new Date().toISOString(),rpe,notes:sessionNotes,blocks:exerciseSnapshot});
   DB.set('history',S.history);
+  buildPerformanceProfile(); // rebuild after session logged
   if(S.history.length%3===0){
     S.programWeek++;
     if(S.programWeek>16){
@@ -5549,6 +5597,7 @@ function renderTimesContent(){
   }).join('');
   html+=`</div></div>`; // close pb-analysis-body + card
   document.getElementById('times-content').innerHTML=html;
+  renderPerformanceInsightsTimes(); // performance correlation panel
 }
 
 // Events that have meaningful splits (not 50s)
@@ -5595,6 +5644,7 @@ function saveTimeEntry(){
   S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
   DB.set('timeHistory',S.timeHistory);
+  buildPerformanceProfile(); // rebuild after time entry saved
   closeModal('add-time-modal');S.activeTStroke=ev;renderStrokeTabs();renderTimesContent();
   // Detect new PB and show share card
   const newBestLCM=getBest(ev,'lcm');
@@ -6193,6 +6243,11 @@ function renderHome(){
   const tp=isTaperWeek();
   if(tp.yes&&az)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-today)/86400000);if(d>=0&&d<=7&&az)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
+  // Performance profile nudge — shown at Gate 2+ if there's an actionable prescription
+  const _pp=S.performanceProfile;
+  if(_pp&&_pp.gate>=2&&_pp.prescription&&_pp.prescription.reasoning.length&&az){
+    az.innerHTML+=`<div class="alert-banner" style="background:rgba(0,198,255,0.07);border:1px solid rgba(0,198,255,0.2);cursor:pointer;" onclick="showSection('times')">📊 <span style="color:var(--accent);font-weight:700;">Training Insight:</span> ${_pp.prescription.reasoning[0]}</div>`;
+  }
 
   renderHomeCals();
   renderKmTracker();
@@ -7359,6 +7414,14 @@ function generateOffSeasonWorkout(forceType){
   const ph=getCurrentOffSeasonPhase();
   const dayType=forceType||getOffSeasonDayType()||'lower';
   const sp=getStrokeProfile();
+  // Performance profile exercise boosts for off-season generator
+  const _ppOOS=S.performanceProfile;
+  if(!forceType&&_ppOOS&&_ppOOS.gate>=2&&_ppOOS.prescription){
+    const emOOS=_ppOOS.prescription.exEmphasis;
+    if(emOOS.lowerBoost&&emOOS.lowerBoost.length)sp._ppLowerBoost=emOOS.lowerBoost;
+    if(emOOS.upperBoost&&emOOS.upperBoost.length)sp._ppUpperBoost=emOOS.upperBoost;
+    if(emOOS.coreBoost&&emOOS.coreBoost.length)sp._ppCoreBoost=emOOS.coreBoost;
+  }
   const intensity=ph?ph.liftIntensity:'GPP';
   const _mult=getLoadMult();
   const _load=getLoadDesc(_mult);
@@ -8593,6 +8656,154 @@ function toggleHistoryDetail(el,idx){
   detail.style.display=open?'none':'block';
   if(chevron)chevron.style.transform=open?'':'rotate(90deg)';
 }
+
+// ── Performance Insights — Times Tab ──
+function renderPerformanceInsightsTimes(){
+  const el=document.getElementById('perf-insights-times');
+  if(!el)return;
+  // Ensure profile is built (may be null on first load)
+  const pp=S.performanceProfile||buildPerformanceProfile();
+  if(!pp){el.innerHTML='';return;}
+
+  const gateColors={1:'var(--muted)',2:'var(--gold)',3:'var(--accent)'};
+  const gateLabels={1:'Building Data',2:'Suggestions',3:'Active Prescription'};
+  const gateColor=gateColors[pp.gate]||'var(--muted)';
+  const gateLabel=gateLabels[pp.gate]||'';
+
+  // Gate 1: passive display only
+  if(pp.gate===1){
+    el.innerHTML=`<div class="card" style="margin-bottom:12px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);">📊 Performance Insights — <span style="color:var(--muted);">Building</span></div>
+        <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
+      </div>
+      <div class="perf-body" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:8px;">${pp.gateReason}. Keep logging races and training sessions — insights unlock automatically.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
+            <div style="font-size:18px;font-weight:900;color:var(--text);">${pp.totalRacesLogged}</div>
+            <div style="font-size:10px;color:var(--muted);">races logged</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
+            <div style="font-size:18px;font-weight:900;color:var(--text);">${pp.fullCyclesCompleted}</div>
+            <div style="font-size:10px;color:var(--muted);">full cycles</div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
+            <div style="font-size:18px;font-weight:900;color:var(--text);">${(S.history||[]).length}</div>
+            <div style="font-size:10px;color:var(--muted);">dryland sessions</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);">Unlocks at 10 races + 2 training cycles</div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Gates 2 & 3: full insights
+  const trendIcon=t=>t==='improving'?'📈':t==='regressing'?'📉':t==='plateau'?'➡️':'—';
+  const trendColor=t=>t==='improving'?'var(--green)':t==='regressing'?'var(--red)':t==='plateau'?'var(--gold)':'var(--muted)';
+  const signalIcon=s=>s==='positive'?'✅':s==='negative'?'⚠️':s==='neutral'?'➡️':'—';
+
+  // SCM/LCM trend rows
+  const poolRows=(['scm','lcm']).map(pool=>{
+    const pat=pool==='scm'?pp.scmPattern:pp.lcmPattern;
+    if(pat.trend==='insufficient')return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="font-size:12px;color:var(--text);">${pool.toUpperCase()} Times</span><span style="font-size:11px;color:var(--muted);">Insufficient data</span></div>`;
+    const avgStr=pat.avgImprovement<0?`▼ ${Math.abs(pat.avgImprovement).toFixed(2)}s/meet faster`:`▲ ${pat.avgImprovement.toFixed(2)}s/meet slower`;
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--text);">${pool.toUpperCase()} Times</span>
+      <span style="font-size:12px;font-weight:700;color:${trendColor(pat.trend)};">${trendIcon(pat.trend)} ${avgStr}</span>
+    </div>`;
+  }).join('');
+
+  // Block correlation rows
+  const blockRows=Object.entries(pp.blockCorrelation).map(([phase,d])=>{
+    if(d.signal==='insufficient')return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);"><span style="font-size:12px;color:var(--muted);">${phase}</span><span style="font-size:11px;color:var(--muted);">—</span></div>`;
+    const rate=d.total>0?Math.round((d.imp/d.total)*100):0;
+    const col=d.signal==='positive'?'var(--green)':d.signal==='negative'?'var(--red)':'var(--muted)';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--text);">${phase} Block</span>
+      <span style="font-size:12px;font-weight:700;color:${col};">${signalIcon(d.signal)} ${rate}% improvement rate</span>
+    </div>`;
+  }).join('');
+
+  // Coach tag causes
+  const tagRows=pp.tagProfile.trainingCauses.length?pp.tagProfile.trainingCauses.map(tc=>`
+    <div style="padding:8px 10px;background:var(--surface);border-radius:8px;border-left:3px solid var(--orange);margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:2px;">${tc.label} — ${Math.round(tc.pct*100)}% of races</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${tc.cause}</div>
+      <div style="font-size:11px;color:var(--text);">Fix: ${tc.trainingFix}</div>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--muted);">No persistent issues detected — tag more races to refine.</div>';
+
+  // Prescription block (Gate 2+)
+  let prescriptionHtml='';
+  if(pp.prescription&&pp.prescription.reasoning.length){
+    const confColor=pp.prescription.confidence==='high'?'var(--green)':pp.prescription.confidence==='medium'?'var(--gold)':'var(--muted)';
+    const reasoningHtml=pp.prescription.reasoning.map(r=>`<div style="font-size:11px;color:var(--text);padding:3px 0;border-bottom:1px solid var(--border);">• ${r}</div>`).join('');
+    prescriptionHtml=`<div style="margin-top:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid ${confColor};">
+      <div style="font-size:11px;font-weight:700;color:${confColor};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
+        ${pp.gate===3?'📈 Active Prescription':'💡 Suggestions'} · Confidence: ${pp.prescription.confidence}
+      </div>
+      ${reasoningHtml}
+    </div>`;
+  }
+
+  // Warnings
+  const warningsHtml=pp.dataWarnings.length?`<div style="margin-top:8px;font-size:10px;color:var(--muted);font-style:italic;">${pp.dataWarnings.map(w=>`⚠️ ${w}`).join(' · ')}</div>`:'';
+
+  el.innerHTML=`<div class="card" style="margin-bottom:12px;border:1px solid ${gateColor};">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:${gateColor};">📊 Performance Insights</div>
+        <div style="font-size:10px;color:var(--muted);">${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} cycles · ${gateLabel}</div>
+      </div>
+      <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
+    </div>
+    <div class="perf-body" style="display:none;margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Pool Trends</div>
+      ${poolRows}
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">Block Correlation</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">% of races where times improved after each training block</div>
+      ${blockRows}
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">Recurring Race Issues</div>
+      ${tagRows}
+      ${prescriptionHtml}
+      ${warningsHtml}
+      ${pp.gate<2?'<div style="margin-top:8px;font-size:11px;color:var(--muted);">⚠️ Suggestions shown at Gate 2 only</div>':''}
+    </div>
+  </div>`;
+}
+function togglePerfInsights(header){
+  const card=header.closest('.card');
+  if(!card)return;
+  const body=card.querySelector('.perf-body');
+  const chevron=card.querySelector('.perf-chevron');
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  if(chevron)chevron.style.transform=open?'':'rotate(90deg)';
+}
+
+// ── Performance Hint — Dryland Tab ──
+function renderDrylandProfileHint(){
+  const el=document.getElementById('dryland-profile-hint');
+  if(!el)return;
+  const pp=S.performanceProfile;
+  if(!pp||pp.gate<2||!pp.prescription||!pp.prescription.reasoning.length){el.innerHTML='';return;}
+  const gateColor=pp.gate===3?'var(--accent)':'var(--gold)';
+  const topReason=pp.prescription.reasoning[0]||'';
+  el.innerHTML=`<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface);border-radius:10px;border-left:3px solid ${gateColor};">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="this.parentElement.querySelector('.dryland-hint-body').style.display=this.parentElement.querySelector('.dryland-hint-body').style.display==='none'?'block':'none';this.querySelector('.dhc').style.transform=this.querySelector('.dhc').style.transform?'':'rotate(90deg)';">
+      <div style="font-size:12px;font-weight:700;color:${gateColor};">${pp.gate===3?'📈 Profile Active':'💡 Profile Hint'}</div>
+      <span class="dhc" style="font-size:14px;color:var(--muted);transition:transform 0.25s;">›</span>
+    </div>
+    <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.5;">${topReason}</div>
+    <div class="dryland-hint-body" style="display:none;margin-top:8px;">
+      ${pp.prescription.reasoning.slice(1).map(r=>`<div style="font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);">• ${r}</div>`).join('')}
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} cycles · Confidence: ${pp.prescription.confidence}</div>
+    </div>
+  </div>`;
+}
+
 function renderProgramTargets(){
   document.getElementById('week-display').textContent=S.programWeek;
   document.getElementById('cycle-display').textContent=S.programCycle||1;
@@ -9235,6 +9446,20 @@ const COACH_TAGS=[
   {id:'great',label:'Strong swim'},
 ];
 
+// ── Coach Tag → Training Cause Mapping ──
+// Static domain knowledge: what each recurring race tag means for dryland programming
+const TAG_TRAINING_CAUSES={
+  pacing:    {cause:'Inconsistent race pace — going out too fast or dying in the back half',trainingFix:'Increase aerobic base volume in GPP; add pacing sets to warm-up',blockEmphasis:'GPP',exBoost:'cardio'},
+  kick:      {cause:'Weak kick — insufficient hip thrust and ankle/hamstring power',trainingFix:'Prioritise Hip Thrust and Nordic Ham Curls in lower sessions',blockEmphasis:'Strength',exBoost:'hinge'},
+  underwaters:{cause:'Short or weak dolphin kick off walls — needs explosive hip power',trainingFix:'Plyometric lower emphasis; Hip Thrust, Box Jumps, Depth Jump',blockEmphasis:'Power',exBoost:'explosive'},
+  start:     {cause:'Start reaction or block power — needs explosive full-body power',trainingFix:'Power block emphasis; Hang Power Clean, Countermovement Jump',blockEmphasis:'Power',exBoost:'explosive'},
+  stroke:    {cause:'Stroke rate dropping — upper body endurance or pulling power',trainingFix:'Pull-up volume and Weighted Pull-Ups in Strength block',blockEmphasis:'Strength',exBoost:'pull'},
+  turn:      {cause:'Turn speed — explosive push-off and core bracing at the wall',trainingFix:'Single-leg plyometrics, Core anti-rotation, Power phase emphasis',blockEmphasis:'Power',exBoost:'explosive'},
+  finish:    {cause:'Finish — body position awareness or race fatigue',trainingFix:'Aerobic capacity in GPP; core stability for body position',blockEmphasis:'GPP',exBoost:'core'},
+  breathing: {cause:'Breathing pattern disrupting stroke rhythm — often anxiety or fatigue',trainingFix:'Aerobic base (GPP); breathing pattern drills in warm-up',blockEmphasis:'GPP',exBoost:'cardio'},
+  head_pos:  {cause:'Head position — usually core weakness or upper trap dominance',trainingFix:'Core stability; Y/T/W raises, posterior shoulder work',blockEmphasis:'GPP',exBoost:'core'},
+};
+
 // ── Meet Intelligence Engine ──
 // Analyses all past race logs to build a swimmer profile for a given event
 function getMeetIntelligence(event){
@@ -9538,6 +9763,169 @@ function getRestProtocol(gapHours,prelimResult,seedTime,coachTags){
   }).filter(Boolean);
 
   return{protocol,coachFixes,delta,qualified};
+}
+
+// ════════════════════════════════════════════════════════
+// ── Performance Correlation Engine ──
+// Analyses race results, training blocks, and coach tags
+// to build a gated prescription profile.
+// Rebuilt whenever a time, race log, or session is saved.
+// ════════════════════════════════════════════════════════
+
+function _pceTSec(t){if(!t||t==='—')return Infinity;const p=String(t).split(':');return p.length===2?parseFloat(p[0])*60+parseFloat(p[1]):parseFloat(t);}
+
+function getProfileGate(){
+  const raceResults=(S.meetRaceLog||[]).filter(l=>{
+    const s=_pceTSec(l.time);return s!==Infinity&&s>0;
+  });
+  const racesLogged=raceResults.length;
+  const cyclesCompleted=Math.max(0,(S.programCycle||1)-1);
+  if(racesLogged>=20&&cyclesCompleted>=3)return{gate:3,racesLogged,cyclesCompleted,reason:`${racesLogged} races · ${cyclesCompleted} full cycles`};
+  if(racesLogged>=10&&cyclesCompleted>=2)return{gate:2,racesLogged,cyclesCompleted,reason:`${racesLogged} races · ${cyclesCompleted} cycles — suggestions`};
+  const needRaces=racesLogged<10?`${10-racesLogged} more race logs needed`:'';
+  const needCycles=cyclesCompleted<2?`${2-cyclesCompleted} more training cycle(s) needed`:'';
+  const parts=[needRaces,needCycles].filter(Boolean);
+  return{gate:1,racesLogged,cyclesCompleted,reason:parts.join(' · ')||'Building data...'};
+}
+
+function pceAnalysePool(poolType){
+  const events=Object.keys(S.timeHistory||{}).filter(ev=>(S.timeHistory[ev]||[]).some(e=>_pceTSec(e[poolType])!==Infinity));
+  const eventBreakdown={};
+  let totalDelta=0,eventCount=0;
+  for(const ev of events){
+    const hist=(S.timeHistory[ev]||[]).filter(e=>_pceTSec(e[poolType])!==Infinity).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    if(hist.length<2){eventBreakdown[ev]={entryCount:hist.length,trend:'insufficient'};continue;}
+    const bestSec=Math.min(...hist.map(e=>_pceTSec(e[poolType])));
+    const first=_pceTSec(hist[0][poolType]);const last=_pceTSec(hist[hist.length-1][poolType]);
+    const totalD=last-first;const avgDelta=totalD/(hist.length-1);
+    const trend=hist.length<3?'insufficient':avgDelta<-0.3?'improving':avgDelta>0.3?'regressing':'plateau';
+    eventBreakdown[ev]={bestSec,entryCount:hist.length,trend,avgDeltaPerMeet:avgDelta};
+    totalDelta+=avgDelta;eventCount++;
+  }
+  const avgImprovement=eventCount>0?totalDelta/eventCount:0;
+  const trend=eventCount<2?'insufficient':avgImprovement<-0.2?'improving':avgImprovement>0.2?'regressing':'plateau';
+  return{avgImprovement,trend,eventBreakdown};
+}
+
+function pceAnalyseBlocks(){
+  const corr={GPP:{imp:0,total:0},Strength:{imp:0,total:0},Power:{imp:0,total:0},Taper:{imp:0,total:0}};
+  for(const log of(S.meetRaceLog||[])){
+    const resultSec=_pceTSec(log.time);if(resultSec===Infinity||resultSec<=0)continue;
+    const race=(S.meetRaces||[]).find(r=>String(r.id)===String(log.raceId));if(!race)continue;
+    const meet=(S.meets||[]).find(m=>String(m.id)===String(log.meetId));if(!meet||!meet.date)continue;
+    const meetDate=localDate(meet.date);
+    const lookback=42*86400000;
+    const priorSessions=(S.history||[]).filter(h=>{
+      if(!h.date||!h.phase)return false;
+      const diff=meetDate-new Date(h.date);return diff>0&&diff<=lookback;
+    });
+    if(priorSessions.length<3)continue;
+    const phaseCounts={};for(const h of priorSessions){const pn=h.phase.name;phaseCounts[pn]=(phaseCounts[pn]||0)+1;}
+    const dom=Object.entries(phaseCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    if(!dom||!corr[dom])continue;
+    const pool=(race.pool==='scm')?'scm':'lcm';
+    const evHist=(S.timeHistory[race.event]||[]).filter(e=>_pceTSec(e[pool])!==Infinity).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const priorEntries=evHist.filter(e=>new Date(e.date)<meetDate);
+    if(!priorEntries.length)continue;
+    const priorBest=Math.min(...priorEntries.map(e=>_pceTSec(e[pool])));
+    const improved=resultSec<priorBest-0.05;
+    corr[dom].total++;if(improved)corr[dom].imp++;
+  }
+  const result={};
+  for(const[phase,d]of Object.entries(corr)){
+    const rate=d.total>0?d.imp/d.total:null;
+    result[phase]={...d,signal:d.total<3?'insufficient':rate>0.6?'positive':rate<0.3?'negative':'neutral'};
+  }
+  return result;
+}
+
+function pceBuildTagProfile(gate){
+  const allLogs=(S.meetRaceLog||[]).filter(l=>_pceTSec(l.time)!==Infinity&&_pceTSec(l.time)>0);
+  const tagTotal=allLogs.length;const tagCounts={};
+  for(const log of allLogs)for(const t of(log.coachTags||[])){tagCounts[t]=(tagCounts[t]||0)+1;}
+  const minCount=Math.max(2,Math.floor(tagTotal*0.35));
+  const persistentIssues=Object.entries(tagCounts)
+    .filter(([tag,count])=>tag!=='great'&&count>=minCount&&tagTotal>0&&count/tagTotal>=0.35)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([tag,count])=>({tag,count,pct:count/tagTotal,label:(COACH_TAGS.find(ct=>ct.id===tag)||{}).label||tag}));
+  const strengths=tagCounts['great']&&tagTotal>0&&tagCounts['great']/tagTotal>=0.5
+    ?[{tag:'great',label:'Strong swim',pct:tagCounts['great']/tagTotal,count:tagCounts['great']}]:[];
+  const trainingCauses=persistentIssues.filter(i=>TAG_TRAINING_CAUSES[i.tag]).map(i=>({...i,...TAG_TRAINING_CAUSES[i.tag]}));
+  return{persistentIssues,strengths,trainingCauses,tagTotal};
+}
+
+function pceBuildPrescription(blockCorr,tagProfile,gate){
+  if(gate<2)return null;
+  const reasoning=[];
+  const offSeasonWeights={Transition:1.0,GPP:1.0,Hypertrophy:1.0,'Strength Block':1.0,'Specific Prep':1.0};
+  const blockEmphasis={GPP:0,Strength:0,Power:0};
+  const exEmphasis={lowerBoost:[],upperBoost:[],coreBoost:[]};
+  let sessionTypeHint=null;
+  // Block correlation drives phase weighting
+  for(const[phase,d]of Object.entries(blockCorr)){
+    if(d.signal==='positive'){
+      if(phase==='GPP'){offSeasonWeights.GPP=Math.min(1.5,offSeasonWeights.GPP+0.3);blockEmphasis.GPP=1;reasoning.push(`GPP block preceded improvement in ${d.imp}/${d.total} races — expanding aerobic base`);}
+      if(phase==='Strength'){offSeasonWeights['Strength Block']=Math.min(1.4,offSeasonWeights['Strength Block']+0.2);blockEmphasis.Strength=1;reasoning.push(`Strength block correlates with ${d.imp}/${d.total} race improvements — prioritising compound loading`);}
+      if(phase==='Power'){blockEmphasis.Power=1;reasoning.push(`Power block correlates with ${d.imp}/${d.total} improvements — maintaining explosive emphasis`);}
+    }
+    if(d.signal==='negative'){
+      if(phase==='GPP'){offSeasonWeights.GPP=Math.max(0.7,offSeasonWeights.GPP-0.2);reasoning.push(`GPP shows limited race correlation — may need earlier intensity shift`);}
+      if(phase==='Strength'){reasoning.push(`Strength block shows limited correlation — checking tag causes for root issue`);}
+    }
+  }
+  // Coach tags drive exercise emphasis
+  for(const issue of tagProfile.trainingCauses){
+    const cause=TAG_TRAINING_CAUSES[issue.tag];if(!cause)continue;
+    const pctStr=`${Math.round(issue.pct*100)}%`;
+    if(cause.blockEmphasis==='Power'){
+      if(!exEmphasis.lowerBoost.includes('explosive'))exEmphasis.lowerBoost.push('explosive');
+      sessionTypeHint=sessionTypeHint||'power';
+      reasoning.push(`"${issue.label}" in ${pctStr} of races → prioritising explosive lower body`);
+    }
+    if(cause.blockEmphasis==='Strength'){
+      if(!exEmphasis.upperBoost.includes('pull'))exEmphasis.upperBoost.push('pull');
+      reasoning.push(`"${issue.label}" in ${pctStr} of races → prioritising pull strength`);
+    }
+    if(cause.blockEmphasis==='GPP'){
+      offSeasonWeights.GPP=Math.min(1.5,offSeasonWeights.GPP+0.15);
+      if(!exEmphasis.coreBoost.includes('core'))exEmphasis.coreBoost.push('core');
+      reasoning.push(`"${issue.label}" in ${pctStr} of races → aerobic base and core stability need work`);
+    }
+  }
+  const confidence=gate===3?'high':'medium';
+  return{offSeasonWeights,blockEmphasis,exEmphasis,sessionTypeHint,confidence,reasoning};
+}
+
+function buildPerformanceProfile(){
+  // Staleness check — skip rebuild if profile is fresh (<10 min) unless called by race log trigger
+  const pp=S.performanceProfile;
+  if(pp&&pp.builtAt&&(new Date()-new Date(pp.builtAt))<600000&&!buildPerformanceProfile._force)return pp;
+  buildPerformanceProfile._force=false;
+
+  const{gate,racesLogged,cyclesCompleted,reason}=getProfileGate();
+  const scmPattern=pceAnalysePool('scm');
+  const lcmPattern=pceAnalysePool('lcm');
+  const tagProfile=pceBuildTagProfile(gate);
+  const blockCorrelation=gate>=2?pceAnalyseBlocks():{GPP:{signal:'insufficient'},Strength:{signal:'insufficient'},Power:{signal:'insufficient'},Taper:{signal:'insufficient'}};
+
+  const sufficients=Object.entries(blockCorrelation).filter(([,d])=>d.signal!=='insufficient');
+  const bestBlock=sufficients.find(([,d])=>d.signal==='positive')?.[0]||null;
+  const weakBlock=sufficients.find(([,d])=>d.signal==='negative')?.[0]||null;
+
+  const dataWarnings=[];
+  if(!(S.meets||[]).length)dataWarnings.push('No meets in calendar — race context unavailable');
+  const allEvents=Object.keys(S.timeHistory||{});
+  if(allEvents.every(ev=>(S.timeHistory[ev]||[]).length<2))dataWarnings.push('Most events have fewer than 2 time entries');
+  const logsWithTags=(S.meetRaceLog||[]).filter(l=>(l.coachTags||[]).length>0);
+  const totalLogs=(S.meetRaceLog||[]).filter(l=>_pceTSec(l.time)!==Infinity&&_pceTSec(l.time)>0);
+  if(totalLogs.length>0&&logsWithTags.length<totalLogs.length*0.5)dataWarnings.push('Less than half of race logs have coach tags — tag analysis may be incomplete');
+
+  const prescription=pceBuildPrescription(blockCorrelation,tagProfile,gate);
+
+  const profile={gate,gateReason:reason,totalRacesLogged:racesLogged,fullCyclesCompleted:cyclesCompleted,scmPattern,lcmPattern,blockCorrelation,bestBlock,weakBlock,tagProfile,prescription,builtAt:new Date().toISOString(),dataWarnings};
+  S.performanceProfile=profile;
+  DB.set('performanceProfile',profile);
+  return profile;
 }
 
 // ── Meet Day Banner ──
@@ -9909,6 +10297,7 @@ function saveMeetRaceResult(){
   };
   S.meetRaceLog.push(entry);
   DB.set('meetRaceLog',S.meetRaceLog);
+  buildPerformanceProfile._force=true;buildPerformanceProfile(); // force rebuild — race data is high value
   // Auto-sync to Times tab + PB detection
   let pbEv=null,pbTime=null,pbCourse=null,pbMeet=null;
   if(race&&time){
