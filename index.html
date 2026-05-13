@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 102</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 104</div>
       </div>
     </div>
 
@@ -581,12 +581,29 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       </div>
       <h1 style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:6px;">SwimFitPro</h1>
       <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">Dryland · Fuel · Race Prep</p>
-      <p style="font-size:14px;color:var(--muted);line-height:1.5;">Set up your athlete profile to get personalised training, time standards, and nutrition.</p>
+      <p style="font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:16px;">Takes 2 minutes. Every question below changes how the app works for you — the more honest you are, the smarter it gets.</p>
+      <!-- It gets smarter promise -->
+      <div style="background:linear-gradient(135deg,rgba(0,198,255,0.08),rgba(100,60,255,0.08));border:1px solid rgba(0,198,255,0.2);border-radius:14px;padding:14px 16px;margin-bottom:4px;text-align:left;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:10px;">This app gets smarter the more you use it</div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,198,255,0.15);border:1px solid rgba(0,198,255,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--accent);flex-shrink:0;">1</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--text);">Start logging</div><div style="font-size:11px;color:var(--muted);line-height:1.4;">Dryland sessions, races, pool check-ins. The app builds your profile.</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,198,255,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0;">2</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--muted);">Patterns emerge <span style="font-size:10px;font-weight:400;">(10+ races · 2 training arcs)</span></div><div style="font-size:11px;color:var(--muted);line-height:1.4;">Your race data starts correlating with your training blocks. Early insights surface.</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,198,255,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0;">3</div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--muted);">Full correlation active <span style="font-size:10px;font-weight:400;">(20+ races · 3 training arcs)</span></div><div style="font-size:11px;color:var(--muted);line-height:1.4;">Every session is shaped by your race history, training load, and readiness. The engine is fully personalised to you.</div></div>
+        </div>
+      </div>
     </div>
 
     <!-- STEP 1: Basic Info -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">👤 About You</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Your age and gender determine your age-group time standards and how training load is scaled. Your club and country set which qualifying standards you're compared against.</p>
       <div class="form-row"><label>First Name</label><input type="text" id="ob-name" placeholder="e.g. Alex" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
       <div class="form-row"><label>Club / Team</label><input type="text" id="ob-club" placeholder="e.g. Cascade Swim Club" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
       <div class="form-row"><label>Date of Birth</label>
@@ -784,12 +801,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- STEP 2: Favourite Strokes & Distances -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">🏊 Your Events</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Select the events you race. These appear first in your Times tab.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Select the events you race. These appear first in your Times tab and are used to compare your times against qualifying standards.</p>
       <div id="ob-events" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">🌊 Your Strokes</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Used to personalise your dryland workouts with the right movement patterns.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Your primary stroke determines which muscles every dryland session prioritises — a butterfly swimmer trains differently to a breaststroker. Be honest here, it changes every session you're ever prescribed.</p>
       <div class="form-row"><label>Primary Stroke</label>
         <select id="ob-primary-stroke" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
           <option value="">Select primary stroke</option>
@@ -817,7 +834,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- STEP 3: Time Standard -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">🎯 Time Standard to Chase</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pick the standard you want to compare your times against. You can change this anytime.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">This is the benchmark your times are measured against. The app tracks your gap to this standard, projects when you'll hit it, and uses it to calibrate how your training data is interpreted. You can change it anytime.</p>
       <div id="ob-std-picker" style="display:flex;flex-direction:column;gap:8px;">
         <!-- Populated dynamically by updateObStdPicker() based on province -->
       </div>
@@ -826,14 +843,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- STEP 4: Long-Term Goals -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">🚀 Long-Term Goals</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">What are you ultimately working towards? Pick up to 3. These shape how your training is prioritised.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">What are you working toward? Pick up to 3. These shape how your training data is weighted — a swimmer chasing a scholarship is calibrated differently to one building for longevity.</p>
       <div id="ob-goals" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
     </div>
 
     <!-- STEP 5: Training Level -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">💪 Training Level</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">This shapes how many exercises you get each session and how they're scaled.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Be honest — this sets your starting load and how sessions are scaled. Choosing too high means the first session will be too hard. You can always adjust it later in your profile.</p>
       <div style="display:flex;gap:8px;">
         <button type="button" id="ob-level-beginner" onclick="setObLevel('beginner')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
           <div style="font-size:20px;margin-bottom:4px;">🌱</div>New to dryland
@@ -851,7 +868,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- STEP 6: Equipment -->
     <div class="card" style="margin-bottom:12px;">
       <div class="card-title">🏗️ Equipment Access</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">What do you have available for dryland training?</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">The app only prescribes exercises you can actually do. A full gym unlocks heavier compound loading — bodyweight still gets you a complete session, just built differently.</p>
       <div style="display:flex;gap:8px;">
         <button type="button" id="ob-equip-bodyweight" onclick="setObEquip('bodyweight')" style="flex:1;padding:12px 8px;border-radius:10px;border:2px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">
           <div style="font-size:20px;margin-bottom:4px;">🤸</div>Bodyweight only
@@ -6423,10 +6440,40 @@ function renderHome(){
   const tp=isTaperWeek();
   if(tp.yes&&az)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-today)/86400000);if(d>=0&&d<=7&&az)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
-  // Performance profile nudge — shown at Gate 2+ if there's an actionable prescription
-  const _pp=S.performanceProfile;
+  // Performance profile nudge — shown at Gate 2+ if there's an actionable insight
+  const _pp=S.performanceProfile||buildPerformanceProfile();
   if(_pp&&_pp.gate>=2&&_pp.prescription&&_pp.prescription.reasoning.length&&az){
     az.innerHTML+=`<div class="alert-banner" style="background:rgba(0,198,255,0.07);border:1px solid rgba(0,198,255,0.2);cursor:pointer;" onclick="showSection('times')">📊 <span style="color:var(--accent);font-weight:700;">Training Insight:</span> ${_pp.prescription.reasoning[0]}</div>`;
+  }
+  // Engine progress card — shown at Gate 1 only (disappears once Gate 2 unlocked)
+  if(_pp&&_pp.gate<2&&az){
+    const racesLogged=_pp.racesLogged||0;
+    const arcsCompleted=_pp.cyclesCompleted||0;
+    const racePct=Math.min(100,Math.round(racesLogged/10*100));
+    const arcPct=Math.min(100,Math.round(arcsCompleted/2*100));
+    const raceNeed=Math.max(0,10-racesLogged);
+    const arcNeed=Math.max(0,2-arcsCompleted);
+    az.innerHTML+=`<div style="background:linear-gradient(135deg,rgba(0,198,255,0.06),rgba(100,60,255,0.06));border:1px solid rgba(0,198,255,0.15);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);">Performance Engine</div>
+        <div style="font-size:10px;color:var(--muted);background:var(--surface);border-radius:20px;padding:3px 8px;">Building</div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:11px;color:var(--muted);">Races logged</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text);">${racesLogged} / 10${raceNeed>0?` · ${raceNeed} to go`:' ✓'}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:5px;overflow:hidden;"><div style="background:var(--accent);height:100%;width:${racePct}%;border-radius:4px;transition:width 0.4s;"></div></div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:11px;color:var(--muted);">Training arcs</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text);">${arcsCompleted} / 2${arcNeed>0?` · ${arcNeed} to go`:' ✓'}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:5px;overflow:hidden;"><div style="background:var(--purple);height:100%;width:${arcPct}%;border-radius:4px;transition:width 0.4s;"></div></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;">A training arc = a GPP block followed by a Strength or Power block. The more you log, the more the engine learns about what drives your best performances.</div>
+    </div>`;
   }
 
   renderHomeCals();
@@ -8134,6 +8181,9 @@ S.foodFavourites=DB.get('foodFavourites',[]); // [foodId]
 S.foodRecents=DB.get('foodRecents',[]); // [{id,name,cal,carbs,protein,fat}] — last 20 distinct
 S._foodTab=S._foodTab||'library'; // 'library'|'recents'|'favourites'|'search'
 S._offSearchTimer=null;
+// Saved meal slots — build once, tap to log daily
+// [{id, name, mealType, items:[{foodId, qty}], lastUsed}]
+S.savedMeals=DB.get('savedMeals',[]);
 
 // Resolve a food by id — checks SWIMMER_FOODS then foodCache
 function resolveFood(foodId){
@@ -8396,76 +8446,80 @@ function onFoodSearch(val){
   }
 }
 
-// API search — try USDA first, fall back to Open Food Facts
+// API search — Open Food Facts primary (global coverage), USDA fallback
 async function foodApiSearch(query){
   const r=document.getElementById('food-api-results');
   if(!r)return;
+
+  // ── Primary: Open Food Facts (global, 3M+ products) ──
   try{
-    // Try USDA FoodData Central first
-    const url=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=DEMO_KEY`;
-    const resp=await fetch(url,{signal:AbortSignal.timeout(6000)});
-    if(!resp.ok)throw new Error('USDA error');
-    const data=await resp.json();
-    const foods=(data.foods||[]);
-    function getNutrient(nutrients,id){
-      const n=(nutrients||[]).find(n=>n.nutrientId===id||n.nutrientNumber===String(id));
-      return n?Math.round(n.value*10)/10:0;
+    const offUrl=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&lc=en&fields=product_name,product_name_en,brands,nutriments,_id,lang`;
+    const offResp=await fetch(offUrl,{signal:AbortSignal.timeout(8000)});
+    if(!offResp.ok)throw new Error('OFF error');
+    const offData=await offResp.json();
+    function getBestName(p){
+      if(p.product_name_en&&p.product_name_en.trim())return p.product_name_en.trim();
+      if((p.lang==='en'||!p.lang)&&p.product_name&&p.product_name.trim())return p.product_name.trim();
+      return null;
     }
     const seen=new Set();
-    const rows=foods.filter(f=>{
-      if(!f.description)return false;
-      const key=f.description.toLowerCase().trim();
+    const offRows=(offData.products||[]).filter(p=>{
+      const n=p.nutriments||{};
+      const hasKcal=n['energy-kcal_100g']||n['energy-kcal']||n['energy_100g'];
+      if(!hasKcal)return false;
+      const name=getBestName(p);
+      if(!name)return false;
+      const key=name.toLowerCase().trim();
       if(seen.has(key))return false;
       seen.add(key);return true;
-    }).slice(0,15).map(f=>{
-      const cal=getNutrient(f.foodNutrients,1008);
-      if(!cal)return '';
-      const carbs=getNutrient(f.foodNutrients,1005);
-      const protein=getNutrient(f.foodNutrients,1003);
-      const fat=getNutrient(f.foodNutrients,1004);
-      const brand=f.brandOwner?` (${f.brandOwner.split(' ').slice(0,2).join(' ')})`:f.brandName?` (${f.brandName})`:'';
-      const name=(f.description+brand).slice(0,60);
-      const food={id:'usda_'+f.fdcId,name,cal,carbs,protein,fat,per100g:true};
+    }).slice(0,15).map(p=>{
+      const n=p.nutriments||{};
+      const cal=Math.round(n['energy-kcal_100g']||n['energy-kcal_serving']||((n['energy_100g']||0)/4.184));
+      const carbs=Math.round((n['carbohydrates_100g']||0)*10)/10;
+      const protein=Math.round((n['proteins_100g']||0)*10)/10;
+      const fat=Math.round((n['fat_100g']||0)*10)/10;
+      const brand=p.brands?` (${p.brands.split(',')[0].trim()})`: '';
+      const nm=(getBestName(p)||'Unknown')+brand;
+      const food={id:'off_'+p._id,name:nm.slice(0,60),cal,carbs,protein,fat,per100g:true};
       return _foodRow(food);
     }).filter(Boolean).join('');
-    if(!rows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
-    r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">More results \xb7 per 100g \xb7 USDA FoodData Central</div>`+rows;
-  } catch(usdaErr){
-    // Fallback to Open Food Facts
+    if(offRows){
+      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · Open Food Facts</div>`+offRows;
+      return;
+    }
+    throw new Error('OFF no results');
+  } catch(offErr){
+    // ── Fallback: USDA FoodData Central ──
     try{
-      const url=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&lc=en&fields=product_name,product_name_en,brands,nutriments,_id,lang`;
-      const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      if(!resp.ok)throw new Error('OFF error');
-      const data=await resp.json();
-      function getBestName(p){
-        if(p.product_name_en&&p.product_name_en.trim())return p.product_name_en.trim();
-        if((p.lang==='en'||!p.lang)&&p.product_name&&p.product_name.trim())return p.product_name.trim();
-        return null;
+      const usdaUrl=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=DEMO_KEY`;
+      const usdaResp=await fetch(usdaUrl,{signal:AbortSignal.timeout(6000)});
+      if(!usdaResp.ok)throw new Error('USDA error');
+      const usdaData=await usdaResp.json();
+      const foods=(usdaData.foods||[]);
+      function getNutrient(nutrients,id){
+        const n=(nutrients||[]).find(n=>n.nutrientId===id||n.nutrientNumber===String(id));
+        return n?Math.round(n.value*10)/10:0;
       }
-      const seen=new Set();
-      const rows=(data.products||[]).filter(p=>{
-        const n=p.nutriments||{};
-        const hasKcal=n['energy-kcal_100g']||n['energy-kcal']||n['energy_100g'];
-        if(!hasKcal)return false;
-        const name=getBestName(p);
-        if(!name)return false;
-        const key=name.toLowerCase().trim();
-        if(seen.has(key))return false;
-        seen.add(key);return true;
-      }).slice(0,15).map(p=>{
-        const n=p.nutriments||{};
-        const cal=Math.round(n['energy-kcal_100g']||n['energy-kcal_serving']||((n['energy_100g']||0)/4.184));
-        const carbs=Math.round((n['carbohydrates_100g']||0)*10)/10;
-        const protein=Math.round((n['proteins_100g']||0)*10)/10;
-        const fat=Math.round((n['fat_100g']||0)*10)/10;
-        const brand=p.brands?` (${p.brands.split(',')[0].trim()})`: '';
-        const name=(getBestName(p)||'Unknown')+brand;
-        const food={id:'off_'+p._id,name:name.slice(0,60),cal,carbs,protein,fat,per100g:true};
+      const seen2=new Set();
+      const usdaRows=foods.filter(f=>{
+        if(!f.description)return false;
+        const key=f.description.toLowerCase().trim();
+        if(seen2.has(key))return false;
+        seen2.add(key);return true;
+      }).slice(0,15).map(f=>{
+        const cal=getNutrient(f.foodNutrients,1008);
+        if(!cal)return '';
+        const carbs=getNutrient(f.foodNutrients,1005);
+        const protein=getNutrient(f.foodNutrients,1003);
+        const fat=getNutrient(f.foodNutrients,1004);
+        const brand=f.brandOwner?` (${f.brandOwner.split(' ').slice(0,2).join(' ')})`:f.brandName?` (${f.brandName})`:'';
+        const name=(f.description+brand).slice(0,60);
+        const food={id:'usda_'+f.fdcId,name,cal,carbs,protein,fat,per100g:true};
         return _foodRow(food);
       }).filter(Boolean).join('');
-      if(!rows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
-      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">More results \xb7 per 100g \xb7 Open Food Facts</div>`+rows;
-    } catch(offErr){
+      if(!usdaRows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
+      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · USDA FoodData Central</div>`+usdaRows;
+    } catch(usdaErr){
       r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable right now. Check your connection or add a Custom food.</div>`;
     }
   }
@@ -8506,6 +8560,186 @@ function _buildMealFoodResults(){return _buildFoodPanel();}
 function updateMealSearchResults(){
   const res=document.getElementById('meal-food-results');
   if(res)res.innerHTML=_buildFoodPanel();
+}
+
+// ── Saved Meal Slots ──────────────────────────────────────────────────────────
+// Build once → tap to log. Primary fuel entry mechanic.
+
+function _savedMealsCalc(slot){
+  // Returns {cal,carbs,protein,fat} totals for a saved slot
+  let cal=0,carbs=0,protein=0,fat=0;
+  (slot.items||[]).forEach(item=>{
+    const food=resolveFood(item.foodId);
+    if(!food)return;
+    const q=item.qty||1;
+    cal+=food.cal*q;carbs+=food.carbs*q;protein+=food.protein*q;fat+=food.fat*q;
+  });
+  return{cal:Math.round(cal),carbs:Math.round(carbs),protein:Math.round(protein),fat:Math.round(fat)};
+}
+
+function logSavedMeal(slotId){
+  // Tap to log an entire saved meal slot as today's entries
+  const slot=(S.savedMeals||[]).find(s=>s.id===slotId);
+  if(!slot||!slot.items||!slot.items.length){showToast('No foods in this meal slot');return;}
+  const key=getMealLogKey();
+  if(!S.mealLog[key])S.mealLog[key]=[];
+  const mealType=slot.mealType||'Breakfast';
+  slot.items.forEach(item=>{
+    const food=resolveFood(item.foodId);
+    if(!food)return;
+    S.mealLog[key].push({foodId:item.foodId,qty:item.qty||1,mealType,ts:Date.now()});
+    // Ensure food is in cache for future resolve
+    if(!SWIMMER_FOODS.find(f=>f.id===food.id))S.foodCache[food.id]=food;
+  });
+  DB.set('mealLog',S.mealLog);
+  DB.set('foodCache',S.foodCache);
+  // Update lastUsed
+  slot.lastUsed=dKey(new Date());
+  DB.set('savedMeals',S.savedMeals);
+  showToast(`✅ ${slot.name} logged`);
+  renderMealTracker();
+}
+
+function deleteSavedMeal(slotId){
+  S.savedMeals=(S.savedMeals||[]).filter(s=>s.id!==slotId);
+  DB.set('savedMeals',S.savedMeals);
+  renderMealTracker();
+}
+
+function openSaveMealModal(){
+  // Save current "today's meals" selection as a new slot
+  // If nothing logged today, show the save-slot builder modal
+  const existing=getTodayMeals();
+  if(!existing.length){showToast('Log some foods first, then save as a meal slot');return;}
+  const name=prompt('Name this meal slot (e.g. "Pre-training breakfast"):');
+  if(!name||!name.trim())return;
+  const mealType=S._mealType||'Breakfast';
+  const items=existing.map(m=>({foodId:m.foodId,qty:m.qty||1}));
+  const slot={id:'slot_'+Date.now(),name:name.trim(),mealType,items,lastUsed:null};
+  if(!S.savedMeals)S.savedMeals=[];
+  S.savedMeals.push(slot);
+  DB.set('savedMeals',S.savedMeals);
+  showToast(`💾 "${slot.name}" saved`);
+  renderMealTracker();
+}
+
+function renderSavedMealsSection(){
+  const slots=S.savedMeals||[];
+  const mealType=S._mealType||'Breakfast';
+  if(!slots.length){
+    return`<div style="text-align:center;padding:16px 8px;color:var(--muted);font-size:13px;">
+      <div style="font-size:28px;margin-bottom:6px;">🍽️</div>
+      <div style="font-weight:700;margin-bottom:4px;">No saved meals yet</div>
+      <div style="font-size:12px;line-height:1.5;">Log foods for a typical meal, then tap <strong>Save as meal slot</strong> below. Next time, log the whole meal in one tap.</div>
+    </div>`;
+  }
+  return slots.map(slot=>{
+    const totals=_savedMealsCalc(slot);
+    const lastUsedStr=slot.lastUsed?`Last used ${slot.lastUsed}`:'Never used';
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(slot.name)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${totals.cal} kcal · ${totals.protein}g protein · ${totals.carbs}g carbs · ${lastUsedStr}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;">
+        <button onclick="logSavedMeal('${slot.id}')" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(0,198,255,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Log</button>
+        <button onclick="deleteSavedMeal('${slot.id}')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Fuel → Performance Correlation Card ──────────────────────────────────────
+// Compares days where fuel targets were hit against session RPE and quality
+
+function renderFuelCorrelationCard(){
+  // Need at least 7 days of both meal log and dryland history to say anything meaningful
+  const hist=S.history||[];
+  if(hist.length<5)return'';
+
+  const mealLog=S.mealLog||{};
+  const targets=getDailyCalFromSchedule();
+  if(!targets)return'';
+
+  // Scan last 30 days
+  const now=new Date();
+  let fuelled={rpe:[],qual:[]};
+  let underfuelled={rpe:[],qual:[]};
+  let daysAnalysed=0;
+
+  for(let i=1;i<=30;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const key=dKey(d);
+    const dayMeals=mealLog[key]||[];
+    if(!dayMeals.length)continue;
+
+    let dayCal=0;
+    dayMeals.forEach(m=>{const food=resolveFood(m.foodId);if(food)dayCal+=food.cal*(m.qty||1);});
+    if(!dayCal)continue;
+
+    // Find dryland session on this date
+    const session=hist.find(h=>h.date&&dKey(new Date(h.date))===key&&h.rpe);
+    if(!session)continue;
+
+    daysAnalysed++;
+    const calPct=targets.cal?dayCal/targets.cal:0;
+    const fuelledDay=calPct>=0.85; // within 85% of target counts as fuelled
+
+    if(fuelledDay){
+      fuelled.rpe.push(session.rpe);
+      if(session.readiness)fuelled.qual.push(session.readiness);
+    } else {
+      underfuelled.rpe.push(session.rpe);
+      if(session.readiness)underfuelled.qual.push(session.readiness);
+    }
+  }
+
+  if(daysAnalysed<5||!fuelled.rpe.length||!underfuelled.rpe.length)return'';
+
+  const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+  const fuellRPE=avg(fuelled.rpe);
+  const underRPE=avg(underfuelled.rpe);
+  const rpeDiff=underRPE-fuellRPE; // positive = underfuelled sessions feel harder
+  const fuellQual=avg(fuelled.qual);
+  const underQual=avg(underfuelled.qual);
+  const qualDiff=fuellQual-underQual; // positive = fuelled days have better readiness
+
+  // Only surface if there's a meaningful signal
+  if(Math.abs(rpeDiff)<0.3&&Math.abs(qualDiff)<0.2)return'';
+
+  const icon=rpeDiff>0.5?'⚡':'📊';
+  const headline=rpeDiff>0.5
+    ?`Sessions feel ${rpeDiff.toFixed(1)} RPE harder when underfuelled`
+    :`Your fuel data shows a pattern across ${daysAnalysed} matched days`;
+
+  let bullets='';
+  if(Math.abs(rpeDiff)>=0.3){
+    bullets+=`<div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:4px;">
+      ${rpeDiff>0?`🔴 Underfuelled sessions average RPE ${underRPE.toFixed(1)} vs ${fuellRPE.toFixed(1)} when fuelled — ${rpeDiff.toFixed(1)} points harder`
+      :`🟢 Your RPE data doesn't show a clear fuel impact yet — keep logging`}
+    </div>`;
+  }
+  if(fuelled.qual.length>=3&&Math.abs(qualDiff)>=0.2){
+    bullets+=`<div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:4px;">
+      ${qualDiff>0?`🟢 Readiness averages ${fuellQual.toFixed(1)}/5 on fuelled days vs ${underQual.toFixed(1)}/5 when underfuelled`
+      :`📊 Readiness scores similar whether fuelled or not — other recovery factors likely dominant`}
+    </div>`;
+  }
+
+  const totalFuelDays=fuelled.rpe.length;
+  const totalUnderDays=underfuelled.rpe.length;
+
+  return`<div class="card" style="margin-bottom:12px;border:1px solid rgba(0,198,255,0.2);">
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+      <span style="font-size:22px;">${icon}</span>
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);">Fuel → Performance</div>
+        <div style="font-size:11px;color:var(--accent);font-weight:600;">${headline}</div>
+      </div>
+    </div>
+    ${bullets}
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">Based on ${totalFuelDays} fuelled sessions vs ${totalUnderDays} underfuelled sessions in the last 30 days · Log consistently to strengthen the signal</div>
+  </div>`;
 }
 function _buildMealTimingRows(data){
   const hasSwim=data.swimCount>=1;
@@ -8669,10 +8903,31 @@ function renderMealTracker(){
     <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">2% dehydration = ~1–2% slower swim time. Stay ahead of it.</div>
   </div>`;
 
-  // ── 3. Meal Compliance (always open) ──
+  // ── 3. Fuel → Performance correlation (only shows when signal exists) ──
+  const corrCard=renderFuelCorrelationCard();
+  if(corrCard)html+=corrCard;
+
+  // ── 4. Meal Compliance (always open) ──
   html+=renderMealComplianceCard(today,targets.swimCount>=1,targets.dryCount>=1,targets.swimCount>=2||(targets.swimCount>=1&&targets.dryCount>=1),targets.isMeet);
 
-  // ── 4. Meal Timing — collapsible, starts collapsed ──
+  // ── 5. My Meals — saved slots, primary logging mechanic ──
+  const myMealsOpen=S._fuelSectOpen['mymeals']!==false; // default open
+  const slotCount=(S.savedMeals||[]).length;
+  html+=`<div class="card" style="margin-bottom:12px;border:${slotCount?'1px solid rgba(0,198,255,0.25)':'1px solid var(--border)'};">
+    <button onclick="_toggleFuelSection('mymeals')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="card-title" style="margin-bottom:0;">🍽️ My Meals</div>
+        ${slotCount?`<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(26,188,191,0.12);padding:2px 7px;border-radius:10px;">${slotCount} saved</span>`:'<span style="font-size:10px;color:var(--muted);font-weight:600;">Build once · Log in one tap</span>'}
+      </div>
+      <span id="fuel-sect-chev-mymeals" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:${myMealsOpen?'rotate(0deg)':'rotate(-90deg)'};">▼</span>
+    </button>
+    <div id="fuel-sect-body-mymeals" style="display:${myMealsOpen?'block':'none'};margin-top:8px;">
+      ${renderSavedMealsSection()}
+      <button onclick="openSaveMealModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed rgba(0,198,255,0.4);background:rgba(0,198,255,0.05);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">+ Save today's meals as a slot</button>
+    </div>
+  </div>`;
+
+  // ── 7. Meal Timing — collapsible, starts collapsed ──
   const timingOpen=S._fuelSectOpen['timing']===true;
   const dl=targets.isMeet?'Meet Day':targets.swimCount>=2?'Double Day':targets.swimCount>=1&&targets.dryCount>=1?'Swim + Dryland':targets.swimCount>=1?'Swim Day':targets.dryCount>=1?'Dryland Day':'Rest Day';
   html+=`<div class="card" style="margin-bottom:12px;">
@@ -8685,7 +8940,7 @@ function renderMealTracker(){
     </div>
   </div>`;
 
-  // ── 5. Logged Meals — collapsible, starts collapsed ──
+  // ── 8. Logged Meals — collapsible, starts collapsed ──
   const logOpen=S._fuelSectOpen['loggedmeals']===true;
   const loggedCount=meals.length;
   html+=`<div class="card" style="margin-bottom:12px;">
@@ -8699,7 +8954,7 @@ function renderMealTracker(){
     <div id="fuel-sect-body-loggedmeals" style="display:${logOpen?'block':'none'};margin-top:8px;">`;
 
   // NOTE: "No meals logged" text updated below — refers to Add Food below
-  // ── 6. Add Food — collapsible, starts collapsed ──
+  // ── 9. Add Food — collapsible, starts collapsed ──
   // (variable declaration moved here to allow logged meals section to reference it)
   const addOpen=S._fuelSectOpen['addfood']===true;
 
@@ -8743,7 +8998,7 @@ function renderMealTracker(){
   }
   html+=`</div></div>`;
 
-  // ── 6. Add Food — collapsible, starts collapsed ──
+  // ── 9. Add Food — escape hatch for foods not in saved slots ──
   html+=`<div class="card" style="margin-bottom:12px;">
     <button onclick="_toggleFuelSection('addfood')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font);">
       <div class="card-title" style="margin-bottom:0;">➕ Add Food</div>
