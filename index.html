@@ -8607,15 +8607,33 @@ function deleteSavedMeal(slotId){
 }
 
 function openSaveMealModal(){
-  // Save current "today's meals" selection as a new slot
-  // If nothing logged today, show the save-slot builder modal
+  // Save current "today's meals" as a named slot
+  // Uses inline DOM input — prompt() is blocked in PWA standalone mode on iOS
+  S.mealLog=DB.get('mealLog',S.mealLog||{});
   const existing=getTodayMeals();
   if(!existing.length){showToast('Log some foods first, then save as a meal slot');return;}
-  const name=prompt('Name this meal slot (e.g. "Pre-training breakfast"):');
-  if(!name||!name.trim())return;
+  // Toggle the inline name entry row
+  const wrap=document.getElementById('save-meal-name-wrap');
+  if(wrap){
+    wrap.style.display=wrap.style.display==='none'?'block':'none';
+    if(wrap.style.display==='block'){
+      const inp=document.getElementById('save-meal-name-input');
+      if(inp){inp.value='';inp.focus();}
+    }
+    return;
+  }
+}
+
+function confirmSaveMealSlot(){
+  const inp=document.getElementById('save-meal-name-input');
+  const name=inp?inp.value.trim():'';
+  if(!name){showToast('Enter a name for this meal slot');return;}
+  S.mealLog=DB.get('mealLog',S.mealLog||{});
+  const existing=getTodayMeals();
+  if(!existing.length){showToast('No foods logged today to save');return;}
   const mealType=S._mealType||'Breakfast';
   const items=existing.map(m=>({foodId:m.foodId,qty:m.qty||1}));
-  const slot={id:'slot_'+Date.now(),name:name.trim(),mealType,items,lastUsed:null};
+  const slot={id:'slot_'+Date.now(),name,mealType,items,lastUsed:null};
   if(!S.savedMeals)S.savedMeals=[];
   S.savedMeals.push(slot);
   DB.set('savedMeals',S.savedMeals);
@@ -8924,6 +8942,13 @@ function renderMealTracker(){
     <div id="fuel-sect-body-mymeals" style="display:${myMealsOpen?'block':'none'};margin-top:8px;">
       ${renderSavedMealsSection()}
       <button onclick="openSaveMealModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed rgba(0,198,255,0.4);background:rgba(0,198,255,0.05);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">+ Save today's meals as a slot</button>
+      <div id="save-meal-name-wrap" style="display:none;margin-top:8px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Name this meal slot:</div>
+        <div style="display:flex;gap:8px;">
+          <input id="save-meal-name-input" type="text" placeholder='e.g. "Pre-training breakfast"' style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--accent);background:var(--surface);color:var(--text);font-size:13px;font-family:var(--font);" onkeydown="if(event.key==='Enter')confirmSaveMealSlot()">
+          <button onclick="confirmSaveMealSlot()" style="padding:9px 14px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">Save</button>
+        </div>
+      </div>
     </div>
   </div>`;
 
