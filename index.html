@@ -566,7 +566,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 89</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 97</div>
       </div>
     </div>
 
@@ -1730,11 +1730,12 @@ function getProvStandardKeys(){
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
 
 // Version gate — migrate data forward, never wipe user data
-const APP_VER='v8';
+const APP_VER='v9';
 (function(){
   const prev=DB.get('appVer','');
   if(prev===APP_VER)return; // already current
   // v7 → v8: preserve bodyStats (old gate wiped it — we don't do that anymore)
+  // v8 → v9: race feedback loop, entry type tagging, PCE weighting — no data migration needed
   // Any future migrations go here as additional if(prev<'vX') blocks
   DB.set('appVer',APP_VER);
 })();

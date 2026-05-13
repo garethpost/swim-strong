@@ -1,8 +1,8 @@
 // SwimFitPro Service Worker
 const CACHE_NAME = 'swimfitpro-v97';
 const CACHE_URLS = [
-  './index.html',
   './icons/Icon-513.jpeg',
+  // index.html intentionally excluded — always fetched fresh from network
 ];
 
 // Allow page to trigger immediate activation
@@ -10,7 +10,7 @@ self.addEventListener('message', event => {
   if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Install: cache core assets
+// Install: cache only non-HTML assets; skip waiting immediately
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CACHE_URLS))
@@ -18,18 +18,18 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches and immediately take control of all clients
+// Activate: wipe ALL old caches, claim all clients immediately
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k))) // delete everything, including current
+    ).then(() => caches.open(CACHE_NAME)) // re-open clean cache
   );
   self.clients.claim();
 });
 
 // Fetch strategy:
-// - index.html → network-first (always get latest, fall back to cache if offline)
+// - index.html / navigation → always network, no-cache headers, never serve from cache
 // - everything else → cache-first (fast, fall back to network)
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
@@ -41,28 +41,24 @@ self.addEventListener('fetch', event => {
     url.pathname.endsWith('/');
 
   if (isNavigation) {
-    // Network-first for the app shell — always get fresh HTML
+    // Always fetch HTML fresh — bypass both SW cache and browser cache
     event.respondWith(
-      fetch(event.request).then(response => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
+      fetch(event.request, { cache: 'no-store' }).then(response => {
         return response;
       }).catch(() => {
-        // Offline fallback
+        // Offline only: fall back to cached copy if available
         return caches.match('./index.html');
       })
     );
   } else {
-    // Cache-first for all other assets (icons, images, etc.)
+    // Cache-first for static assets (icons, images, etc.)
     event.respondWith(
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
           if (response && response.status === 200) {
             const ext = url.pathname.split('.').pop().toLowerCase();
-            if (['js','css','jpeg','jpg','png','svg','woff','woff2'].includes(ext)) {
+            if (['jpeg','jpg','png','svg','woff','woff2'].includes(ext)) {
               const clone = response.clone();
               caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
             }
