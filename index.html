@@ -1392,6 +1392,19 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 </div></div>
 
+<!-- Save Meal Slot modal -->
+<div class="modal-overlay" id="save-meal-slot-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Save Meal Slot">
+<div class="modal-handle"></div>
+<h3 style="font-size:17px;margin-bottom:4px;">💾 Save as Meal Slot</h3>
+<p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Name this meal so you can log it in one tap next time.</p>
+<div class="form-row"><label>Meal slot name</label><input type="text" id="save-slot-name-input" placeholder='e.g. "Pre-training breakfast"' style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);" onkeydown="if(event.key==='Enter')confirmSaveMealSlot()"></div>
+<div id="save-slot-preview" style="font-size:12px;color:var(--muted);margin:8px 0 14px;"></div>
+<div style="display:flex;gap:8px;margin-top:4px;">
+  <button class="btn btn-primary" style="flex:1" onclick="confirmSaveMealSlot()">Save slot</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('save-meal-slot-modal')">Cancel</button>
+</div>
+</div></div>
+
 <!-- Custom Target Meet modal -->
 <div class="modal-overlay" id="ctm-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Custom Target Meet">
 <div class="modal-handle"></div>
@@ -8607,25 +8620,24 @@ function deleteSavedMeal(slotId){
 }
 
 function openSaveMealModal(){
-  // Save current "today's meals" as a named slot
-  // Uses inline DOM input — prompt() is blocked in PWA standalone mode on iOS
   S.mealLog=DB.get('mealLog',S.mealLog||{});
   const existing=getTodayMeals();
   if(!existing.length){showToast('Log some foods first, then save as a meal slot');return;}
-  // Toggle the inline name entry row
-  const wrap=document.getElementById('save-meal-name-wrap');
-  if(wrap){
-    wrap.style.display=wrap.style.display==='none'?'block':'none';
-    if(wrap.style.display==='block'){
-      const inp=document.getElementById('save-meal-name-input');
-      if(inp){inp.value='';inp.focus();}
-    }
-    return;
+  // Show preview of what will be saved
+  const preview=document.getElementById('save-slot-preview');
+  if(preview){
+    let cal=0,prot=0;
+    existing.forEach(m=>{const f=resolveFood(m.foodId);if(f){cal+=f.cal*(m.qty||1);prot+=f.protein*(m.qty||1);}});
+    preview.textContent=`${existing.length} food${existing.length>1?'s':''} · ${Math.round(cal)} kcal · ${Math.round(prot)}g protein`;
   }
+  const inp=document.getElementById('save-slot-name-input');
+  if(inp)inp.value='';
+  openModal('save-meal-slot-modal');
+  setTimeout(()=>{if(inp)inp.focus();},300);
 }
 
 function confirmSaveMealSlot(){
-  const inp=document.getElementById('save-meal-name-input');
+  const inp=document.getElementById('save-slot-name-input');
   const name=inp?inp.value.trim():'';
   if(!name){showToast('Enter a name for this meal slot');return;}
   S.mealLog=DB.get('mealLog',S.mealLog||{});
@@ -8637,6 +8649,7 @@ function confirmSaveMealSlot(){
   if(!S.savedMeals)S.savedMeals=[];
   S.savedMeals.push(slot);
   DB.set('savedMeals',S.savedMeals);
+  closeModal('save-meal-slot-modal');
   showToast(`💾 "${slot.name}" saved`);
   renderMealTracker();
 }
@@ -8942,13 +8955,6 @@ function renderMealTracker(){
     <div id="fuel-sect-body-mymeals" style="display:${myMealsOpen?'block':'none'};margin-top:8px;">
       ${renderSavedMealsSection()}
       <button onclick="openSaveMealModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed rgba(0,198,255,0.4);background:rgba(0,198,255,0.05);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">+ Save today's meals as a slot</button>
-      <div id="save-meal-name-wrap" style="display:none;margin-top:8px;">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Name this meal slot:</div>
-        <div style="display:flex;gap:8px;">
-          <input id="save-meal-name-input" type="text" placeholder='e.g. "Pre-training breakfast"' style="flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--accent);background:var(--surface);color:var(--text);font-size:13px;font-family:var(--font);" onkeydown="if(event.key==='Enter')confirmSaveMealSlot()">
-          <button onclick="confirmSaveMealSlot()" style="padding:9px 14px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">Save</button>
-        </div>
-      </div>
     </div>
   </div>`;
 
