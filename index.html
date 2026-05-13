@@ -575,7 +575,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 98</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 99</div>
       </div>
     </div>
 
@@ -8981,14 +8981,15 @@ function renderPerformanceInsightsTimes(){
           </div>
           <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
             <div style="font-size:18px;font-weight:900;color:var(--text);">${pp.fullCyclesCompleted}</div>
-            <div style="font-size:10px;color:var(--muted);">full cycles</div>
+            <div style="font-size:10px;color:var(--muted);">training arcs</div>
           </div>
           <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
             <div style="font-size:18px;font-weight:900;color:var(--text);">${(S.history||[]).length}</div>
             <div style="font-size:10px;color:var(--muted);">dryland sessions</div>
           </div>
         </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);">Unlocks at 10 races + 2 training cycles</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);">Unlocks at 10 races + 2 completed training arcs (GPP → Strength/Power)</div>
+        ${pp.cycleDetail?`<div style="margin-top:4px;font-size:10px;color:var(--muted);font-style:italic;">${pp.cycleDetail}</div>`:''}
       </div>
     </div>`;
     return;
@@ -9069,7 +9070,7 @@ function renderPerformanceInsightsTimes(){
     <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
       <div>
         <div style="font-size:12px;font-weight:700;color:${gateColor};">📊 Performance Insights</div>
-        <div style="font-size:10px;color:var(--muted);">${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} cycles · ${gateLabel}</div>
+        <div style="font-size:10px;color:var(--muted);">${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} training arc${pp.fullCyclesCompleted!==1?'s':''} · ${gateLabel}</div>
       </div>
       <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
     </div>
@@ -9115,7 +9116,8 @@ function renderDrylandProfileHint(){
     <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.5;">${topReason}</div>
     <div class="dryland-hint-body" style="display:none;margin-top:8px;">
       ${pp.prescription.reasoning.slice(1).map(r=>`<div style="font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);">• ${r}</div>`).join('')}
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} cycles · Confidence: ${pp.prescription.confidence}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} training arc${pp.fullCyclesCompleted!==1?'s':''} · Confidence: ${pp.prescription.confidence}</div>
+      ${pp.cycleDetail?`<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:2px;">${pp.cycleDetail}</div>`:''}
     </div>
   </div>`;
 }
@@ -10094,22 +10096,114 @@ function getProfileGate(){
   const raceResults=(S.meetRaceLog||[]).filter(l=>{
     const s=_pceTSec(l.time);return s!==Infinity&&s>0;
   });
-  // Total career races (unweighted count — gate is career-based, not programme-specific)
+  // Total career races (unweighted — gate is career-based, transitions don't reset)
   const racesLogged=raceResults.length;
-  // Weighted effective races — downweights old cross-programme data for prescription quality
+  // Weighted effective races — downweights old cross-programme data
   const weightedRaces=raceResults.reduce((sum,l)=>sum+_pceDataWeight(l),0);
-  const cyclesCompleted=Math.max(0,(S.programCycle||1)-1);
-  // Gate uses career race count (so transitions don't reset), but notes weighted signal quality
-  if(racesLogged>=20&&cyclesCompleted>=3)return{gate:3,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} full cycles`};
-  if(racesLogged>=10&&cyclesCompleted>=2)return{gate:2,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} cycles — suggestions`};
+  // Use meaningful cycle detection — block-completion and race-span based, not session count
+  const {cycles:cyclesCompleted,drylandArcs,raceSpanCycles,detail:cycleDetail}=countMeaningfulCycles();
+  // Gate thresholds — same race count requirements, but cycles now reflect reality
+  if(racesLogged>=20&&cyclesCompleted>=3)return{gate:3,racesLogged,cyclesCompleted,drylandArcs,raceSpanCycles,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} training arcs`,cycleDetail};
+  if(racesLogged>=10&&cyclesCompleted>=2)return{gate:2,racesLogged,cyclesCompleted,drylandArcs,raceSpanCycles,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} training arcs — suggestions`,cycleDetail};
   const needRaces=racesLogged<10?`${10-racesLogged} more race logs needed`:'';
-  const needCycles=cyclesCompleted<2?`${2-cyclesCompleted} more training cycle(s) needed`:'';
+  const needCycles=cyclesCompleted<2?`${2-cyclesCompleted} more training arc${2-cyclesCompleted!==1?'s':''} needed`:'';
   const parts=[needRaces,needCycles].filter(Boolean);
-  return{gate:1,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:parts.join(' · ')||'Building data...'};
+  return{gate:1,racesLogged,cyclesCompleted,drylandArcs,raceSpanCycles,weightedRaces:Math.round(weightedRaces),reason:parts.join(' · ')||'Building data...',cycleDetail};
 }
 
 // Entry type weight — race times are ground truth; time trials and benchmarks are lower signal
 function _pceEntryWeight(e){const t=e.entryType||'race';return t==='race'?1.0:t==='time_trial'?0.7:0.5;}
+
+// ── Meaningful cycle detection ──
+// A "cycle" is a completed stimulus-adaptation arc, not a session count.
+// Defined as: at least one GPP phase block AND at least one Strength or Power phase block
+// logged in history, with a minimum 3-week calendar gap between first and last session
+// in that arc. This correctly handles short off-seasons and truncated blocks.
+//
+// Secondary signal: race date span. If a swimmer has race data spanning 6+ months,
+// that represents at least one competitive season regardless of dryland session count.
+//
+// We scan history chronologically, grouping consecutive sessions by dominant phase,
+// and count transitions from GPP → Strength/Power as completed arc boundaries.
+function countMeaningfulCycles(){
+  const hist=(S.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(hist.length<4)return{cycles:0,detail:'Insufficient dryland history'};
+
+  // Group sessions into phase runs
+  // A run is a sequence of sessions in the same named phase (GPP/Strength/Power/Taper)
+  const runs=[];
+  let curRun=null;
+  for(const h of hist){
+    const pName=h.phase&&h.phase.name?h.phase.name:null;
+    if(!pName)continue;
+    // Normalise off-season phase names to core categories
+    const normPhase=pName==='GPP'||pName==='Transition'||pName==='General Prep'||pName==='Neural Reset'||pName==='Transition / Reset'?'GPP'
+      :pName==='Strength'||pName==='Strength Block'||pName==='Advanced Strength'||pName==='Elite Strength'||pName==='Hypertrophy'?'Strength'
+      :pName==='Power'||pName==='Power Block'||pName==='Max Power Block'||pName==='Elite Power & Speed'?'Power'
+      :pName==='Taper'||pName==='Peak & Taper'||pName==='Championship Taper'||pName==='Championship Peak'?'Taper'
+      :'Other';
+    if(curRun&&curRun.phase===normPhase){
+      curRun.end=new Date(h.date);curRun.count++;
+    } else {
+      if(curRun)runs.push(curRun);
+      curRun={phase:normPhase,start:new Date(h.date),end:new Date(h.date),count:1};
+    }
+  }
+  if(curRun)runs.push(curRun);
+
+  // Count arcs: GPP followed by Strength or Power (within same programme or across)
+  // with at least 14 days total span in the arc
+  let cycles=0;
+  let arcStart=null;
+  let hasGPP=false;
+  let hasStrengthOrPower=false;
+  for(const run of runs){
+    if(run.count<2)continue; // need at least 2 sessions to count a meaningful run
+    if(run.phase==='GPP'){
+      // Starting a new arc or resetting
+      if(hasGPP&&hasStrengthOrPower&&arcStart){
+        // Complete previous arc before resetting
+        cycles++;
+      }
+      arcStart=run.start;hasGPP=true;hasStrengthOrPower=false;
+    } else if((run.phase==='Strength'||run.phase==='Power')&&hasGPP){
+      hasStrengthOrPower=true;
+    } else if(run.phase==='Taper'&&hasGPP&&hasStrengthOrPower&&arcStart){
+      // Taper closes an arc
+      const spanDays=(run.end-arcStart)/86400000;
+      if(spanDays>=14){cycles++;}
+      arcStart=null;hasGPP=false;hasStrengthOrPower=false;
+    }
+  }
+  // Count any open arc that has GPP + Strength/Power (in-progress arc counts as partial)
+  if(hasGPP&&hasStrengthOrPower&&arcStart){
+    const spanDays=(new Date()-arcStart)/86400000;
+    if(spanDays>=14)cycles++; // count in-progress arc if it's been running 14+ days
+  }
+
+  // Secondary signal: race date span
+  // Each 6-month window with race data = 1 additional cycle signal
+  // but only if dryland arcs are thin — prevents double-counting
+  const raceDates=(S.meetRaceLog||[])
+    .filter(l=>_pceTSec(l.time)!==Infinity&&l.ts)
+    .map(l=>new Date(l.ts))
+    .sort((a,b)=>a-b);
+  let raceSpanCycles=0;
+  if(raceDates.length>=2){
+    const totalSpanMonths=(raceDates[raceDates.length-1]-raceDates[0])/2592000000;
+    raceSpanCycles=Math.floor(totalSpanMonths/6); // 1 cycle per 6 months of race history
+  }
+
+  // Final count: use whichever is higher — dryland arcs or race span signal
+  // but cap race span contribution at dryland arcs + 1 to prevent gaming
+  const finalCycles=Math.max(cycles,Math.min(raceSpanCycles,cycles+1));
+  return{
+    cycles:finalCycles,
+    drylandArcs:cycles,
+    raceSpanCycles,
+    detail:`${cycles} completed training arc${cycles!==1?'s':''} · ${raceDates.length} races over ${Math.round((raceDates.length>=2?(raceDates[raceDates.length-1]-raceDates[0])/2592000000:0))} months`
+  };
+}
 
 // Programme + time decay weight — combines programme context and recency into a single multiplier
 // Same programme: full weight decayed by time (1.0 → 0.4 over 24 months)
