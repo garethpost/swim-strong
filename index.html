@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v97 -->
+  <!-- cache-bust: v98 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -404,6 +404,15 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
 
+      <!-- ── CAREER / PROGRAMME (collapsible) ── -->
+      <button onclick="toggleMoreSection('more-career-body','more-career-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
+        <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Career</span>
+        <span id="more-career-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
+      </button>
+      <div id="more-career-body" style="display:none;">
+        <div id="career-programme-card"></div>
+      </div>
+
       <!-- ── PROGRAM (collapsible) ── -->
       <button onclick="toggleMoreSection('more-program-body','more-program-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
         <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Program</span>
@@ -566,7 +575,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 97</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 98</div>
       </div>
     </div>
 
@@ -1026,6 +1035,28 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 <button class="btn btn-primary" onclick="saveMeetRace()" style="margin-bottom:8px;">Add Race ✓</button>
 <button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-race-modal')" aria-label="Close dialog">Cancel</button>
+</div></div>
+
+<!-- ── New Programme Modal ── -->
+<div class="modal-overlay" id="new-programme-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="New Programme">
+<div class="modal-handle"></div>
+<h3 style="font-size:18px;font-weight:800;margin-bottom:4px;">Start New Programme</h3>
+<p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Your historical data is preserved. The engine will gradually prioritise your new programme's data as it builds.</p>
+<div class="form-row"><label>Programme / Club Name</label><input type="text" id="np-name" placeholder="e.g. University of Texas Swimming" style="font-size:14px;"></div>
+<div class="form-row"><label>Country</label><input type="text" id="np-country" placeholder="e.g. USA" style="font-size:14px;"></div>
+<div class="form-row"><label>Head Coach (optional)</label><input type="text" id="np-coach" placeholder="e.g. Coach Johnson" style="font-size:14px;"></div>
+<div class="form-row"><label>Start Date</label><input type="date" id="np-start" style="font-size:13px;padding:10px 8px;"></div>
+<div class="form-row"><label>Reason for transition</label>
+  <select id="np-reason" style="font-size:14px;padding:10px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;font-family:var(--font);">
+    <option value="scholarship">🎓 Scholarship / University</option>
+    <option value="club_move">🏊 Club move</option>
+    <option value="national">🏅 National programme</option>
+    <option value="relocation">📍 Relocation</option>
+    <option value="other">Other</option>
+  </select>
+</div>
+<button class="btn btn-primary" onclick="saveNewProgramme()" style="margin-bottom:8px;">Start New Programme →</button>
+<button class="btn-ghost" style="width:100%;" onclick="closeModal('new-programme-modal')">Cancel</button>
 </div></div>
 
 <!-- ── Race Result Logger Modal ── -->
@@ -1730,13 +1761,48 @@ function getProvStandardKeys(){
 const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Free':'4:01.69','50 Back':'27.22','100 Back':'57.91','200 Back':'2:07.75','50 Breast':'29.38','100 Breast':'1:04.42','200 Breast':'2:22.10','50 Fly':'25.19','100 Fly':'55.28','200 Fly':'2:06.39','200 IM':'2:07.63','400 IM':'4:36.96'};
 
 // Version gate — migrate data forward, never wipe user data
-const APP_VER='v9';
+const APP_VER='v10';
 (function(){
   const prev=DB.get('appVer','');
   if(prev===APP_VER)return; // already current
-  // v7 → v8: preserve bodyStats (old gate wiped it — we don't do that anymore)
-  // v8 → v9: race feedback loop, entry type tagging, PCE weighting — no data migration needed
-  // Any future migrations go here as additional if(prev<'vX') blocks
+  // v7 → v8: preserve bodyStats
+  // v8 → v9: race feedback loop, entry type tagging, PCE weighting
+  // v9 → v10: programme transition system — tag all existing data as programme_1
+  if(prev<'v10'){
+    const progId='programme_1';
+    // Tag existing meetRaceLog entries
+    const mrl=DB.get('meetRaceLog',[]);
+    let mrlChanged=false;
+    mrl.forEach(l=>{if(!l.programmeId){l.programmeId=progId;mrlChanged=true;}});
+    if(mrlChanged)DB.set('meetRaceLog',mrl);
+    // Tag existing timeHistory entries
+    const th=DB.get('timeHistory',{});
+    let thChanged=false;
+    Object.values(th).forEach(arr=>(arr||[]).forEach(e=>{if(!e.programmeId){e.programmeId=progId;thChanged=true;}}));
+    if(thChanged)DB.set('timeHistory',th);
+    // Tag existing dryland history
+    const hist=DB.get('history',[]);
+    let hChanged=false;
+    hist.forEach(h=>{if(!h.programmeId){h.programmeId=progId;hChanged=true;}});
+    if(hChanged)DB.set('history',hist);
+    // Create programme_1 entry if no programmes exist yet
+    const progs=DB.get('programmes',[]);
+    if(!progs.length){
+      const profile=DB.get('profile',null);
+      progs.push({
+        id:progId,
+        name:(profile&&profile.club)||'Club Programme',
+        club:(profile&&profile.club)||'',
+        country:(profile&&profile.country)||'',
+        coachName:'',
+        transitionReason:'origin',
+        startDate:'2020-01-01', // conservative origin date
+        endDate:null,
+      });
+      DB.set('programmes',progs);
+      DB.set('currentProgrammeId',progId);
+    }
+  }
   DB.set('appVer',APP_VER);
 })();
 
@@ -1796,6 +1862,8 @@ let S={
   equipmentMode:DB.get('equipmentMode','gym'), // 'bodyweight'|'minimal'|'gym'
   customTargetMeets:DB.get('customTargetMeets',[]), // [{id,meetId,name,times:{event:{lcm,scm}}}] — up to 3
   performanceProfile:DB.get('performanceProfile',null), // gated correlation engine output
+  programmes:DB.get('programmes',[]), // [{id,name,club,country,coachName,transitionReason,startDate,endDate}]
+  currentProgrammeId:DB.get('currentProgrammeId','programme_1'), // active programme stamp
 };
 
 // Units
@@ -5192,7 +5260,7 @@ function confirmSession(){
       lastLog:ex.weighted?getLastLog(ex.name):null,
     }))
   }));
-  S.history.push({...w,date:new Date().toISOString(),rpe,notes:sessionNotes,blocks:exerciseSnapshot});
+  S.history.push({...w,date:new Date().toISOString(),rpe,notes:sessionNotes,blocks:exerciseSnapshot,programmeId:S.currentProgrammeId||'programme_1'});
   DB.set('history',S.history);
   buildPerformanceProfile(); // rebuild after session logged
   if(S.history.length%3===0){
@@ -5617,9 +5685,13 @@ function renderTimesContent(){
     const g=tgt&&time?gapSec(time,tgt):null;
     const gPill=tgt?`<span class="gap-pill ${gapClass(g)}" style="font-size:9px;margin-left:4px;">${gapLabel(g,tgt)}</span>`:'';
     const splitStr=e.split?`<div style="font-size:10px;color:var(--muted);margin-top:1px;">${SPLIT_EVENTS[ev]||'Split'}: ${e.split}</div>`:'';
+    // Programme badge — show if more than one programme exists
+    const _progs=S.programmes||[];
+    const _eprog=e.programmeId?_progs.find(p=>p.id===e.programmeId):null;
+    const progBadge=_progs.length>1&&_eprog?`<span style="font-size:9px;background:rgba(26,188,191,0.12);color:var(--accent);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:600;">${esc(_eprog.name.split(' ')[0])}</span>`:'';
     return`<div class="time-entry-row">
       <div class="time-entry-date">${d}</div>
-      <div class="time-entry-meet" style="flex:1;"><div>${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}</div>${splitStr}</div>
+      <div class="time-entry-meet" style="flex:1;"><div>${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}${progBadge}</div>${splitStr}</div>
       <div style="font-size:10px;font-weight:700;color:${col};min-width:30px;text-align:center;">${course}</div>
       <div style="font-size:14px;font-weight:800;color:${col};min-width:50px;text-align:right;">${time}</div>
       <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;" onclick="delTime('${esc(ev)}',${hist.length-1-ri})">✕</button>
@@ -5773,7 +5845,7 @@ function saveTimeEntry(){
   const prevBestLCM=getBest(ev,'lcm');
   const prevBestSCM=getBest(ev,'scm');
   if(!S.timeHistory[ev])S.timeHistory[ev]=[];
-  const entry={date,meet,scm:scm||'—',lcm:lcm||'—',entryType:_timeEntryType||'race'};
+  const entry={date,meet,scm:scm||'—',lcm:lcm||'—',entryType:_timeEntryType||'race',programmeId:S.currentProgrammeId||'programme_1'};
   if(split)entry.split=split;
   S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -7530,6 +7602,95 @@ function renderOffSeasonCard(){
   }
 }
 
+// ── Career Programme System ──
+function renderCareerProgrammes(){
+  const el=document.getElementById('career-programme-card');
+  if(!el)return;
+  const progs=S.programmes||[];
+  const currentId=S.currentProgrammeId||'programme_1';
+  const current=progs.find(p=>p.id===currentId)||progs[progs.length-1]||null;
+  const past=progs.filter(p=>p.id!==currentId&&p.endDate);
+  const REASON_LABELS={scholarship:'🎓 Scholarship / University',club_move:'🏊 Club move',national:'🏅 National programme',relocation:'📍 Relocation',origin:'🏠 Origin programme',other:'Other'};
+
+  let html=`<div class="card">
+    <div class="card-title">Current Programme</div>`;
+  if(current){
+    const raceCount=(S.meetRaceLog||[]).filter(l=>l.programmeId===currentId).length;
+    const sessionCount=(S.history||[]).filter(h=>h.programmeId===currentId).length;
+    const startDisp=current.startDate?new Date(current.startDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'—';
+    html+=`<div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--accent);margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;">${esc(current.name||'—')}</div>
+      ${current.country?`<div style="font-size:11px;color:var(--muted);">${esc(current.country)}${current.coachName?' · Coach: '+esc(current.coachName):''}</div>`:''}
+      <div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:700;">Since ${startDisp}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <span style="background:var(--bg);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--text);">🏁 ${raceCount} races</span>
+        <span style="background:var(--bg);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--text);">🏋️ ${sessionCount} sessions</span>
+      </div>
+    </div>`;
+  } else {
+    html+=`<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">No programme set up yet.</p>`;
+  }
+  html+=`<button class="btn btn-primary btn-sm" onclick="openNewProgramme()">+ Start New Programme</button>`;
+
+  if(past.length){
+    html+=`<div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:8px;">Previous Programmes</div>`;
+    past.slice().reverse().forEach(p=>{
+      const rc=(S.meetRaceLog||[]).filter(l=>l.programmeId===p.id).length;
+      const sc=(S.history||[]).filter(h=>h.programmeId===p.id).length;
+      const sd=p.startDate?new Date(p.startDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'?';
+      const ed=p.endDate?new Date(p.endDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'?';
+      html+=`<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(p.name||'—')}</div>
+        <div style="font-size:10px;color:var(--muted);">${esc(p.country||'')} · ${sd} → ${ed}</div>
+        ${p.transitionReason?`<div style="font-size:10px;color:var(--muted);margin-top:2px;">${REASON_LABELS[p.transitionReason]||p.transitionReason}</div>`:''}
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+          <span style="background:var(--bg);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--muted);">🏁 ${rc} races</span>
+          <span style="background:var(--bg);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--muted);">🏋️ ${sc} sessions</span>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+function openNewProgramme(){
+  document.getElementById('np-name').value='';
+  document.getElementById('np-country').value='';
+  document.getElementById('np-coach').value='';
+  document.getElementById('np-start').value=new Date().toISOString().split('T')[0];
+  document.getElementById('np-reason').value='scholarship';
+  openModal('new-programme-modal');
+}
+
+function saveNewProgramme(){
+  const name=document.getElementById('np-name').value.trim();
+  const country=document.getElementById('np-country').value.trim();
+  const coach=document.getElementById('np-coach').value.trim();
+  const startDate=document.getElementById('np-start').value;
+  const reason=document.getElementById('np-reason').value;
+  if(!name)return alert('Enter a programme or club name.');
+  if(!startDate)return alert('Enter a start date.');
+  // Close out the current programme
+  const currentId=S.currentProgrammeId||'programme_1';
+  const current=(S.programmes||[]).find(p=>p.id===currentId);
+  if(current&&!current.endDate)current.endDate=startDate;
+  // Create new programme
+  const newId='programme_'+Date.now();
+  const newProg={id:newId,name,club:name,country,coachName:coach,transitionReason:reason,startDate,endDate:null};
+  S.programmes=S.programmes||[];
+  S.programmes.push(newProg);
+  S.currentProgrammeId=newId;
+  DB.set('programmes',S.programmes);
+  DB.set('currentProgrammeId',S.currentProgrammeId);
+  // Force PCE rebuild with new programme context
+  buildPerformanceProfile._force=true;buildPerformanceProfile();
+  closeModal('new-programme-modal');
+  renderCareerProgrammes();
+  alert(`Programme started: ${name}. All new data will be tagged to this programme.`);
+}
+
 function activateOffSeasonFromCard(){
   const inp=document.getElementById('oos-next-start');
   if(!inp||!inp.value){alert('Enter the next season start date.');return;}
@@ -8884,6 +9045,26 @@ function renderPerformanceInsightsTimes(){
   // Warnings
   const warningsHtml=pp.dataWarnings.length?`<div style="margin-top:8px;font-size:10px;color:var(--muted);font-style:italic;">${pp.dataWarnings.map(w=>`⚠️ ${w}`).join(' · ')}</div>`:'';
 
+  // Programme data split — shown at Gate 2+ when multiple programmes exist
+  const _allProgs=S.programmes||[];
+  let progSplitHtml='';
+  if(_allProgs.length>1){
+    const splitRows=_allProgs.map(p=>{
+      const rc=(S.meetRaceLog||[]).filter(l=>l.programmeId===p.id&&_pceTSec(l.time)!==Infinity).length;
+      const sc=(S.history||[]).filter(h=>h.programmeId===p.id).length;
+      const isCurrent=p.id===S.currentProgrammeId;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:11px;color:${isCurrent?'var(--accent)':'var(--muted)'};">${esc(p.name)}${isCurrent?' ●':''}</span>
+        <span style="font-size:10px;color:var(--muted);">🏁 ${rc} races · 🏋️ ${sc} sessions</span>
+      </div>`;
+    }).join('');
+    progSplitHtml=`<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border-radius:10px;border:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Data by Programme</div>
+      ${splitRows}
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Current programme weighted higher in prescription</div>
+    </div>`;
+  }
+
   el.innerHTML=`<div class="card" style="margin-bottom:12px;border:1px solid ${gateColor};">
     <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
       <div>
@@ -8893,6 +9074,7 @@ function renderPerformanceInsightsTimes(){
       <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
     </div>
     <div class="perf-body" style="display:none;margin-top:12px;">
+      ${progSplitHtml}
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Pool Trends</div>
       ${poolRows}
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">Block Correlation</div>
@@ -9912,18 +10094,40 @@ function getProfileGate(){
   const raceResults=(S.meetRaceLog||[]).filter(l=>{
     const s=_pceTSec(l.time);return s!==Infinity&&s>0;
   });
+  // Total career races (unweighted count — gate is career-based, not programme-specific)
   const racesLogged=raceResults.length;
+  // Weighted effective races — downweights old cross-programme data for prescription quality
+  const weightedRaces=raceResults.reduce((sum,l)=>sum+_pceDataWeight(l),0);
   const cyclesCompleted=Math.max(0,(S.programCycle||1)-1);
-  if(racesLogged>=20&&cyclesCompleted>=3)return{gate:3,racesLogged,cyclesCompleted,reason:`${racesLogged} races · ${cyclesCompleted} full cycles`};
-  if(racesLogged>=10&&cyclesCompleted>=2)return{gate:2,racesLogged,cyclesCompleted,reason:`${racesLogged} races · ${cyclesCompleted} cycles — suggestions`};
+  // Gate uses career race count (so transitions don't reset), but notes weighted signal quality
+  if(racesLogged>=20&&cyclesCompleted>=3)return{gate:3,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} full cycles`};
+  if(racesLogged>=10&&cyclesCompleted>=2)return{gate:2,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:`${racesLogged} races · ${cyclesCompleted} cycles — suggestions`};
   const needRaces=racesLogged<10?`${10-racesLogged} more race logs needed`:'';
   const needCycles=cyclesCompleted<2?`${2-cyclesCompleted} more training cycle(s) needed`:'';
   const parts=[needRaces,needCycles].filter(Boolean);
-  return{gate:1,racesLogged,cyclesCompleted,reason:parts.join(' · ')||'Building data...'};
+  return{gate:1,racesLogged,cyclesCompleted,weightedRaces:Math.round(weightedRaces),reason:parts.join(' · ')||'Building data...'};
 }
 
 // Entry type weight — race times are ground truth; time trials and benchmarks are lower signal
 function _pceEntryWeight(e){const t=e.entryType||'race';return t==='race'?1.0:t==='time_trial'?0.7:0.5;}
+
+// Programme + time decay weight — combines programme context and recency into a single multiplier
+// Same programme: full weight decayed by time (1.0 → 0.4 over 24 months)
+// Different programme: capped at 0.3 then time-decayed further
+// This lets historical data inform without dominating once a new programme builds momentum
+function _pceDataWeight(entry){
+  const currentProg=S.currentProgrammeId||'programme_1';
+  const entryProg=entry.programmeId||'programme_1';
+  const sameProg=entryProg===currentProg;
+  // Time decay: months old, capped at 30 months
+  const entryDate=new Date(entry.date||entry.ts||'2020-01-01');
+  const monthsOld=Math.min(30,Math.max(0,(new Date()-entryDate)/2592000000));
+  // Decay curve: 1.0 at 0 months → 0.4 at 24 months (exponential decay)
+  const timeMult=sameProg
+    ?Math.max(0.4,Math.exp(-monthsOld*0.038)) // same programme: gentle decay
+    :Math.min(0.3,Math.max(0.05,Math.exp(-monthsOld*0.07))); // different: capped at 0.3, faster decay
+  return timeMult;
+}
 
 function pceAnalysePool(poolType){
   const events=Object.keys(S.timeHistory||{}).filter(ev=>(S.timeHistory[ev]||[]).some(e=>_pceTSec(e[poolType])!==Infinity));
@@ -9937,11 +10141,13 @@ function pceAnalysePool(poolType){
       const s=_pceTSec(e[poolType]);const w=_pceEntryWeight(e);
       return s*w<best?s*w:best;
     },Infinity);
-    // Weighted trend — weight each delta by the avg of the two entries involved
+    // Weighted trend — weight each delta by entry type AND programme/recency
     let wDelta=0,wSum=0;
     for(let i=1;i<hist.length;i++){
       const delta=_pceTSec(hist[i][poolType])-_pceTSec(hist[i-1][poolType]);
-      const w=(_pceEntryWeight(hist[i])+_pceEntryWeight(hist[i-1]))/2;
+      const typeW=(_pceEntryWeight(hist[i])+_pceEntryWeight(hist[i-1]))/2;
+      const dataW=(_pceDataWeight(hist[i])+_pceDataWeight(hist[i-1]))/2;
+      const w=typeW*dataW;
       wDelta+=delta*w;wSum+=w;
     }
     const avgDelta=wSum>0?wDelta/wSum:0;
@@ -9978,12 +10184,14 @@ function pceAnalyseBlocks(){
     if(!priorEntries.length)continue;
     const priorBest=Math.min(...priorEntries.map(e=>_pceTSec(e[pool])));
     const improved=resultSec<priorBest-0.05;
-    corr[dom].total++;if(improved)corr[dom].imp++;
+    const dw=_pceDataWeight(log); // programme + recency weight
+    corr[dom].total+=dw;if(improved)corr[dom].imp+=dw;
   }
   const result={};
   for(const[phase,d]of Object.entries(corr)){
     const rate=d.total>0?d.imp/d.total:null;
-    result[phase]={...d,signal:d.total<3?'insufficient':rate>0.6?'positive':rate<0.3?'negative':'neutral'};
+    // Use weighted totals — threshold of 2.0 (equiv to ~2-3 full-weight races)
+    result[phase]={...d,signal:d.total<2.0?'insufficient':rate>0.6?'positive':rate<0.3?'negative':'neutral'};
   }
   return result;
 }
@@ -10504,6 +10712,7 @@ function saveMeetRaceResult(){
       dryland:_raceFeedback.dryland||null,
       body:_raceFeedback.body||null,
     },
+    programmeId:S.currentProgrammeId||'programme_1',
     ts:new Date().toISOString(),
   };
   S.meetRaceLog.push(entry);
@@ -10519,7 +10728,7 @@ function saveMeetRaceResult(){
     const prevBestLCM=getBest(ev,'lcm');
     const prevBestSCM=getBest(ev,'scm');
     const meetName=S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet';
-    const timeEntry={date:dKey(new Date()),meet:meetName,entryType:'race'};
+    const timeEntry={date:dKey(new Date()),meet:meetName,entryType:'race',programmeId:S.currentProgrammeId||'programme_1'};
     if(pool==='scm'){timeEntry.scm=time;timeEntry.lcm='—';}
     else{timeEntry.lcm=time;timeEntry.scm='—';}
     S.timeHistory[ev].push(timeEntry);
@@ -10560,7 +10769,7 @@ function showSection(name){
   }
   if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();}
 
 }
 
