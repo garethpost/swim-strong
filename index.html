@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v75 -->
+  <!-- cache-bust: v97 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1042,6 +1042,27 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="form-row"><label>Coach Notes (optional)</label>
   <textarea id="ml-notes" rows="2" placeholder="What did the coach say?" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);resize:none;"></textarea>
 </div>
+<div style="margin-bottom:14px;">
+  <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Race Day Feel — 3 taps</div>
+  <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;">Energy on race day</div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;" id="ml-energy-btns">
+    <button onclick="setRaceFeedback('energy','fresh')" id="ml-energy-fresh" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">⚡ Fresh</button>
+    <button onclick="setRaceFeedback('energy','normal')" id="ml-energy-normal" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">👌 Normal</button>
+    <button onclick="setRaceFeedback('energy','flat')" id="ml-energy-flat" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">😴 Flat</button>
+  </div>
+  <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;">Did the dryland feel like it helped?</div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;" id="ml-dryland-btns">
+    <button onclick="setRaceFeedback('dryland','yes')" id="ml-dryland-yes" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">✅ Yes</button>
+    <button onclick="setRaceFeedback('dryland','unsure')" id="ml-dryland-unsure" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🤷 Unsure</button>
+    <button onclick="setRaceFeedback('dryland','no')" id="ml-dryland-no" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">❌ No</button>
+  </div>
+  <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:6px;">Body readiness</div>
+  <div style="display:flex;gap:6px;" id="ml-body-btns">
+    <button onclick="setRaceFeedback('body','strong')" id="ml-body-strong" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">💪 Strong</button>
+    <button onclick="setRaceFeedback('body','normal')" id="ml-body-normal" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">👌 Normal</button>
+    <button onclick="setRaceFeedback('body','heavy')" id="ml-body-heavy" style="flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🪨 Heavy</button>
+  </div>
+</div>
 <button class="btn btn-primary" onclick="saveMeetRaceResult()" style="margin-bottom:8px;">Save Result ✓</button>
 <button class="btn-ghost" style="width:100%;" onclick="closeModal('meet-log-modal')" aria-label="Close dialog">Cancel</button>
 </div></div>
@@ -1309,6 +1330,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div class="form-grid-2">
   <div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div>
   <div class="form-row"><label>Meet name</label><input type="text" id="at-meet" placeholder="AB Provincials" style="font-size:13px;"></div>
+</div>
+<div class="form-row">
+  <label>Entry type</label>
+  <div style="display:flex;gap:6px;margin-top:4px;">
+    <button id="at-type-race" onclick="setTimeEntryType('race')" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--accent);background:rgba(26,188,191,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">🏁 Race</button>
+    <button id="at-type-time_trial" onclick="setTimeEntryType('time_trial')" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">⏱ Time Trial</button>
+    <button id="at-type-benchmark" onclick="setTimeEntryType('benchmark')" style="flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">📋 Benchmark</button>
+  </div>
 </div>
 <div style="display:flex;gap:8px;margin-top:4px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveTimeEntry()">Save</button>
@@ -5596,6 +5625,79 @@ function renderTimesContent(){
     </div>`;
   }).join('');
   html+=`</div></div>`; // close pb-analysis-body + card
+
+  // ── Phase 2: Prescription Rationale Card ──
+  // Shows after races: what dryland emphasis preceded the last race, and what happened to the time
+  const _pp2=S.performanceProfile;
+  const _raceEntries=hist.filter(e=>(e.entryType||'race')==='race');
+  if(_pp2&&_pp2.gate>=2&&_pp2.prescription&&_raceEntries.length>=1){
+    const lastRace=_raceEntries[_raceEntries.length-1];
+    const lastRaceDate=new Date(lastRace.date);
+    // Find dominant training phase in 42 days before last race
+    const lookback42=(S.history||[]).filter(h=>{
+      if(!h.date||!h.phase)return false;
+      const diff=lastRaceDate-new Date(h.date);return diff>0&&diff<=42*86400000;
+    });
+    let prescRationale=null;
+    if(lookback42.length>=3){
+      const phaseCount={};for(const h of lookback42){const pn=h.phase&&h.phase.name?h.phase.name:null;if(pn)phaseCount[pn]=(phaseCount[pn]||0)+1;}
+      const dominantPhase=Object.entries(phaseCount).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
+      if(dominantPhase){
+        const isLcmEntry=lastRace.lcm&&lastRace.lcm!=='—';
+        const pool=isLcmEntry?'lcm':'scm';
+        const prevEntries=hist.filter(e=>new Date(e.date)<lastRaceDate&&e[pool]&&e[pool]!=='—');
+        let resultLabel='first entry';let resultColor='var(--muted)';
+        if(prevEntries.length){
+          const prevBestSec=Math.min(...prevEntries.map(e=>tSec(e[pool])));
+          const thisSec=tSec(lastRace[pool]);
+          const diff=thisSec-prevBestSec;
+          if(diff<-0.05){resultLabel=`▼ ${Math.abs(diff).toFixed(2)}s faster`;resultColor='var(--green)';}
+          else if(diff>0.05){resultLabel=`▲ ${Math.abs(diff).toFixed(2)}s slower`;resultColor='var(--red)';}
+          else{resultLabel='similar time';resultColor='var(--muted)';}
+        }
+        const feelLog=(S.meetRaceLog||[]).find(l=>{
+          const r2=S.meetRaces&&S.meetRaces.find(r=>String(r.id)===String(l.raceId)&&r.event===ev);
+          return r2&&Math.abs(new Date(l.ts||lastRace.date)-lastRaceDate)<86400000*2;
+        });
+        const feelStr=feelLog&&feelLog.raceFeel&&feelLog.raceFeel.energy?
+          `Energy: ${feelLog.raceFeel.energy==='fresh'?'⚡ Fresh':feelLog.raceFeel.energy==='flat'?'😴 Flat':'👌 Normal'} · Body: ${feelLog.raceFeel.body==='strong'?'💪 Strong':feelLog.raceFeel.body==='heavy'?'🪨 Heavy':'👌 Normal'}`
+          :'';
+        prescRationale={dominantPhase,resultLabel,resultColor,feelStr,sessionCount:lookback42.length,raceDate:lastRace.date};
+      }
+    }
+    const prescBlock=_pp2.prescription.blockEmphasis;
+    const emphasisEntries=Object.entries(prescBlock).filter(([,v])=>v>0).map(([k])=>k);
+    const emphasisStr=emphasisEntries.length?emphasisEntries.join(' + '):'Balanced';
+    html+=`<div class="card" style="border-left:3px solid var(--accent);background:rgba(26,188,191,0.04);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:10px;">🔗 Dryland → Race Connection</div>
+      ${prescRationale?`
+      <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:10px;border:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Last race — ${new Date(prescRationale.raceDate).toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'2-digit'})}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span style="background:var(--bg);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--muted);">Dryland focus: <span style="color:var(--text);">${prescRationale.dominantPhase}</span></span>
+          <span style="font-size:13px;font-weight:800;color:${prescRationale.resultColor};">${prescRationale.resultLabel}</span>
+        </div>
+        ${prescRationale.feelStr?`<div style="font-size:10px;color:var(--muted);margin-top:6px;">${prescRationale.feelStr}</div>`:''}
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">${prescRationale.sessionCount} sessions in the 6-week build</div>
+      </div>`:'<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Log more dryland sessions and races to see the connection here.</div>'}
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;">Current dryland emphasis</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="background:var(--bg);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--text);">📌 ${emphasisStr}</span>
+        <span style="background:var(--bg);border-radius:8px;padding:5px 10px;font-size:10px;color:var(--muted);">${_pp2.prescription.confidence==='high'?'High confidence':'Medium confidence'}</span>
+      </div>
+      ${(_pp2.prescription.feelInsights&&_pp2.prescription.feelInsights.length)?`
+      <div style="margin-bottom:8px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;">Race feel insights</div>
+        ${_pp2.prescription.feelInsights.map(f=>`<div style="font-size:11px;color:var(--text);padding:5px 0;border-bottom:1px solid var(--border);">${f}</div>`).join('')}
+      </div>`:''}
+      ${_pp2.prescription.reasoning&&_pp2.prescription.reasoning.length?`
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px;">Why this prescription</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;">${_pp2.prescription.reasoning.slice(0,3).join('<br>')}</div>
+      </div>`:''}
+    </div>`;
+  }
+
   document.getElementById('times-content').innerHTML=html;
   renderPerformanceInsightsTimes(); // performance correlation panel
 }
@@ -5609,13 +5711,44 @@ function updateSplitField(){
   if(SPLIT_EVENTS[ev]){sr.style.display='block';sl.textContent=SPLIT_EVENTS[ev]+' (optional)';}
   else{sr.style.display='none';}
 }
+let _timeEntryType='race'; // 'race' | 'time_trial' | 'benchmark'
+let _raceFeedback={energy:null,dryland:null,body:null}; // post-race feel taps
+
+function setTimeEntryType(type){
+  _timeEntryType=type;
+  ['race','time_trial','benchmark'].forEach(t=>{
+    const btn=document.getElementById('at-type-'+t);
+    if(!btn)return;
+    if(t===type){
+      btn.style.background='rgba(26,188,191,0.15)';btn.style.color='var(--accent)';btn.style.borderColor='var(--accent)';
+    } else {
+      btn.style.background='var(--surface)';btn.style.color='var(--muted)';btn.style.borderColor='var(--border)';
+    }
+  });
+}
+function setRaceFeedback(field,val){
+  _raceFeedback[field]=val;
+  const groups={energy:['fresh','normal','flat'],dryland:['yes','unsure','no'],body:['strong','normal','heavy']};
+  (groups[field]||[]).forEach(v=>{
+    const btn=document.getElementById('ml-'+field+'-'+v);
+    if(!btn)return;
+    if(v===val){
+      btn.style.background='rgba(26,188,191,0.15)';btn.style.color='var(--accent)';btn.style.borderColor='var(--accent)';
+    } else {
+      btn.style.background='var(--surface)';btn.style.color='var(--muted)';btn.style.borderColor='var(--border)';
+    }
+  });
+}
 function openAddTime(ev){
+  _timeEntryType='race';
   document.getElementById('at-event').innerHTML=ALL_EVENTS.map(e=>`<option value="${e}"${e===ev?' selected':''}>${e}</option>`).join('');
   document.getElementById('at-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('at-time-scm').value='';
   document.getElementById('at-time-lcm').value='';
   document.getElementById('at-meet').value='';
   document.getElementById('at-split').value='';
+  // Reset entry type buttons — default to Race
+  setTimeEntryType('race');
   updateSplitField();
   openModal('add-time-modal');
 }
@@ -5639,7 +5772,7 @@ function saveTimeEntry(){
   const prevBestLCM=getBest(ev,'lcm');
   const prevBestSCM=getBest(ev,'scm');
   if(!S.timeHistory[ev])S.timeHistory[ev]=[];
-  const entry={date,meet,scm:scm||'—',lcm:lcm||'—'};
+  const entry={date,meet,scm:scm||'—',lcm:lcm||'—',entryType:_timeEntryType||'race'};
   if(split)entry.split=split;
   S.timeHistory[ev].push(entry);
   S.timeHistory[ev].sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -9788,21 +9921,36 @@ function getProfileGate(){
   return{gate:1,racesLogged,cyclesCompleted,reason:parts.join(' · ')||'Building data...'};
 }
 
+// Entry type weight — race times are ground truth; time trials and benchmarks are lower signal
+function _pceEntryWeight(e){const t=e.entryType||'race';return t==='race'?1.0:t==='time_trial'?0.7:0.5;}
+
 function pceAnalysePool(poolType){
   const events=Object.keys(S.timeHistory||{}).filter(ev=>(S.timeHistory[ev]||[]).some(e=>_pceTSec(e[poolType])!==Infinity));
   const eventBreakdown={};
-  let totalDelta=0,eventCount=0;
+  let totalDelta=0,totalWeight=0,eventCount=0;
   for(const ev of events){
     const hist=(S.timeHistory[ev]||[]).filter(e=>_pceTSec(e[poolType])!==Infinity).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
     if(hist.length<2){eventBreakdown[ev]={entryCount:hist.length,trend:'insufficient'};continue;}
-    const bestSec=Math.min(...hist.map(e=>_pceTSec(e[poolType])));
-    const first=_pceTSec(hist[0][poolType]);const last=_pceTSec(hist[hist.length-1][poolType]);
-    const totalD=last-first;const avgDelta=totalD/(hist.length-1);
-    const trend=hist.length<3?'insufficient':avgDelta<-0.3?'improving':avgDelta>0.3?'regressing':'plateau';
-    eventBreakdown[ev]={bestSec,entryCount:hist.length,trend,avgDeltaPerMeet:avgDelta};
-    totalDelta+=avgDelta;eventCount++;
+    // Weighted best — race entries count fully, others discounted
+    const bestSec=hist.reduce((best,e)=>{
+      const s=_pceTSec(e[poolType]);const w=_pceEntryWeight(e);
+      return s*w<best?s*w:best;
+    },Infinity);
+    // Weighted trend — weight each delta by the avg of the two entries involved
+    let wDelta=0,wSum=0;
+    for(let i=1;i<hist.length;i++){
+      const delta=_pceTSec(hist[i][poolType])-_pceTSec(hist[i-1][poolType]);
+      const w=(_pceEntryWeight(hist[i])+_pceEntryWeight(hist[i-1]))/2;
+      wDelta+=delta*w;wSum+=w;
+    }
+    const avgDelta=wSum>0?wDelta/wSum:0;
+    const raceOnly=hist.filter(e=>(e.entryType||'race')==='race');
+    const trend=raceOnly.length<2?'insufficient':avgDelta<-0.3?'improving':avgDelta>0.3?'regressing':'plateau';
+    const evWeight=hist.reduce((s,e)=>s+_pceEntryWeight(e),0)/hist.length;
+    eventBreakdown[ev]={bestSec:Math.min(...hist.map(e=>_pceTSec(e[poolType]))),entryCount:hist.length,raceEntries:raceOnly.length,trend,avgDeltaPerMeet:avgDelta,weightedSignal:evWeight};
+    totalDelta+=avgDelta*evWeight;totalWeight+=evWeight;eventCount++;
   }
-  const avgImprovement=eventCount>0?totalDelta/eventCount:0;
+  const avgImprovement=totalWeight>0?totalDelta/totalWeight:0;
   const trend=eventCount<2?'insufficient':avgImprovement<-0.2?'improving':avgImprovement>0.2?'regressing':'plateau';
   return{avgImprovement,trend,eventBreakdown};
 }
@@ -9854,7 +10002,7 @@ function pceBuildTagProfile(gate){
   return{persistentIssues,strengths,trainingCauses,tagTotal};
 }
 
-function pceBuildPrescription(blockCorr,tagProfile,gate){
+function pceBuildPrescription(blockCorr,tagProfile,gate,raceFeel){
   if(gate<2)return null;
   const reasoning=[];
   const offSeasonWeights={Transition:1.0,GPP:1.0,Hypertrophy:1.0,'Strength Block':1.0,'Specific Prep':1.0};
@@ -9892,8 +10040,53 @@ function pceBuildPrescription(blockCorr,tagProfile,gate){
       reasoning.push(`"${issue.label}" in ${pctStr} of races → aerobic base and core stability need work`);
     }
   }
+  // Race feel feedback loop — adjusts taper confidence and dryland prescription
+  const feelInsights=[];
+  if(raceFeel&&raceFeel.hasData&&raceFeel.totalFeedback>=3){
+    if(raceFeel.energyFlat>0.5){
+      // Flat energy in majority of races → taper may be too short or load too high pre-meet
+      offSeasonWeights.Taper=Math.max(0.7,(offSeasonWeights.Taper||1.0)-0.15);
+      feelInsights.push(`Flat energy in ${Math.round(raceFeel.energyFlat*100)}% of races — taper needs more unloading time`);
+    } else if(raceFeel.energyFresh>0.6){
+      feelInsights.push(`Fresh energy in ${Math.round(raceFeel.energyFresh*100)}% of races — taper timing is working`);
+    }
+    if(raceFeel.drylandHelped>0.5){
+      feelInsights.push(`Dryland reported as helpful in ${Math.round(raceFeel.drylandHelped*100)}% of races — prescription is effective`);
+      // Positive feedback — maintain current emphasis, slight confidence boost
+    }
+    if(raceFeel.drylandHurt>0.4){
+      // Athletes saying dryland didn't help — may need phase shift or timing review
+      feelInsights.push(`Dryland not felt as helpful in ${Math.round(raceFeel.drylandHurt*100)}% of races — review training-to-race timing`);
+    }
+    if(raceFeel.bodyHeavy>0.45){
+      // Heavy body at race day → reduce load in final taper week
+      feelInsights.push(`Heavy body feel in ${Math.round(raceFeel.bodyHeavy*100)}% of races — reduce intensity in final taper week`);
+    }
+  }
   const confidence=gate===3?'high':'medium';
-  return{offSeasonWeights,blockEmphasis,exEmphasis,sessionTypeHint,confidence,reasoning};
+  return{offSeasonWeights,blockEmphasis,exEmphasis,sessionTypeHint,confidence,reasoning,feelInsights};
+}
+
+// Analyse race feel feedback across logged races
+function pceAnalyseRaceFeel(){
+  const logs=(S.meetRaceLog||[]).filter(l=>l.raceFeel&&Object.values(l.raceFeel).some(v=>v!==null));
+  if(!logs.length)return{hasData:false,energyFresh:0,energyFlat:0,drylandHelped:0,drylandHurt:0,bodyHeavy:0,totalFeedback:0};
+  const total=logs.length;
+  const ef=logs.filter(l=>l.raceFeel.energy==='fresh').length;
+  const efl=logs.filter(l=>l.raceFeel.energy==='flat').length;
+  const dh=logs.filter(l=>l.raceFeel.dryland==='yes').length;
+  const dn=logs.filter(l=>l.raceFeel.dryland==='no').length;
+  const bh=logs.filter(l=>l.raceFeel.body==='heavy').length;
+  // Also check if races where dryland "helped" correlated with better results
+  const drylandRaces=logs.filter(l=>l.raceFeel.dryland==='yes');
+  const nonDrylandRaces=logs.filter(l=>l.raceFeel.dryland==='no');
+  let drylandBetterRate=null;
+  if(drylandRaces.length>=2&&nonDrylandRaces.length>=2){
+    // Compare times vs prior best for each group
+    // Simple proxy: look at whether flat energy or heavy body occurred when dryland "no"
+    drylandBetterRate=dh/Math.max(1,dh+dn);
+  }
+  return{hasData:true,energyFresh:ef/total,energyFlat:efl/total,drylandHelped:dh/total,drylandHurt:dn/total,bodyHeavy:bh/total,drylandBetterRate,totalFeedback:total};
 }
 
 function buildPerformanceProfile(){
@@ -9907,6 +10100,7 @@ function buildPerformanceProfile(){
   const lcmPattern=pceAnalysePool('lcm');
   const tagProfile=pceBuildTagProfile(gate);
   const blockCorrelation=gate>=2?pceAnalyseBlocks():{GPP:{signal:'insufficient'},Strength:{signal:'insufficient'},Power:{signal:'insufficient'},Taper:{signal:'insufficient'}};
+  const raceFeel=pceAnalyseRaceFeel();
 
   const sufficients=Object.entries(blockCorrelation).filter(([,d])=>d.signal!=='insufficient');
   const bestBlock=sufficients.find(([,d])=>d.signal==='positive')?.[0]||null;
@@ -9919,10 +10113,12 @@ function buildPerformanceProfile(){
   const logsWithTags=(S.meetRaceLog||[]).filter(l=>(l.coachTags||[]).length>0);
   const totalLogs=(S.meetRaceLog||[]).filter(l=>_pceTSec(l.time)!==Infinity&&_pceTSec(l.time)>0);
   if(totalLogs.length>0&&logsWithTags.length<totalLogs.length*0.5)dataWarnings.push('Less than half of race logs have coach tags — tag analysis may be incomplete');
+  const logsWithFeel=(S.meetRaceLog||[]).filter(l=>l.raceFeel&&Object.values(l.raceFeel).some(v=>v!==null));
+  if(totalLogs.length>=5&&logsWithFeel.length<totalLogs.length*0.4)dataWarnings.push('Less than 40% of race logs have race-day feel data — taper and recovery analysis limited');
 
-  const prescription=pceBuildPrescription(blockCorrelation,tagProfile,gate);
+  const prescription=pceBuildPrescription(blockCorrelation,tagProfile,gate,raceFeel);
 
-  const profile={gate,gateReason:reason,totalRacesLogged:racesLogged,fullCyclesCompleted:cyclesCompleted,scmPattern,lcmPattern,blockCorrelation,bestBlock,weakBlock,tagProfile,prescription,builtAt:new Date().toISOString(),dataWarnings};
+  const profile={gate,gateReason:reason,totalRacesLogged:racesLogged,fullCyclesCompleted:cyclesCompleted,scmPattern,lcmPattern,blockCorrelation,bestBlock,weakBlock,tagProfile,raceFeel,prescription,builtAt:new Date().toISOString(),dataWarnings};
   S.performanceProfile=profile;
   DB.set('performanceProfile',profile);
   return profile;
@@ -10258,13 +10454,22 @@ let _selectedTags=[];
 function openRaceLog(raceId){
   _logRaceId=raceId;
   _selectedTags=[];
+  _raceFeedback={energy:null,dryland:null,body:null};
   const race=S.meetRaces.find(r=>String(r.id)===String(raceId));
   if(!race)return;
   document.getElementById('meet-log-title').textContent=`Log: ${race.event}`;
   document.getElementById('meet-log-sub').textContent=`${race.session==='prelims'?'Prelims':race.session==='finals'?'Finals':'Single Session'} · Seed: ${race.seedTime||'—'}`;
   document.getElementById('ml-time').value='';
   document.getElementById('ml-notes').value='';
-  // Render tags
+  // Reset feedback buttons
+  ['energy','dryland','body'].forEach(field=>{
+    const groups={energy:['fresh','normal','flat'],dryland:['yes','unsure','no'],body:['strong','normal','heavy']};
+    (groups[field]||[]).forEach(v=>{
+      const btn=document.getElementById('ml-'+field+'-'+v);
+      if(btn){btn.style.background='var(--surface)';btn.style.color='var(--muted)';btn.style.borderColor='var(--border)';}
+    });
+  });
+  // Render coach tags
   document.getElementById('ml-tags').innerHTML=COACH_TAGS.map(t=>`
     <button id="cftag-${t.id}" onclick="toggleCoachTag('${t.id}')" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all 0.15s;">${t.label}</button>
   `).join('');
@@ -10293,6 +10498,11 @@ function saveMeetRaceResult(){
     coachTags:[..._selectedTags],
     coachNotes:notes||null,
     session:race?race.session:null,
+    raceFeel:{
+      energy:_raceFeedback.energy||null,
+      dryland:_raceFeedback.dryland||null,
+      body:_raceFeedback.body||null,
+    },
     ts:new Date().toISOString(),
   };
   S.meetRaceLog.push(entry);
@@ -10308,7 +10518,7 @@ function saveMeetRaceResult(){
     const prevBestLCM=getBest(ev,'lcm');
     const prevBestSCM=getBest(ev,'scm');
     const meetName=S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet';
-    const timeEntry={date:dKey(new Date()),meet:meetName};
+    const timeEntry={date:dKey(new Date()),meet:meetName,entryType:'race'};
     if(pool==='scm'){timeEntry.scm=time;timeEntry.lcm='—';}
     else{timeEntry.lcm=time;timeEntry.scm='—';}
     S.timeHistory[ev].push(timeEntry);
