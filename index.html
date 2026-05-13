@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 104</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 105</div>
       </div>
     </div>
 
@@ -8954,7 +8954,13 @@ function renderMealTracker(){
     </button>
     <div id="fuel-sect-body-mymeals" style="display:${myMealsOpen?'block':'none'};margin-top:8px;">
       ${renderSavedMealsSection()}
-      <button onclick="openSaveMealModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed rgba(0,198,255,0.4);background:rgba(0,198,255,0.05);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">+ Save today's meals as a slot</button>
+      ${meals.length
+        ? `<button onclick="openSaveMealModal()" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed rgba(0,198,255,0.4);background:rgba(0,198,255,0.05);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">💾 Save today's ${meals.length} food${meals.length>1?'s':''} as a meal slot</button>`
+        : `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px dashed var(--border);background:rgba(255,255,255,0.02);text-align:center;">
+            <div style="font-size:12px;color:var(--muted);line-height:1.5;">Log some foods via <strong style="color:var(--text);">Add Food</strong> below first — then save them as a reusable slot</div>
+            <button onclick="_toggleFuelSection('addfood');document.getElementById('fuel-sect-body-addfood').scrollIntoView({behavior:'smooth'})" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:none;background:rgba(0,198,255,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Go to Add Food →</button>
+          </div>`
+      }
     </div>
   </div>`;
 
