@@ -476,25 +476,6 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div style="font-size:11px;color:var(--muted);" id="km-target-status"></div>
         </div>
         <div class="card">
-          <div class="card-title">Mobility & Stretch Progress</div>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Logged automatically when you complete a mobility workout.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-            <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
-              <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-this-week">—</div>
-              <div style="font-size:10px;color:var(--muted);">This week</div>
-            </div>
-            <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
-              <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-30day">—</div>
-              <div style="font-size:10px;color:var(--muted);">Last 30 days</div>
-            </div>
-            <div style="background:var(--surface);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border);">
-              <div style="font-size:22px;font-weight:900;color:var(--purple);" id="mob-streak">—</div>
-              <div style="font-size:10px;color:var(--muted);">Wk streak</div>
-            </div>
-          </div>
-          <div id="mob-last-label" style="font-size:11px;color:var(--muted);text-align:center;"></div>
-        </div>
-        <div class="card">
           <div class="card-title">Pool Session Log</div>
           <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Logged from the home screen on swim days.</p>
           <div id="pool-log-list"></div>
@@ -575,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 99</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 101</div>
       </div>
     </div>
 
@@ -1849,6 +1830,7 @@ let S={
   autoDeload:DB.get('autoDeload',false), // true when fatigue auto-trigger fires
   weightTrendLog:DB.get('weightTrendLog',[]), // [{date,wtKg}] — logged each time body stats saved
   poolLog:DB.get('poolLog',[]), // [{date,feel,timedSwim,timedTime,distKm,notes}]
+  poolLoadToday:DB.get('poolLoadToday',null), // {date,km,load:1|2|3} — today's pool session load signal
   mobilityLog:DB.get('mobilityLog',[]), // [YYYY-MM-DD] — dates when mobility session logged
   mealCompliance:DB.get('mealCompliance',{}), // {YYYY-MM-DD:{pre:bool,intra:bool,post:bool}}
   appTheme:DB.get('appTheme','original'),
@@ -2629,77 +2611,44 @@ function applyClubLogo(){
 }
 
 // ── KM Tracker ──
+// ── Km Tracker — reads automatically from poolLog (no manual entry) ──
 function renderKmTracker(){
-  const total=S.swimKmTotal||0;
-  const disp=S.useKm?total.toFixed(1):(total*0.621371).toFixed(1);
   const unit=S.useKm?'km':'mi';
+  const poolLog=S.poolLog||[];
+  // Total season km from pool check-in log
+  const totalKm=poolLog.reduce((a,e)=>a+(e.distKm||0),0);
+  const totalDisp=S.useKm?totalKm.toFixed(1):(totalKm*0.621371).toFixed(1);
   const el=document.getElementById('km-display');
   const ul=document.getElementById('km-unit-label');
-  if(el)el.textContent=disp;
+  if(el)el.textContent=totalDisp;
   if(ul)ul.textContent=unit;
-  // Last entry label
-  const log=S.swimKmLog||[];
+  // Last session label
   const lbl=document.getElementById('km-session-label');
   if(lbl){
-    if(log.length){
-      const last=log[log.length-1];
-      const d=new Date(last.date);
-      const dStr=d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});
-      const lastDisp=S.useKm?last.km.toFixed(1)+'km':(last.km*0.621371).toFixed(1)+'mi';
+    const sorted=[...poolLog].sort((a,b)=>b.date.localeCompare(a.date));
+    if(sorted.length){
+      const last=sorted[0];
+      const dStr=localDate(last.date).toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+      const lastDisp=S.useKm?(last.distKm||0).toFixed(1)+'km':((last.distKm||0)*0.621371).toFixed(1)+'mi';
       lbl.textContent=`Last: ${lastDisp} on ${dStr}`;
     } else {
-      lbl.textContent='tap + to log today\'s distance';
+      lbl.textContent='Log pool sessions to track season distance';
     }
   }
   // Season target progress bar
   const targetKm=S.seasonKmTarget||500;
   const targetDisp=S.useKm?targetKm:(targetKm*0.621371).toFixed(0);
-  const pct=Math.min(100,(total/targetKm)*100);
+  const pct=Math.min(100,(totalKm/targetKm)*100);
   const pbEl=document.getElementById('km-season-bar');
   const pbLbl=document.getElementById('km-season-label');
   if(pbEl)pbEl.style.width=pct.toFixed(1)+'%';
-  if(pbLbl)pbLbl.textContent=`${disp} / ${targetDisp} ${unit} (${pct.toFixed(0)}% of season target)`;
-  // Hide input row initially
-  const ir=document.getElementById('km-input-row');
-  if(ir)ir.style.display='none';
+  if(pbLbl)pbLbl.textContent=`${totalDisp} / ${targetDisp} ${unit} · ${pct.toFixed(0)}% of season target`;
 }
-function adjustKm(dir){
-  if(dir===1){
-    // Show input row
-    const ir=document.getElementById('km-input-row');
-    if(ir){ir.style.display='flex';document.getElementById('km-amount-input').focus();}
-  } else {
-    // Subtract last entry
-    const log=S.swimKmLog||[];
-    if(!log.length)return;
-    const last=log.pop();
-    S.swimKmTotal=Math.max(0,(S.swimKmTotal||0)-last.km);
-    S.swimKmLog=log;
-    DB.set('swimKmTotal',S.swimKmTotal);DB.set('swimKmLog',S.swimKmLog);
-    renderKmTracker();
-  }
-}
-function logKm(){
-  const inp=document.getElementById('km-amount-input');
-  if(!inp)return;
-  let val=parseFloat(inp.value);
-  if(!val||val<=0)return;
-  // Convert miles to km if imperial distance setting
-  const kmVal=S.useKm?val:val/0.621371;
-  const today=new Date().toISOString().slice(0,10);
-  S.swimKmLog=(S.swimKmLog||[]);
-  S.swimKmLog.push({date:today,km:kmVal});
-  S.swimKmTotal=(S.swimKmTotal||0)+kmVal;
-  DB.set('swimKmTotal',S.swimKmTotal);DB.set('swimKmLog',S.swimKmLog);
-  inp.value='';
-  const ir=document.getElementById('km-input-row');
-  if(ir)ir.style.display='none';
-  renderKmTracker();
-}
-function cancelKm(){
-  const ir=document.getElementById('km-input-row');
-  if(ir)ir.style.display='none';
-}
+// Legacy stubs — manual km entry replaced by pool check-in
+function adjustKm(){}
+function logKm(){}
+function cancelKm(){}
+function openSwimLog(){openModal('pool-checkin-modal');} // redirect to pool check-in
 
 // ── Dynamic daily calories ──
 function getDailyCalFromSchedule(forDate){
@@ -3177,6 +3126,15 @@ function getLoadMult(){
   // misaligned with actual session difficulty (accumulated from RPE feedback loop)
   const bias=S.rpeCalibrationBias||0;
   if(bias!==0)mult+=bias;
+  // Pool load signal — if swimmer logged a pool session today, reduce dryland load slightly.
+  // Protects block integrity: heavy pool (>5km) = -10%, moderate (3-5km) = -5%, light (<3km) = no change.
+  // This is a daily adjustment only — never touches 1RM, progression targets, or block structure.
+  const pl=S.poolLoadToday;
+  if(pl&&pl.date===dKey(new Date())){
+    if(pl.load===3)mult-=0.10; // heavy pool session (>5km)
+    else if(pl.load===2)mult-=0.05; // moderate pool session (3-5km)
+    // light pool session (<3km) — no adjustment
+  }
   return Math.max(0.3,Math.min(1.3,mult));
 }
 function getLoadDesc(m){
@@ -4297,6 +4255,22 @@ function generateWorkout(forceType){
         reason:`Avg session RPE ${rpeAvg.toFixed(1)}/10 over last ${recentRPE.length} sessions. You're in the red zone. Today's session is on schedule but consider a deload week if this continues.`,
         color:'var(--red)'
       };
+    }
+  }
+
+  // ── Pool load today signal — inform swimmer the app knows about their swim ──
+  // Shows as an informational note only — load mult already adjusted in getLoadMult().
+  // Never overrides adaptNote set above (injury/overreach warnings take priority).
+  if(!adaptNote){
+    const pl=S.poolLoadToday;
+    if(pl&&pl.date===dKey(new Date())&&pl.distKm>0){
+      const unit=S.useKm?'km':'mi';
+      const dispKm=S.useKm?pl.distKm.toFixed(1):(pl.distKm*0.621371).toFixed(1);
+      if(pl.load===3){
+        adaptNote={icon:'🏊',label:'Heavy Pool Session Noted',reason:`You swam ${dispKm}${unit} today. Dryland load adjusted down 10% to account for cumulative fatigue — your block progression stays on track.`,color:'var(--accent)'};
+      } else if(pl.load===2){
+        adaptNote={icon:'🏊',label:'Pool Session Noted',reason:`You swam ${dispKm}${unit} today. Minor load adjustment applied — session is near-normal. Your training arc is protected.`,color:'var(--accent)'};
+      }
     }
   }
 
@@ -9599,6 +9573,14 @@ function savePoolCheckin(){
   _editingPoolDate=null;
   if(S.poolLog.length>90)S.poolLog=S.poolLog.slice(-90);
   DB.set('poolLog',S.poolLog);
+  // ── Pool load signal → dryland readiness ──
+  // Write today's pool load so the dryland engine can factor it in.
+  // Light (<3km)=1, Moderate (3-5km)=2, Heavy (>5km)=3. Influences daily load mult only.
+  if(entryDate===dKey(new Date())&&distKm>0){
+    const poolLoad=distKm<3?1:distKm<5?2:3;
+    S.poolLoadToday={date:entryDate,km:distKm,load:poolLoad};
+    DB.set('poolLoadToday',S.poolLoadToday);
+  }
   closeModal('pool-checkin-modal');
   renderHome();
   if(document.getElementById('section-schedule')&&document.getElementById('section-schedule').classList.contains('active')){
@@ -9606,43 +9588,8 @@ function savePoolCheckin(){
   }
 }
 
-// ── Mobility Stats ──
-function renderMobilityStats(){
-  const log=S.mobilityLog||[];
-  const today=new Date();today.setHours(0,0,0,0);
-  // This week (Mon–Sun)
-  const dow=today.getDay();const monOffset=dow===0?-6:1-dow;
-  const weekStart=new Date(today);weekStart.setDate(today.getDate()+monOffset);
-  const thisWeek=log.filter(d=>{const dt=localDate(d);return dt>=weekStart&&dt<=today;}).length;
-  // Last 30 days
-  const ago30=new Date(today);ago30.setDate(today.getDate()-30);
-  const last30=log.filter(d=>localDate(d)>=ago30).length;
-  // Week streak — count consecutive weeks (including this week) with at least 1 session
-  let streak=0;
-  for(let w=0;;w++){
-    const ws=new Date(weekStart);ws.setDate(weekStart.getDate()-w*7);
-    const we=new Date(ws);we.setDate(ws.getDate()+6);
-    const count=log.filter(d=>{const dt=localDate(d);return dt>=ws&&dt<=we;}).length;
-    if(count>0)streak++;
-    else break;
-  }
-  const el1=document.getElementById('mob-this-week');
-  const el2=document.getElementById('mob-30day');
-  const el3=document.getElementById('mob-streak');
-  const el4=document.getElementById('mob-last-label');
-  const noData=log.length===0;
-  if(el1)el1.textContent=noData?'—':thisWeek;
-  if(el2)el2.textContent=noData?'—':last30;
-  if(el3)el3.textContent=noData?'—':streak;
-  if(el4){
-    if(log.length){
-      const lastDate=localDate(log[log.length-1]);
-      el4.textContent=`Last session: ${lastDate.toLocaleDateString('en-CA',{month:'short',day:'numeric',year:'numeric'})}`;
-    } else {
-      el4.textContent='Complete a mobility workout to start tracking.';
-    }
-  }
-}
+// ── Mobility Stats — consolidated into dryland session history ──
+function renderMobilityStats(){} // legacy stub — mobility data lives in dryland session history
 
 // ── Weight Trend Chart ──
 function renderWeightTrendChart(){
@@ -10863,62 +10810,12 @@ function showSection(name){
   }
   if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderMobilityStats();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();}
 
 }
 
 // ── Swim Log ──
-function openSwimLog(){
-  const unit=S.useKm?'km':'mi';
-  const goalEl=document.getElementById('swim-log-season-goal');
-  const unitEls=document.querySelectorAll('#swim-log-unit,#swim-log-goal-unit');
-  unitEls.forEach(el=>el.textContent=unit);
-  // Pre-fill current season goal
-  if(goalEl){
-    const currentGoal=S.kmSeasonTarget||(S.useKm?500:300);
-    goalEl.value=S.useKm?currentGoal:Math.round(currentGoal*0.621371);
-  }
-  // Show weekly target note
-  const noteEl=document.getElementById('swim-log-goal-note');
-  if(noteEl){
-    const goal=S.kmSeasonTarget||(S.useKm?500:300);
-    const weekTarget=parseFloat((goal/36).toFixed(1));
-    const disp=S.useKm?weekTarget:parseFloat((weekTarget*0.621371).toFixed(1));
-    noteEl.textContent=`Current: ${S.useKm?goal:Math.round(goal*0.621371)}${unit} season → ${disp}${unit}/week target`;
-  }
-  // Clear distance input
-  const kmEl=document.getElementById('swim-log-km');
-  if(kmEl)kmEl.value='';
-  openModal('swim-log-modal');
-}
-function saveSwimLog(){
-  const kmEl=document.getElementById('swim-log-km');
-  const goalEl=document.getElementById('swim-log-season-goal');
-  if(!kmEl)return;
-  const rawDist=parseFloat(kmEl.value);
-  if(!rawDist||rawDist<=0){alert('Enter a distance.');return;}
-  const date=dKey(new Date());
-  // Convert to km for storage
-  const distKm=S.useKm?rawDist:rawDist/0.621371;
-  // Save pool log entry
-  S.poolLog=S.poolLog||[];
-  const existing=S.poolLog.findIndex(e=>e.date===date);
-  if(existing>=0){
-    S.poolLog[existing].distKm=Math.round((S.poolLog[existing].distKm+distKm)*100)/100;
-  } else {
-    S.poolLog.push({date,distKm:Math.round(distKm*100)/100});
-  }
-  DB.set('poolLog',S.poolLog);
-  // Save season goal if changed
-  if(goalEl&&goalEl.value){
-    const newGoalDisp=parseFloat(goalEl.value);
-    const newGoalKm=S.useKm?newGoalDisp:newGoalDisp/0.621371;
-    S.kmSeasonTarget=Math.round(newGoalKm);
-    DB.set('seasonKmTarget',S.kmSeasonTarget);
-  }
-  closeModal('swim-log-modal');
-  renderHome();
-}
+// openSwimLog and saveSwimLog retired — pool check-in is the single source of truth for pool distance
 
 // INIT
 if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
@@ -10961,35 +10858,6 @@ if('serviceWorker' in navigator){
 }
 </script>
 
-<!-- Swim Log Modal -->
-<div class="modal-overlay" id="swim-log-modal" onclick="if(event.target===this)closeModal('swim-log-modal')">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Log Pool Session">
-    <div class="modal-handle"></div>
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Pool Session</div>
-    <h3 style="font-size:20px;font-weight:900;margin-bottom:16px;color:var(--text);">Log Your Swim</h3>
-
-    <div style="margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Distance Today</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="number" id="swim-log-km" placeholder="0.0" step="0.1" min="0.1" max="30"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:24px;font-weight:800;padding:12px 14px;font-family:var(--font);text-align:center;">
-        <span id="swim-log-unit" style="font-size:16px;font-weight:700;color:var(--muted);">km</span>
-      </div>
-    </div>
-
-    <div style="margin-bottom:18px;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">Season Goal <span style="font-weight:400;text-transform:none;">(optional — sets your weekly target)</span></div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="number" id="swim-log-season-goal" placeholder="500" step="10" min="50" max="2000"
-          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-weight:700;padding:11px 14px;font-family:var(--font);">
-        <span id="swim-log-goal-unit" style="font-size:14px;font-weight:700;color:var(--muted);">km</span>
-      </div>
-      <div id="swim-log-goal-note" style="font-size:11px;color:var(--muted);margin-top:5px;"></div>
-    </div>
-
-    <button class="btn btn-primary" onclick="saveSwimLog()" style="margin-bottom:8px;">Log Session ✓</button>
-    <button class="btn-ghost" onclick="closeModal('swim-log-modal')" style="width:100%;">Cancel</button>
-  </div>
-</div>
+<!-- swim-log-modal retired — pool check-in is the single entry point for pool distance -->
 </body>
 </html>
