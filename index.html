@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 105</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 106</div>
       </div>
     </div>
 
@@ -1389,6 +1389,22 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <div style="display:flex;gap:8px;margin-top:14px;">
   <button class="btn btn-primary" style="flex:1" onclick="saveCustomFood()">Add to log</button>
   <button class="btn-ghost" style="flex:1" onclick="closeModal('custom-food-modal')">Cancel</button>
+</div>
+</div></div>
+
+<!-- Edit Meal Slot modal -->
+<div class="modal-overlay" id="edit-meal-slot-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Edit Meal Slot">
+<div class="modal-handle"></div>
+<h3 style="font-size:17px;margin-bottom:4px;">✏️ Edit Meal Slot</h3>
+<p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Update the name, meal type, or remove individual foods.</p>
+<div class="form-row" style="margin-bottom:10px;"><label>Name</label><input type="text" id="edit-slot-name-input" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+<div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Logs under</div>
+<div id="edit-slot-mealtype-wrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+<div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Foods</div>
+<div id="edit-slot-foods-wrap" style="max-height:35vh;overflow-y:auto;margin-bottom:14px;"></div>
+<div style="display:flex;gap:8px;">
+  <button class="btn btn-primary" style="flex:1" onclick="confirmEditSlot()">Save changes</button>
+  <button class="btn-ghost" style="flex:1" onclick="closeModal('edit-meal-slot-modal')">Cancel</button>
 </div>
 </div></div>
 
@@ -8619,6 +8635,73 @@ function deleteSavedMeal(slotId){
   renderMealTracker();
 }
 
+function openEditSlotModal(slotId){
+  const slot=(S.savedMeals||[]).find(s=>s.id===slotId);
+  if(!slot)return;
+  // Stash the id being edited
+  S._editingSlotId=slotId;
+  // Populate name field
+  const nameInp=document.getElementById('edit-slot-name-input');
+  if(nameInp)nameInp.value=slot.name;
+  // Populate meal type pills
+  _renderEditSlotMealTypePills(slot.mealType||'Breakfast');
+  // Populate food list
+  _renderEditSlotFoods(slot);
+  openModal('edit-meal-slot-modal');
+}
+
+function _renderEditSlotMealTypePills(selected){
+  const wrap=document.getElementById('edit-slot-mealtype-wrap');
+  if(!wrap)return;
+  wrap.innerHTML=MEAL_TYPES.map(t=>`<button onclick="_selectEditSlotMealType('${t}')" id="edit-slot-pill-${t.replace(/\s/g,'-')}" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid ${selected===t?'var(--accent)':'var(--border)'};background:${selected===t?'rgba(26,188,191,0.15)':'var(--surface)'};color:${selected===t?'var(--accent)':'var(--muted)'};font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">${MEAL_TYPE_ICONS[t]} ${t}</button>`).join('');
+  S._editSlotMealType=selected;
+}
+
+function _selectEditSlotMealType(t){
+  S._editSlotMealType=t;
+  _renderEditSlotMealTypePills(t);
+}
+
+function _renderEditSlotFoods(slot){
+  const wrap=document.getElementById('edit-slot-foods-wrap');
+  if(!wrap)return;
+  const items=slot.items||[];
+  if(!items.length){wrap.innerHTML=`<div style="font-size:12px;color:var(--muted);padding:8px 0;">No foods in this slot.</div>`;return;}
+  wrap.innerHTML=items.map((item,idx)=>{
+    const food=resolveFood(item.foodId);
+    if(!food)return'';
+    const q=item.qty||1;
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(food.name)}${q>1?` ×${q}`:''}</div>
+        <div style="font-size:11px;color:var(--muted);">${Math.round(food.cal*q)} kcal · ${Math.round(food.protein*q)}g P</div>
+      </div>
+      <button onclick="_removeEditSlotItem(${idx})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
+function _removeEditSlotItem(idx){
+  const slot=(S.savedMeals||[]).find(s=>s.id===S._editingSlotId);
+  if(!slot)return;
+  slot.items.splice(idx,1);
+  _renderEditSlotFoods(slot);
+}
+
+function confirmEditSlot(){
+  const slot=(S.savedMeals||[]).find(s=>s.id===S._editingSlotId);
+  if(!slot)return;
+  const nameInp=document.getElementById('edit-slot-name-input');
+  const name=nameInp?nameInp.value.trim():'';
+  if(!name){showToast('Enter a name for this slot');return;}
+  slot.name=name;
+  slot.mealType=S._editSlotMealType||slot.mealType||'Breakfast';
+  DB.set('savedMeals',S.savedMeals);
+  closeModal('edit-meal-slot-modal');
+  showToast('✅ Meal slot updated');
+  renderMealTracker();
+}
+
 function openSaveMealModal(){
   S.mealLog=DB.get('mealLog',S.mealLog||{});
   const existing=getTodayMeals();
@@ -8667,14 +8750,19 @@ function renderSavedMealsSection(){
   return slots.map(slot=>{
     const totals=_savedMealsCalc(slot);
     const lastUsedStr=slot.lastUsed?`Last used ${slot.lastUsed}`:'Never used';
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(slot.name)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${totals.cal} kcal · ${totals.protein}g protein · ${totals.carbs}g carbs · ${lastUsedStr}</div>
+    const mealTypeLabel=slot.mealType||'Breakfast';
+    const itemCount=(slot.items||[]).length;
+    return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(slot.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${mealTypeLabel} · ${itemCount} food${itemCount!==1?'s':''} · ${totals.cal} kcal · ${totals.protein}g P · ${lastUsedStr}</div>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px;">
-        <button onclick="logSavedMeal('${slot.id}')" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(0,198,255,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Log</button>
-        <button onclick="deleteSavedMeal('${slot.id}')" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);">×</button>
+      <div style="display:flex;gap:6px;">
+        <button onclick="logSavedMeal('${slot.id}')" style="flex:1;padding:7px 0;border-radius:8px;border:none;background:rgba(0,198,255,0.15);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Log now</button>
+        <button onclick="openEditSlotModal('${slot.id}')" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Edit</button>
+        <button onclick="deleteSavedMeal('${slot.id}')" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);">×</button>
       </div>
     </div>`;
   }).join('');
@@ -8725,7 +8813,21 @@ function renderFuelCorrelationCard(){
     }
   }
 
-  if(daysAnalysed<5||!fuelled.rpe.length||!underfuelled.rpe.length)return'';
+  // Early-user nudge — show card even without enough data yet
+  if(daysAnalysed<3){
+    const daysLogged=Object.keys(mealLog).filter(k=>mealLog[k]&&mealLog[k].length).length;
+    if(daysLogged<2)return''; // truly new, nothing to say
+    return`<div class="card" style="margin-bottom:12px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:22px;">📊</span>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text);">Fuel → Performance</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">Keep logging — your fuel data will be cross-referenced against your training sessions automatically. Patterns start appearing after a few weeks of consistent logging.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  if(!fuelled.rpe.length||!underfuelled.rpe.length)return'';
 
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
   const fuellRPE=avg(fuelled.rpe);
