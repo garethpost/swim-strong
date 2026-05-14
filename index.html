@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 106</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 107</div>
       </div>
     </div>
 
@@ -2985,6 +2985,10 @@ const EX={
     {name:'Walking Lunge',sets:3,detail:null,desc:'Continuous lunge pattern — unilateral strength with locomotion.',cue:'Tall torso. Long stride. Drive back knee to ground.',weighted:true,tags:['single-leg','squat'],tempo:'2-0-1-0'},
     {name:'Lateral Step-Up',sets:3,detail:null,desc:'Step sideways onto box. Hip abductor and glute emphasis.',cue:'Drive through outside leg. No hip drop. Full extension at top.',weighted:true,tags:['single-leg'],tempo:'2-0-1-0'},
     {name:'Copenhagen Plank',detail:'3×30s each',desc:'Side plank with top leg on bench — brutal adductor load for breaststroke kick.',cue:'Hips stay high. Don\'t let the pelvis sag.',weighted:false,tags:['single-leg']},
+    // ── KNEE PRE-ACTIVATION — Bulletproof Knees (Ross Edgley / breaststroke mandate) ──
+    {name:'Terminal Knee Extensions',detail:'2×15 each',desc:'Band around knee, slight bend, extend to full lock. VMO and distal quad activation. Fires the stabilisers before any knee load.',cue:'Band pulls knee into slight flexion. Drive to full extension. Feel the VMO above the kneecap.',weighted:false,tags:['knee-preact']},
+    {name:'Lateral Band Walks',detail:'2×15 each direction',desc:'Band around ankles, half-squat, walk laterally. Hip abductor and external rotator activation. Protects the knee from valgus collapse under load.',cue:'Constant tension. Toes forward. Don\'t let the band pull your knees in. Control every step.',weighted:false,tags:['knee-preact']},
+    {name:'VMO Wall Sits',detail:'2×30s',desc:'Wall sit position, focus contraction on the teardrop muscle above inner kneecap. Bulletproof knee prerequisite for breaststroke.',cue:'Push knees out over toes. Feel the VMO light up. Breaststroke kick stress-tests this muscle every rep.',weighted:false,tags:['knee-preact']},
     // ── GPP / WORK CAPACITY — Ross Edgley ──
     {name:'Duck Walk',detail:'3×15m',desc:'Walk in squat hold position — Ross Edgley staple for leg endurance.',cue:'Heels down. Thighs parallel. Shuffle forward. No standing up.',weighted:false,tags:['squat']},
     {name:'Sled Push',detail:'4×20m',desc:'Load sled, drive forward with explosive leg drive.',cue:'Forward lean, drive knees, full extension. Power through the floor.',weighted:false,tags:['hinge','explosive']},
@@ -3504,6 +3508,7 @@ const EX_EQUIP={
   'Bulgarian Split Squat':'gym','Single-Leg RDL':'minimal','Step-Ups':'minimal',
   'Lateral Step-Up':'minimal','Reverse Lunge':'minimal','Lateral Lunge':'minimal',
   'Walking Lunge':'minimal','Copenhagen Plank':'bw','Duck Walk':'bw',
+  'Terminal Knee Extensions':'minimal','Lateral Band Walks':'minimal','VMO Wall Sits':'bw',
   'Sled Push':'gym','Sled Drag':'gym',
   // ── UPPER — vertical pull ──
   'Pull-Ups':'minimal','Weighted Pull-Ups':'minimal','Chin-Ups':'minimal',
@@ -4351,6 +4356,30 @@ function generateWorkout(forceType){
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>withSets(e))});
 
+  // ── Bulletproof Shoulders — Ross Edgley Blueprint (in-season) ──
+  const _is1_shoulderStrokes=['free','fly','back','im','distance'];
+  const _is1_isBreaststroker=sp.stroke==='breast'||(sp.secondary&&sp.secondary.includes('breast'));
+  if(dayType==='upper'&&_is1_shoulderStrokes.includes(sp.stroke)){
+    const _is1_scap=EX.warmup.find(e=>e.name==='Scapular Wall Slides');
+    const _is1_bp=EX.warmup.find(e=>e.name==='Band Pull-Aparts');
+    const _is1_er=EX.upper.find(e=>e.name==='External Rotation 90/90');
+    const _is1_exs=[_is1_scap,_is1_bp,_is1_er].filter(Boolean).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}));
+    if(_is1_exs.length)blocks.push({
+      title:'🛡️ Bulletproof Shoulders — Pre-Activation',
+      desc:'Ross Edgley (Blueprint): scapular stability before load. Rotator cuff fires first, big muscles follow. Non-negotiable for overhead stroke swimmers.',
+      exercises:_is1_exs
+    });
+  }
+  // ── Bulletproof Knees — Ross Edgley Blueprint (in-season) ──
+  if(dayType==='lower'&&_is1_isBreaststroker){
+    const _is1_kneePool=EX.lower.filter(e=>e.tags&&e.tags.includes('knee-preact'));
+    if(_is1_kneePool.length)blocks.push({
+      title:'🦵 Bulletproof Knees — Pre-Activation',
+      desc:'Breaststroke whip kick valgus stress is career-limiting. VMO and hip external rotators must fire before any knee load.',
+      exercises:pick(_is1_kneePool,Math.min(3,_is1_kneePool.length)).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}))
+    });
+  }
+
   // Age-group exercise filter: youth=bodyweight only, teen=beginner level enforced
   const effLevel=ag==='youth'?'beginner':ag==='teen'?'beginner':trainingLevel;
   function ageFilter(exArr){
@@ -4948,6 +4977,31 @@ function generateGoalWorkout(forceType){
 
   let blocks=[];
   blocks.push({title:'Warm-Up',exercises:pick(EX.warmup,3).map(e=>withSets(e))});
+
+  // ── Bulletproof Shoulders — Ross Edgley Blueprint (in-season goal-based) ──
+  const _is2_shoulderStrokes=['free','fly','back','im','distance'];
+  const _is2_isBreaststroker=sp.stroke==='breast'||(sp.secondary&&sp.secondary.includes('breast'));
+  if(dayType==='upper'&&_is2_shoulderStrokes.includes(sp.stroke)){
+    const _is2_scap=EX.warmup.find(e=>e.name==='Scapular Wall Slides');
+    const _is2_bp=EX.warmup.find(e=>e.name==='Band Pull-Aparts');
+    const _is2_er=EX.upper.find(e=>e.name==='External Rotation 90/90');
+    const _is2_exs=[_is2_scap,_is2_bp,_is2_er].filter(Boolean).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}));
+    if(_is2_exs.length)blocks.push({
+      title:'🛡️ Bulletproof Shoulders — Pre-Activation',
+      desc:'Ross Edgley (Blueprint): scapular stability before load. Rotator cuff fires first, big muscles follow. Non-negotiable for overhead stroke swimmers.',
+      exercises:_is2_exs
+    });
+  }
+  // ── Bulletproof Knees — Ross Edgley Blueprint (in-season goal-based) ──
+  if(dayType==='lower'&&_is2_isBreaststroker){
+    const _is2_kneePool=EX.lower.filter(e=>e.tags&&e.tags.includes('knee-preact'));
+    if(_is2_kneePool.length)blocks.push({
+      title:'🦵 Bulletproof Knees — Pre-Activation',
+      desc:'Breaststroke whip kick valgus stress is career-limiting. VMO and hip external rotators must fire before any knee load.',
+      exercises:pick(_is2_kneePool,Math.min(3,_is2_kneePool.length)).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}))
+    });
+  }
+
   if(dayType==='lower'){
     const lowerPool=wantsPower
       ?[...EX.lower.filter(e=>e.tags&&(e.tags.includes('explosive')||e.tags.includes('hinge'))),...EX.lower.filter(e=>!e.tags||(!e.tags.includes('explosive')&&!e.tags.includes('hinge')))]
@@ -7861,6 +7915,40 @@ function generateOffSeasonWorkout(forceType){
   const warmupCount=isHypertrophy||isStrength?4:3;
   blocks.push({title:'Warm-Up',exercises:pickFresh(EX.warmup,warmupCount)});
 
+  // ── Bulletproof Shoulders — Ross Edgley Blueprint ──
+  // Scapular stability + rotator cuff pre-activation BEFORE pressing for free/fly/back/IM upper days.
+  // Matches main shoulder block only when needed — breaststroke upper days skip this (different demand).
+  const _shoulderStrokePreact=['free','fly','back','im','distance'];
+  const _isBreaststroker=sp.stroke==='breast'||(sp.secondary&&sp.secondary.includes('breast'));
+  if(dayType==='upper'&&_shoulderStrokePreact.includes(sp.stroke)){
+    const _scapSlides=EX.warmup.find(e=>e.name==='Scapular Wall Slides');
+    const _bandPulls=EX.warmup.find(e=>e.name==='Band Pull-Aparts');
+    const _extRot=EX.upper.find(e=>e.name==='External Rotation 90/90');
+    const _bpShoulderExs=[_scapSlides,_bandPulls,_extRot].filter(Boolean).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}));
+    if(_bpShoulderExs.length){
+      blocks.push({
+        title:'🛡️ Bulletproof Shoulders — Pre-Activation',
+        desc:'Ross Edgley (Blueprint): scapular stability before load. Rotator cuff must fire before the big muscles do. Non-negotiable for overhead stroke swimmers. Do this block deliberately — speed defeats the purpose.',
+        exercises:_bpShoulderExs
+      });
+    }
+  }
+
+  // ── Bulletproof Knees — Ross Edgley Blueprint ──
+  // VMO + hip external rotator pre-activation BEFORE knee load for breaststroke swimmers.
+  // Breaststroke whip kick generates valgus stress on every rep — career-limiting if not addressed.
+  if(dayType==='lower'&&_isBreaststroker){
+    const _kneePreactPool=EX.lower.filter(e=>e.tags&&e.tags.includes('knee-preact'));
+    if(_kneePreactPool.length){
+      const _kneePreactExs=pickFresh(_kneePreactPool,Math.min(3,_kneePreactPool.length)).map(e=>({...e,sets:2,detail:'2×15 — activate before loading'}));
+      blocks.push({
+        title:'🦵 Bulletproof Knees — Pre-Activation',
+        desc:'Breaststroke whip kick valgus stress is career-limiting. VMO and hip external rotators must fire before any knee load. Ross Edgley: stability before strength. Every rep.',
+        exercises:_kneePreactExs
+      });
+    }
+  }
+
   if(dayType==='lower'){
     let pool=[...EX.lower];
     // Remove Nordic from general pool — we'll mandate it separately for sprinters
@@ -7908,6 +7996,20 @@ function generateOffSeasonWorkout(forceType){
       desc:'Posterior shoulder and rotator cuff. Dan Daly: non-negotiable after every pressing session.',
       exercises:pickFresh(shoulderEx.length?shoulderEx:EX.warmup.filter(e=>['Band Pull-Aparts','Y-Raises Prone','Prone Blackburn'].includes(e.name)),shoulderCount)
     });
+
+    // ── Thoracic Mobility — fly and back swimmers only ──
+    // Thoracic restriction forces shoulder compensation — leads to impingement in overhead strokes.
+    const _overheadStrokes=['fly','back'];
+    if(_overheadStrokes.includes(sp.stroke)){
+      const _thoracicPool=EX.warmup.filter(e=>['Thoracic Rotations','Cat-Cow','Downward Dog Active'].includes(e.name));
+      if(_thoracicPool.length){
+        blocks.push({
+          title:'🔄 Thoracic Mobility',
+          desc:'Overhead stroke mandate. Restricted thoracic rotation forces impingement-causing shoulder compensation in fly and back swimmers. 2 sets, slow and controlled — not a warm-up.',
+          exercises:pickFresh(_thoracicPool,Math.min(2,_thoracicPool.length)).map(e=>({...e,sets:2}))
+        });
+      }
+    }
 
   } else if(dayType==='power'){
     const pool=filterByEquipment(EX.plyos||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
