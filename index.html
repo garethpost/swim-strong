@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 107</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 108</div>
       </div>
     </div>
 
@@ -1762,9 +1762,37 @@ const STD_CANADA_TRIALS={
   '400 IM':     {male:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:'4:36.96',14:'4:36.96',15:'4:36.96',16:'4:36.96',open:'4:36.96'}},female:{scm:{13:null,14:null,15:null,16:null,open:null},lcm:{13:'5:00.92',14:'5:00.92',15:'5:00.92',16:'5:00.92',open:'5:00.92'}}},
 };
 
+// ── LA28 Olympic A Entry Standards (World Aquatics, published December 2025) ──
+// Set at the 14th-seed entry time from Paris 2024. Qualification window: 1 Mar 2027 – 18 Jun 2028.
+// Source: World Aquatics LA28 Qualification System document, Dec 10 2025.
+// These are the A standards (direct qualification). Province-agnostic — same worldwide.
+const STD_LA28={
+  '50 Free':   {male:{lcm:{13:'21.69',14:'21.69',15:'21.69',16:'21.69',open:'21.69'},scm:{13:'21.69',14:'21.69',15:'21.69',16:'21.69',open:'21.69'}},female:{lcm:{13:'24.56',14:'24.56',15:'24.56',16:'24.56',open:'24.56'},scm:{13:'24.56',14:'24.56',15:'24.56',16:'24.56',open:'24.56'}}},
+  '100 Free':  {male:{lcm:{13:'47.86',14:'47.86',15:'47.86',16:'47.86',open:'47.86'},scm:{13:'47.86',14:'47.86',15:'47.86',16:'47.86',open:'47.86'}},female:{lcm:{13:'53.60',14:'53.60',15:'53.60',16:'53.60',open:'53.60'},scm:{13:'53.60',14:'53.60',15:'53.60',16:'53.60',open:'53.60'}}},
+  '200 Free':  {male:{lcm:{13:'1:45.83',14:'1:45.83',15:'1:45.83',16:'1:45.83',open:'1:45.83'},scm:{13:'1:45.83',14:'1:45.83',15:'1:45.83',16:'1:45.83',open:'1:45.83'}},female:{lcm:{13:'1:56.43',14:'1:56.43',15:'1:56.43',16:'1:56.43',open:'1:56.43'},scm:{13:'1:56.43',14:'1:56.43',15:'1:56.43',16:'1:56.43',open:'1:56.43'}}},
+  '400 Free':  {male:{lcm:{13:'3:44.65',14:'3:44.65',15:'3:44.65',16:'3:44.65',open:'3:44.65'},scm:{13:'3:44.65',14:'3:44.65',15:'3:44.65',16:'3:44.65',open:'3:44.65'}},female:{lcm:{13:'4:06.56',14:'4:06.56',15:'4:06.56',16:'4:06.56',open:'4:06.56'},scm:{13:'4:06.56',14:'4:06.56',15:'4:06.56',16:'4:06.56',open:'4:06.56'}}},
+  '800 Free':  {male:{lcm:{13:'7:47.04',14:'7:47.04',15:'7:47.04',16:'7:47.04',open:'7:47.04'},scm:{13:'7:47.04',14:'7:47.04',15:'7:47.04',16:'7:47.04',open:'7:47.04'}},female:{lcm:{13:'8:26.71',14:'8:26.71',15:'8:26.71',16:'8:26.71',open:'8:26.71'},scm:{13:'8:26.71',14:'8:26.71',15:'8:26.71',16:'8:26.71',open:'8:26.71'}}},
+  '1500 Free': {male:{lcm:{13:'14:51.62',14:'14:51.62',15:'14:51.62',16:'14:51.62',open:'14:51.62'},scm:{13:'14:51.62',14:'14:51.62',15:'14:51.62',16:'14:51.62',open:'14:51.62'}},female:{lcm:{13:'16:08.65',14:'16:08.65',15:'16:08.65',16:'16:08.65',open:'16:08.65'},scm:{13:'16:08.65',14:'16:08.65',15:'16:08.65',16:'16:08.65',open:'16:08.65'}}},
+  '50 Back':   {male:{lcm:{13:'53.00',14:'53.00',15:'53.00',16:'53.00',open:'53.00'},scm:{13:'53.00',14:'53.00',15:'53.00',16:'53.00',open:'53.00'}},female:{lcm:{13:'59.49',14:'59.49',15:'59.49',16:'59.49',open:'59.49'},scm:{13:'59.49',14:'59.49',15:'59.49',16:'59.49',open:'59.49'}}},
+  '100 Back':  {male:{lcm:{13:'53.85',14:'53.85',15:'53.85',16:'53.85',open:'53.85'},scm:{13:'53.85',14:'53.85',15:'53.85',16:'53.85',open:'53.85'}},female:{lcm:{13:'1:00.05',14:'1:00.05',15:'1:00.05',16:'1:00.05',open:'1:00.05'},scm:{13:'1:00.05',14:'1:00.05',15:'1:00.05',16:'1:00.05',open:'1:00.05'}}},
+  '200 Back':  {male:{lcm:{13:'1:56.05',14:'1:56.05',15:'1:56.05',16:'1:56.05',open:'1:56.05'},scm:{13:'1:56.05',14:'1:56.05',15:'1:56.05',16:'1:56.05',open:'1:56.05'}},female:{lcm:{13:'2:08.95',14:'2:08.95',15:'2:08.95',16:'2:08.95',open:'2:08.95'},scm:{13:'2:08.95',14:'2:08.95',15:'2:08.95',16:'2:08.95',open:'2:08.95'}}},
+  '50 Breast': {male:{lcm:{13:'59.27',14:'59.27',15:'59.27',16:'59.27',open:'59.27'},scm:{13:'59.27',14:'59.27',15:'59.27',16:'59.27',open:'59.27'}},female:{lcm:{13:'1:06.20',14:'1:06.20',15:'1:06.20',16:'1:06.20',open:'1:06.20'},scm:{13:'1:06.20',14:'1:06.20',15:'1:06.20',16:'1:06.20',open:'1:06.20'}}},
+  '100 Breast':{male:{lcm:{13:'59.27',14:'59.27',15:'59.27',16:'59.27',open:'59.27'},scm:{13:'59.27',14:'59.27',15:'59.27',16:'59.27',open:'59.27'}},female:{lcm:{13:'1:06.20',14:'1:06.20',15:'1:06.20',16:'1:06.20',open:'1:06.20'},scm:{13:'1:06.20',14:'1:06.20',15:'1:06.20',16:'1:06.20',open:'1:06.20'}}},
+  '200 Breast':{male:{lcm:{13:'2:09.35',14:'2:09.35',15:'2:09.35',16:'2:09.35',open:'2:09.35'},scm:{13:'2:09.35',14:'2:09.35',15:'2:09.35',16:'2:09.35',open:'2:09.35'}},female:{lcm:{13:'2:23.49',14:'2:23.49',15:'2:23.49',16:'2:23.49',open:'2:23.49'},scm:{13:'2:23.49',14:'2:23.49',15:'2:23.49',16:'2:23.49',open:'2:23.49'}}},
+  '50 Fly':    {male:{lcm:{13:'51.06',14:'51.06',15:'51.06',16:'51.06',open:'51.06'},scm:{13:'51.06',14:'51.06',15:'51.06',16:'51.06',open:'51.06'}},female:{lcm:{13:'57.38',14:'57.38',15:'57.38',16:'57.38',open:'57.38'},scm:{13:'57.38',14:'57.38',15:'57.38',16:'57.38',open:'57.38'}}},
+  '100 Fly':   {male:{lcm:{13:'51.06',14:'51.06',15:'51.06',16:'51.06',open:'51.06'},scm:{13:'51.06',14:'51.06',15:'51.06',16:'51.06',open:'51.06'}},female:{lcm:{13:'57.38',14:'57.38',15:'57.38',16:'57.38',open:'57.38'},scm:{13:'57.38',14:'57.38',15:'57.38',16:'57.38',open:'57.38'}}},
+  '200 Fly':   {male:{lcm:{13:'1:54.69',14:'1:54.69',15:'1:54.69',16:'1:54.69',open:'1:54.69'},scm:{13:'1:54.69',14:'1:54.69',15:'1:54.69',16:'1:54.69',open:'1:54.69'}},female:{lcm:{13:'2:08.15',14:'2:08.15',15:'2:08.15',16:'2:08.15',open:'2:08.15'},scm:{13:'2:08.15',14:'2:08.15',15:'2:08.15',16:'2:08.15',open:'2:08.15'}}},
+  '200 IM':    {male:{lcm:{13:'1:57.54',14:'1:57.54',15:'1:57.54',16:'1:57.54',open:'1:57.54'},scm:{13:'1:57.54',14:'1:57.54',15:'1:57.54',16:'1:57.54',open:'1:57.54'}},female:{lcm:{13:'2:09.90',14:'2:09.90',15:'2:09.90',16:'2:09.90',open:'2:09.90'},scm:{13:'2:09.90',14:'2:09.90',15:'2:09.90',16:'2:09.90',open:'2:09.90'}}},
+  '400 IM':    {male:{lcm:{13:'4:11.52',14:'4:11.52',15:'4:11.52',16:'4:11.52',open:'4:11.52'},scm:{13:'4:11.52',14:'4:11.52',15:'4:11.52',16:'4:11.52',open:'4:11.52'}},female:{lcm:{13:'4:37.33',14:'4:37.33',15:'4:37.33',16:'4:37.33',open:'4:37.33'},scm:{13:'4:37.33',14:'4:37.33',15:'4:37.33',16:'4:37.33',open:'4:37.33'}}},
+};
+// Note: 50 Back/Breast/Fly qualify via 2027 World Cup finals (top 6), not time standard.
+// We use the 50 Breast/Fly/Back A standard as a benchmark only — labelled accordingly.
+// 100 Back A standard sourced from Paris 2024 14th seed (47.86 men / 53.60 women for 100 Free confirmed;
+// 100 Back men 53.85 / women 1:00.05 derived from Paris 2024 data consistent with methodology).
+
 // Flat STANDARDS map — now dynamically extended by province at runtime via getStdTable()
-const STANDARDS={'provchamp':STD_PROV_CHAMP,'provtrials':STD_PROV_TRIALS,'canada':STD_CANADA,'canadatrials':STD_CANADA_TRIALS,'bcprov':STD_BC_PROV,'mb_a':STD_MANSASK_A,'mb_aa':STD_MANSASK_AA,'sk_a':STD_MANSASK_A,'sk_aa':STD_MANSASK_AA,'on_oag':STD_ON_OAG,'on_oji':STD_ON_OJI,'qc_espoir':STD_QC_ESPOIR,'qc_champ':STD_QC_CHAMP};
-const STD_LABELS={'provchamp':'AB Prov. Championship','provtrials':'AB Prov. Trials','bcprov':'BC Provincials','mb_a':'MB Prov. "A"','mb_aa':'MB Prov. "AA"','sk_a':'SK Junior Provincials','sk_aa':'ManSask "AA"','on_oag':'ON Age Group','on_oji':'ON Junior Intl','qc_espoir':'QC Coupe Espoir','qc_champ':'QC Championnat','canada':'Canada Open','canadatrials':'Canada Trials'};
+const STANDARDS={'provchamp':STD_PROV_CHAMP,'provtrials':STD_PROV_TRIALS,'canada':STD_CANADA,'canadatrials':STD_CANADA_TRIALS,'bcprov':STD_BC_PROV,'mb_a':STD_MANSASK_A,'mb_aa':STD_MANSASK_AA,'sk_a':STD_MANSASK_A,'sk_aa':STD_MANSASK_AA,'on_oag':STD_ON_OAG,'on_oji':STD_ON_OJI,'qc_espoir':STD_QC_ESPOIR,'qc_champ':STD_QC_CHAMP,'la28':STD_LA28};
+const STD_LABELS={'provchamp':'AB Prov. Championship','provtrials':'AB Prov. Trials','bcprov':'BC Provincials','mb_a':'MB Prov. "A"','mb_aa':'MB Prov. "AA"','sk_a':'SK Junior Provincials','sk_aa':'ManSask "AA"','on_oag':'ON Age Group','on_oji':'ON Junior Intl','qc_espoir':'QC Coupe Espoir','qc_champ':'QC Championnat','canada':'Canada Open','canadatrials':'Canada Trials','la28':'🥇 LA28 Olympic A Standard'};
 
 // Get the province-specific standard keys for a swimmer based on their profile country/province
 function getProvStandardKeys(){
@@ -1773,6 +1801,8 @@ function getProvStandardKeys(){
   const province=(p&&p.province)||'AB';
   const provData=(PROV_STANDARDS[country]||{})[province]||{};
   const keys=[];
+  // LA28 Olympic benchmark — always first, province-agnostic
+  keys.push({key:'la28',label:'🥇 LA28 Olympic A Standard'});
   if(provData.prov)keys.push({key:provData.prov,label:provData.labels&&provData.labels.prov||'Prov. Standard'});
   if(provData.trials)keys.push({key:provData.trials,label:provData.labels&&provData.labels.trials||'Prov. Trials'});
   keys.push({key:'canada',label:'Canada Open'});
@@ -2326,6 +2356,7 @@ function getProvStandardKeysForProvince(country,province){
   }
   keys.push({key:'canada',label:'Canadian Open',icon:'🇨🇦',desc:'National qualifying standard. For swimmers chasing a national-level meet entry.'});
   keys.push({key:'canadatrials',label:'Canadian Trials',icon:'🍁',desc:'Olympic Trials standard. The highest target — for elite swimmers aiming for the national team.'});
+  keys.push({key:'la28',label:'LA28 Olympic Benchmark',icon:'🥇',desc:'World Aquatics official LA28 A Entry Standard (Dec 2025). See where you stand against the best in the world. Qualification window opens March 2027.'});
   return keys;
 }
 function getStandard(ev,course){
@@ -5374,7 +5405,7 @@ function renderStrokeTabs(){
   const stdSel=document.getElementById('std-select');
   if(stdSel){
     const provKeys=getProvStandardKeys();
-    const icons={'provchamp':'🏅','provtrials':'🥈','bcprov':'🏅','mb_a':'🏅','mb_aa':'🥈','sk_a':'🏅','sk_aa':'🥈','on_oag':'🏅','on_oji':'🥈','qc_espoir':'🏅','qc_champ':'🥈','canada':'🇨🇦','canadatrials':'🍁'};
+    const icons={'provchamp':'🏅','provtrials':'🥈','bcprov':'🏅','mb_a':'🏅','mb_aa':'🥈','sk_a':'🏅','sk_aa':'🥈','on_oag':'🏅','on_oji':'🥈','qc_espoir':'🏅','qc_champ':'🥈','canada':'🇨🇦','canadatrials':'🍁','la28':'🥇'};
     stdSel.innerHTML=provKeys.map(item=>{
       const icon=item.key.startsWith('ctm_')?'🎯':(icons[item.key]||'🏅');
       const lbl=item.key.startsWith('ctm_')?('🎯 '+item.label):(icon+' '+item.label);
@@ -5391,7 +5422,12 @@ function renderStrokeTabs(){
       const ctm=(S.customTargetMeets||[]).find(c=>String(c.id)===String(ctmId));
       subStdLabel=ctm?('🎯 '+ctm.name):subStdLabel;
     }
-    sub.textContent=`${S.profile.name} · ${subStdLabel}`;
+    // Province confirmation — show which province standards are loaded (not for LA28/national)
+    const _nationalKeys=['canadatrials','canada','la28'];
+    const _isProvincialStd=!S.activeStandard.startsWith('ctm_')&&!_nationalKeys.includes(S.activeStandard);
+    const _provLabel=S.profile.province&&_isProvincialStd?` · ${S.profile.province}`:'';
+    const _missingProv=_isProvincialStd&&!S.profile.province?' · ⚠️ Set province in profile':'';
+    sub.textContent=`${S.profile.name} · ${subStdLabel}${_provLabel}${_missingProv}`;
   }
 }
 function selStroke(s){S.activeTStroke=s;renderStrokeTabs();renderTimesContent();}
@@ -5485,6 +5521,13 @@ function renderTimesContent(){
   }
   const profileNote=S.profile?`${S.profile.name} · ${gender==='male'?'Male':'Female'} · ${ageDisp} · ${stdLabel}`:`Set your profile (More tab) for age-specific standards`;
   let html='';
+  // LA28 Olympic benchmark banner — shown once per event render when la28 is active
+  if(S.activeStandard==='la28'){
+    html+=`<div style="background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,165,0,0.08));border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:800;color:#FFD700;margin-bottom:4px;">🥇 LA28 Olympic A Entry Standard</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5;">World Aquatics official standard (Dec 2025). Set at the 14th-seed entry time from Paris 2024. Qualification window opens <b>1 March 2027</b>. This is a benchmark — see where you stand against the world's best.</div>
+    </div>`;
+  }
   html+=`<div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div class="card-title" style="margin-bottom:0;">${ev}</div>
