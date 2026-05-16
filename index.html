@@ -556,9 +556,26 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 112</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 113</div>
       </div>
-    </div>
+
+      <!-- ── Legal ── -->
+      <button onclick="toggleMoreSection('more-legal-body','more-legal-chevron')" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;padding:12px 2px 6px;cursor:pointer;font-family:var(--font);">
+        <span style="font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;">Legal</span>
+        <span id="more-legal-chevron" style="font-size:12px;color:var(--muted);transition:transform 0.2s;transform:rotate(-90deg);">▼</span>
+      </button>
+      <div id="more-legal-body" style="display:none;">
+        <div class="card">
+          <div class="card-title">Privacy &amp; Terms</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">SwimFitPro is committed to protecting your personal information. All data is stored locally on your device — nothing is transmitted to external servers.</p>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="showLegalModal('privacy')">Privacy Policy</button>
+            <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="showLegalModal('terms')">Terms of Use</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- section-more -->
 
   </div><!-- content -->
 
@@ -1421,6 +1438,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 </div></div>
 
+<!-- Legal modal — Privacy Policy & Terms of Use -->
+<div class="modal-overlay" id="legal-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Legal" style="max-height:85vh;display:flex;flex-direction:column;">
+<div class="modal-handle"></div>
+<h3 id="legal-modal-title" style="font-size:17px;margin-bottom:4px;"></h3>
+<div id="legal-modal-body" style="font-size:13px;color:var(--muted);line-height:1.7;overflow-y:auto;flex:1;padding-right:4px;"></div>
+<button class="btn btn-secondary" style="margin-top:16px;" onclick="closeModal('legal-modal')">Close</button>
+</div></div>
+
 <!-- Custom Target Meet modal -->
 <div class="modal-overlay" id="ctm-modal"><div class="modal" role="dialog" aria-modal="true" aria-label="Custom Target Meet">
 <div class="modal-handle"></div>
@@ -2002,6 +2027,58 @@ function dKey(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'
 function localDate(str){const p=str.split('-');return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function showLegalModal(type){
+  const title=document.getElementById('legal-modal-title');
+  const body=document.getElementById('legal-modal-body');
+  if(!title||!body)return;
+  const effectiveDate='May 16, 2026';
+  if(type==='privacy'){
+    title.textContent='Privacy Policy';
+    body.innerHTML=`
+      <p style="margin-bottom:10px;"><strong style="color:var(--text);">Effective date:</strong> ${effectiveDate}</p>
+      <p style="margin-bottom:10px;">SwimFitPro ("we", "our", "the app") is operated by an individual developer based in Canada. We are committed to protecting your personal information in accordance with the <em>Personal Information Protection and Electronic Documents Act</em> (PIPEDA) and applicable provincial privacy legislation.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">1. Information We Collect</p>
+      <p style="margin-bottom:10px;">SwimFitPro collects information you voluntarily enter, including: your name, age, gender, and province; swim times, race results, and performance data; body measurements and nutritional information; training session logs and dryland workout history. This information is stored <strong style="color:var(--text);">locally on your device only</strong>. We do not collect, transmit, or store this data on external servers in the current version of the app.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">2. How We Use Your Information</p>
+      <p style="margin-bottom:10px;">Your data is used solely to provide app features — generating training plans, tracking performance, and displaying insights. We do not use your data for advertising, profiling, or any commercial purpose beyond delivering the app's core functionality.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">3. Data Sharing</p>
+      <p style="margin-bottom:10px;">We do not sell, rent, or share your personal information with third parties. No data leaves your device in the current version of SwimFitPro.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">4. Minors</p>
+      <p style="margin-bottom:10px;">SwimFitPro is designed for use by athletes of all ages, including minors under 18. If you are under 13, please ensure a parent or guardian has reviewed this policy. We do not knowingly collect information from children without parental awareness.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">5. Data Storage &amp; Security</p>
+      <p style="margin-bottom:10px;">All data is stored in your device's local browser storage (localStorage). It is accessible only to you on your device. You can export or delete all data at any time via the Data section in this tab. We recommend keeping regular backups using the Export function.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">6. Your Rights</p>
+      <p style="margin-bottom:10px;">Under PIPEDA, you have the right to access, correct, and delete your personal information. Because all data is stored locally on your device, you have direct control at all times. Use the Export Backup and Reset All Data options in the Data section to exercise these rights.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">7. Future Changes</p>
+      <p style="margin-bottom:10px;">If a future version of SwimFitPro introduces cloud storage or account features, this Privacy Policy will be updated and you will be notified within the app before any data is transmitted externally.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">8. Contact</p>
+      <p>Questions about this policy? Contact us at <strong style="color:var(--accent);">support@swimfitpro.app</strong></p>`;
+  } else {
+    title.textContent='Terms of Use';
+    body.innerHTML=`
+      <p style="margin-bottom:10px;"><strong style="color:var(--text);">Effective date:</strong> ${effectiveDate}</p>
+      <p style="margin-bottom:10px;">By downloading or using SwimFitPro, you agree to the following terms. Please read them carefully.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">1. Use of the App</p>
+      <p style="margin-bottom:10px;">SwimFitPro is a personal training and performance tracking tool for swimmers. It is intended for personal, non-commercial use. You agree not to reproduce, distribute, or create derivative works from the app without written permission.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">2. Not Medical or Professional Advice</p>
+      <p style="margin-bottom:10px;"><strong style="color:var(--text);">SwimFitPro does not provide medical, dietary, or professional athletic advice.</strong> Training plans, nutritional suggestions, and performance insights are generated algorithmically for informational purposes only. Always consult a qualified coach, physician, or registered dietitian before making changes to your training or diet, particularly if you have any medical conditions or injuries.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">3. Assumption of Risk</p>
+      <p style="margin-bottom:10px;">Physical training carries inherent risks. By using this app, you acknowledge that you participate in any training activities at your own risk. SwimFitPro and its developer are not liable for any injury, illness, or loss arising from use of information provided by the app.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">4. Accuracy of Information</p>
+      <p style="margin-bottom:10px;">We make reasonable efforts to ensure time standards, training protocols, and nutritional data are accurate and up to date. However, we make no guarantees of accuracy and recommend verifying qualifying standards directly with Swimming Canada, provincial swim associations, or World Aquatics.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">5. Your Data</p>
+      <p style="margin-bottom:10px;">You own your data. All information you enter into SwimFitPro remains yours. We do not claim any rights over your personal information or performance data. See our Privacy Policy for full details on how data is stored and handled.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">6. Intellectual Property</p>
+      <p style="margin-bottom:10px;">The SwimFitPro name, logo, training protocols, workout engine, and app design are the intellectual property of the developer. Unauthorised reproduction or commercial use is prohibited.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">7. Changes to Terms</p>
+      <p style="margin-bottom:10px;">We may update these terms as the app evolves. Material changes will be communicated within the app. Continued use after notification constitutes acceptance.</p>
+      <p style="margin-bottom:6px;font-weight:700;color:var(--text);">8. Governing Law</p>
+      <p>These terms are governed by the laws of Canada and the province in which the developer operates. Any disputes will be resolved in accordance with Canadian law.</p>`;
+  }
+  document.getElementById('legal-modal').classList.add('open');
+}
+
 function toggleMoreSection(bodyId,chevronId){
   const body=document.getElementById(bodyId);
   const chev=document.getElementById(chevronId);
