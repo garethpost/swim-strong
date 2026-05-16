@@ -1638,17 +1638,12 @@ async function authSignUp(){
   errEl.style.display='none';
   if(!code||!email||!password){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
   if(password.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
-  // Validate invite code
-  const{data:codeData,error:codeErr}=await supa.from('invite_codes').select('*').eq('code',code).maybeSingle();
-  console.log('Invite code lookup — code:',code,'data:',codeData,'error:',codeErr);
-  if(codeErr){errEl.textContent='Error checking invite code: '+codeErr.message;errEl.style.display='block';return;}
-  if(!codeData){errEl.textContent='Invalid invite code. Contact Gareth for access.';errEl.style.display='block';return;}
-  if(codeData.used){errEl.textContent='This invite code has already been used.';errEl.style.display='block';return;}
+  // Validate invite code — hardcoded list for beta (simpler + no DB permission issues)
+  const VALID_CODES=['SWIMFIT2025','BETA2025','SWIM2025'];
+  if(!VALID_CODES.includes(code)){errEl.textContent='Invalid invite code. Contact Gareth for access.';errEl.style.display='block';return;}
   // Create account
   const{data:signUpData,error:signUpErr}=await supa.auth.signUp({email,password});
   if(signUpErr){errEl.textContent=signUpErr.message;errEl.style.display='block';return;}
-  // Mark invite code as used
-  await supa.from('invite_codes').update({used:true,used_by:signUpData.user.id,used_at:new Date().toISOString()}).eq('code',code);
   _currentUser=signUpData.user;
   await onAuthSuccess(true);
 }
