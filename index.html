@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v118 -->
+  <!-- cache-bust: v119 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -568,7 +568,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div id="more-account-email" style="display:none;"></div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" style="width:100%;margin-bottom:8px;" onclick="confirmReset()">Reset All Data</button><button class="btn btn-danger" style="width:100%;background:#7f1d1d;" onclick="requestAccountDeletion()">Delete My Account</button><div id="delete-account-msg" style="display:none;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;text-align:center;">Your deletion request has been submitted. Your data has been cleared from this device and you've been signed out. Your account will be permanently deleted within 48 hours.</div></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 118</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 119</div>
       </div>
 
       <!-- ── Legal ── -->
@@ -989,6 +989,17 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </button>
       </div>
       <input type="hidden" id="ob-equip-val" value="gym">
+    </div>
+
+    <!-- Parental consent block — shown conditionally based on age -->
+    <div id="ob-parental-consent" style="display:none;background:linear-gradient(135deg,rgba(228,168,51,0.08),rgba(228,168,51,0.04));border:1px solid rgba(228,168,51,0.3);border-radius:14px;padding:14px 16px;margin-top:4px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:0.03em;">⚠ Parental Consent Required</div>
+      <div id="ob-parental-msg" style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;"></div>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+        <input type="checkbox" id="ob-parental-check" style="width:18px;height:18px;margin-top:2px;accent-color:var(--gold);flex-shrink:0;">
+        <span id="ob-parental-label" style="font-size:12px;color:var(--muted);line-height:1.6;"></span>
+      </label>
+      <div id="ob-parental-error" style="display:none;font-size:11px;color:var(--red);margin-top:8px;padding-left:30px;">Parental consent is required to continue.</div>
     </div>
 
     <!-- Consent checkbox -->
@@ -2699,6 +2710,30 @@ function updateObDob(){
   const inp=document.getElementById('ob-dob');
   if(m&&d&&y&&inp&&m.value&&d.value&&y.value){
     inp.value=`${y.value}-${m.value}-${d.value}`;
+    // Check age and show parental consent block if needed
+    const dob=new Date(inp.value);
+    const today=new Date();
+    let age=today.getFullYear()-dob.getFullYear();
+    const monthDiff=today.getMonth()-dob.getMonth();
+    if(monthDiff<0||(monthDiff===0&&today.getDate()<dob.getDate()))age--;
+    const block=document.getElementById('ob-parental-consent');
+    const msg=document.getElementById('ob-parental-msg');
+    const lbl=document.getElementById('ob-parental-label');
+    if(block&&msg&&lbl){
+      if(age<13){
+        block.style.display='block';
+        msg.textContent='This app collects fitness and health data. Because this swimmer is under 13, a parent or guardian must complete this setup and provide consent on their behalf.';
+        lbl.textContent='I am the parent or guardian of this swimmer. I have read the Terms of Use and Privacy Policy and consent to the collection and use of my child\'s data within SwimFitPro.';
+      } else if(age<16){
+        block.style.display='block';
+        msg.textContent='This swimmer is under 16. A parent or guardian should review and consent to this app\'s data collection before continuing.';
+        lbl.textContent='I am the parent or guardian of this swimmer (or I am over 16 and completing this myself). I consent to the Terms of Use and Privacy Policy.';
+      } else {
+        block.style.display='none';
+        const pc=document.getElementById('ob-parental-check');
+        if(pc)pc.checked=false;
+      }
+    }
   }
 }
 function updatePmDob(){
@@ -2809,6 +2844,19 @@ function saveProfile(fromOnboarding){
   const name=nameEl.value.trim();const dob=dobEl.value;const gender=genderEl.value;
   if(!name||!dob||!gender){alert('Please fill in your name, date of birth, and gender.');return;}
   if(fromOnboarding){
+    // Check parental consent if block is visible
+    const parentalBlock=document.getElementById('ob-parental-consent');
+    if(parentalBlock&&parentalBlock.style.display!=='none'){
+      const parentalCheck=document.getElementById('ob-parental-check');
+      const parentalErr=document.getElementById('ob-parental-error');
+      if(parentalCheck&&!parentalCheck.checked){
+        if(parentalErr)parentalErr.style.display='block';
+        parentalBlock.scrollIntoView({behavior:'smooth',block:'center'});
+        return;
+      }
+      if(parentalErr)parentalErr.style.display='none';
+    }
+    // Check main consent
     const consentBox=document.getElementById('ob-consent');
     const consentErr=document.getElementById('ob-consent-error');
     if(consentBox&&!consentBox.checked){
