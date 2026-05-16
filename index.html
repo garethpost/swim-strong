@@ -164,6 +164,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
 select option{background:var(--surface);}
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </style>
+<!-- Supabase JS client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="app">
@@ -555,8 +557,13 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="importData(event)">
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
+        <div class="card" style="margin-bottom:8px;">
+          <div class="card-title">Account</div>
+          <div id="more-account-email" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+          <button class="btn btn-secondary" style="width:100%;" onclick="authLogOut()">Log Out</button>
+        </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 115</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 116</div>
       </div>
 
       <!-- ── Legal ── -->
@@ -598,6 +605,74 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <button class="nav-btn" id="nav-fuel" aria-label="Fuel &amp; Nutrition" onclick="showSection('fuel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>Fuel</button>
     <button class="nav-btn" id="nav-more" aria-label="More options" onclick="showSection('more')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>More</button>
   </nav>
+</div>
+
+<!-- AUTH SCREEN — shown before onboarding and app for unauthenticated users -->
+<div id="section-auth" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="padding:env(safe-area-inset-top,24px) 20px 60px;max-width:420px;margin:0 auto;">
+    <div style="text-align:center;padding-top:48px;margin-bottom:32px;">
+      <img src="icons/Icon-513.jpeg" alt="SwimFitPro" style="width:80px;height:80px;border-radius:18px;object-fit:fill;background:#0D1F3C;display:inline-block;margin-bottom:16px;">
+      <h1 style="font-size:26px;font-weight:800;color:var(--text);letter-spacing:-0.5px;margin-bottom:4px;">SwimFitPro</h1>
+      <p style="font-size:12px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);">Beta</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div style="display:flex;background:var(--surface);border-radius:12px;padding:4px;margin-bottom:20px;">
+      <button id="auth-tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all 0.2s;">Log In</button>
+      <button id="auth-tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:10px;border:none;border-radius:9px;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all 0.2s;">Sign Up</button>
+    </div>
+
+    <!-- Login panel -->
+    <div id="auth-login-panel">
+      <div class="card" style="margin-bottom:12px;">
+        <div class="form-row"><label>Email</label>
+          <input type="email" id="auth-login-email" placeholder="your@email.com" autocomplete="email" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        </div>
+        <div class="form-row"><label>Password</label>
+          <input type="password" id="auth-login-password" placeholder="••••••••" autocomplete="current-password" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        </div>
+        <div id="auth-login-error" style="display:none;font-size:12px;color:var(--red);margin-top:4px;margin-bottom:8px;"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="authLogin()">Log In →</button>
+        <button onclick="switchAuthTab('reset')" style="width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);">Forgot password?</button>
+      </div>
+    </div>
+
+    <!-- Sign up panel -->
+    <div id="auth-signup-panel" style="display:none;">
+      <div style="background:linear-gradient(135deg,rgba(0,198,255,0.08),rgba(100,60,255,0.08));border:1px solid rgba(0,198,255,0.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.5;">
+        🔒 SwimFitPro is currently <strong style="color:var(--accent);">invite-only beta</strong>. You need an invite code from Gareth to create an account.
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="form-row"><label>Invite Code</label>
+          <input type="text" id="auth-signup-code" placeholder="e.g. SWIM2025" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="form-row"><label>Email</label>
+          <input type="email" id="auth-signup-email" placeholder="your@email.com" autocomplete="email" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        </div>
+        <div class="form-row"><label>Password <span style="font-size:11px;color:var(--muted);">(min 8 characters)</span></label>
+          <input type="password" id="auth-signup-password" placeholder="••••••••" autocomplete="new-password" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        </div>
+        <div id="auth-signup-error" style="display:none;font-size:12px;color:var(--red);margin-top:4px;margin-bottom:8px;"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="authSignUp()">Create Account →</button>
+      </div>
+    </div>
+
+    <!-- Password reset panel -->
+    <div id="auth-reset-panel" style="display:none;">
+      <div class="card" style="margin-bottom:12px;">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Enter your email and we'll send you a reset link.</p>
+        <div class="form-row"><label>Email</label>
+          <input type="email" id="auth-reset-email" placeholder="your@email.com" autocomplete="email" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+        </div>
+        <div id="auth-reset-msg" style="display:none;font-size:12px;color:var(--accent);margin-top:4px;margin-bottom:8px;"></div>
+        <div id="auth-reset-error" style="display:none;font-size:12px;color:var(--red);margin-top:4px;margin-bottom:8px;"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="authResetPassword()">Send Reset Link</button>
+        <button onclick="switchAuthTab('login')" style="width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);">← Back to Log In</button>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:16px;line-height:1.6;">By signing in you agree to our <span style="color:var(--accent);cursor:pointer;" onclick="showLegalModal('terms')">Terms of Use</span> and <span style="color:var(--accent);cursor:pointer;" onclick="showLegalModal('privacy')">Privacy Policy</span>.</p>
+  </div>
 </div>
 
 <!-- ONBOARDING — fixed full-screen overlay, completely outside #app flex so no inherited spacing -->
@@ -1485,6 +1560,218 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
 <script>
 const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+// ── Supabase client ──
+const SUPA_URL='https://dvcdglckrglnszrctmup.supabase.co';
+const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2Y2RnbGNrcmdsbnN6cmN0bXVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0OTkyODUsImV4cCI6MjA5MzA3NTI4NX0.w2R6xqVjWTMpmisxjPYquVOawcEde4UsUTZWmfX4f1c';
+const supa=supabase.createClient(SUPA_URL,SUPA_ANON);
+let _currentUser=null; // set after auth
+
+// ── All localStorage keys we sync to Supabase ──
+const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','weightLog','weightTrendLog',
+  'poolLog','checkinHistory','daySchedule','meets','offSeason','programmes','currentProgrammeId',
+  'performanceProfile','sessionRPELog','oneRM','oneRMDate','bodyStats','lastStatsUpdate',
+  'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
+  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','workoutMode',
+  'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
+  'lastBaselineDate','autoDeload','mobilityLog','clubLogo'];
+
+// ── Push all localStorage to Supabase (called after login/signup and on key saves) ──
+async function syncToCloud(){
+  if(!_currentUser)return;
+  const payload={};
+  SYNC_KEYS.forEach(k=>{
+    const v=localStorage.getItem(k);
+    if(v!==null)payload[k]=JSON.parse(v);
+  });
+  const{error}=await supa.from('swimmer_data').upsert({id:_currentUser.id,data:payload},{onConflict:'id'});
+  if(error)console.warn('Cloud sync failed:',error.message);
+}
+
+// ── Pull from Supabase into localStorage (called on login) ──
+async function syncFromCloud(){
+  if(!_currentUser)return false;
+  const{data,error}=await supa.from('swimmer_data').select('data').eq('id',_currentUser.id).single();
+  if(error||!data)return false;
+  const d=data.data||{};
+  SYNC_KEYS.forEach(k=>{
+    if(d[k]!==undefined)localStorage.setItem(k,JSON.stringify(d[k]));
+  });
+  return true;
+}
+
+// ── Throttled cloud sync — max once every 30 seconds to avoid hammering ──
+let _syncTimer=null;
+function scheduleSyncToCloud(){
+  if(!_currentUser)return;
+  if(_syncTimer)return; // already scheduled
+  _syncTimer=setTimeout(()=>{_syncTimer=null;syncToCloud();},30000);
+}
+
+// ── Auth UI helpers ──
+function switchAuthTab(tab){
+  document.getElementById('auth-login-panel').style.display=tab==='login'?'':'none';
+  document.getElementById('auth-signup-panel').style.display=tab==='signup'?'':'none';
+  document.getElementById('auth-reset-panel').style.display=tab==='reset'?'':'none';
+  const loginBtn=document.getElementById('auth-tab-login');
+  const signupBtn=document.getElementById('auth-tab-signup');
+  if(loginBtn){loginBtn.style.background=tab==='login'?'var(--accent)':'transparent';loginBtn.style.color=tab==='login'?'#000':'var(--muted)';}
+  if(signupBtn){signupBtn.style.background=tab==='signup'?'var(--accent)':'transparent';signupBtn.style.color=tab==='signup'?'#000':'var(--muted)';}
+}
+
+function showAuthScreen(){
+  document.getElementById('section-auth').style.display='block';
+  document.getElementById('section-onboarding').style.display='none';
+  document.getElementById('app').style.display='none';
+}
+
+function hideAuthScreen(){
+  document.getElementById('section-auth').style.display='none';
+}
+
+// ── Sign Up ──
+async function authSignUp(){
+  const code=(document.getElementById('auth-signup-code').value||'').trim().toUpperCase();
+  const email=(document.getElementById('auth-signup-email').value||'').trim();
+  const password=(document.getElementById('auth-signup-password').value||'').trim();
+  const errEl=document.getElementById('auth-signup-error');
+  errEl.style.display='none';
+  if(!code||!email||!password){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
+  if(password.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
+  // Validate invite code
+  const{data:codeData,error:codeErr}=await supa.from('invite_codes').select('*').eq('code',code).single();
+  if(codeErr||!codeData){errEl.textContent='Invalid invite code. Contact Gareth for access.';errEl.style.display='block';return;}
+  if(codeData.used){errEl.textContent='This invite code has already been used.';errEl.style.display='block';return;}
+  // Create account
+  const{data:signUpData,error:signUpErr}=await supa.auth.signUp({email,password});
+  if(signUpErr){errEl.textContent=signUpErr.message;errEl.style.display='block';return;}
+  // Mark invite code as used
+  await supa.from('invite_codes').update({used:true,used_by:signUpData.user.id,used_at:new Date().toISOString()}).eq('code',code);
+  _currentUser=signUpData.user;
+  await onAuthSuccess(true);
+}
+
+// ── Log In ──
+async function authLogin(){
+  const email=(document.getElementById('auth-login-email').value||'').trim();
+  const password=(document.getElementById('auth-login-password').value||'').trim();
+  const errEl=document.getElementById('auth-login-error');
+  errEl.style.display='none';
+  if(!email||!password){errEl.textContent='Please enter your email and password.';errEl.style.display='block';return;}
+  const{data,error}=await supa.auth.signInWithPassword({email,password});
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  _currentUser=data.user;
+  await onAuthSuccess(false);
+}
+
+// ── Password Reset ──
+async function authResetPassword(){
+  const email=(document.getElementById('auth-reset-email').value||'').trim();
+  const msgEl=document.getElementById('auth-reset-msg');
+  const errEl=document.getElementById('auth-reset-error');
+  msgEl.style.display='none';errEl.style.display='none';
+  if(!email){errEl.textContent='Please enter your email.';errEl.style.display='block';return;}
+  const{error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  msgEl.textContent='Reset link sent — check your inbox.';msgEl.style.display='block';
+}
+
+// ── Log Out ──
+async function authLogOut(){
+  await supa.auth.signOut();
+  _currentUser=null;
+  localStorage.clear();
+  location.reload();
+}
+
+// ── After successful auth: sync data, then launch app ──
+async function onAuthSuccess(isNewUser){
+  hideAuthScreen();
+  if(!isNewUser){
+    // Existing user: pull cloud data down first
+    const pulled=await syncFromCloud();
+    if(pulled){
+      // Reload S from localStorage now that cloud data is local
+      reloadStateFromStorage();
+    }
+  }
+  // New user: their localStorage (if any) will sync up on first scheduleSyncToCloud
+  launchApp();
+}
+
+// ── Reload in-memory S from localStorage (after cloud pull) ──
+function reloadStateFromStorage(){
+  S.profile=DB.get('profile',null);
+  S.timeHistory=DB.get('timeHistory',{});
+  S.history=DB.get('history',[]);
+  S.meetRaceLog=DB.get('meetRaceLog',[]);
+  S.meetRaces=DB.get('meetRaces',[]);
+  S.weightLog=DB.get('weightLog',{});
+  S.weightTrendLog=DB.get('weightTrendLog',[]);
+  S.poolLog=DB.get('poolLog',[]);
+  S.checkinHistory=DB.get('checkinHistory',[]);
+  S.daySchedule=DB.get('daySchedule',{});
+  S.meets=DB.get('meets',[]);
+  S.offSeason=DB.get('offSeason',{active:false,nextSeasonStart:'',phases:[]});
+  S.programmes=DB.get('programmes',[]);
+  S.currentProgrammeId=DB.get('currentProgrammeId','programme_1');
+  S.performanceProfile=DB.get('performanceProfile',null);
+  S.sessionRPELog=DB.get('sessionRPELog',[]);
+  S.oneRM=DB.get('oneRM',{});
+  S.oneRMDate=DB.get('oneRMDate',null);
+  S.bodyStats=DB.get('bodyStats',null);
+  S.lastStatsUpdate=DB.get('lastStatsUpdate',null);
+  S.mealCompliance=DB.get('mealCompliance',{});
+  S.hydrationLog=DB.get('hydrationLog',{});
+  S.swimKmTotal=DB.get('swimKmTotal',0);
+  S.swimKmLog=DB.get('swimKmLog',[]);
+  S.seasonKmTarget=DB.get('seasonKmTarget',500);
+  S.programWeek=DB.get('programWeek',1);
+  S.programCycle=DB.get('programCycle',1);
+  S.swimPhase=DB.get('swimPhase','sprint');
+  S.seasonTemplate=DB.get('seasonTemplate',{start:'',end:'',days:{}});
+  S.shortTermGoals=DB.get('shortTermGoals',[]);
+  S.goalProgram=DB.get('goalProgram',null);
+  S.workoutMode=DB.get('workoutMode','standard');
+  S.activeStandard=DB.get('activeStandard','provchamp');
+  S.useKg=DB.get('useKg',true);
+  S.useKm=DB.get('useKm',true);
+  S.appTheme=DB.get('appTheme','original');
+  S.equipmentMode=DB.get('equipmentMode','gym');
+  S.customTargetMeets=DB.get('customTargetMeets',[]);
+  S.lastBaselineDate=DB.get('lastBaselineDate',null);
+  S.autoDeload=DB.get('autoDeload',false);
+  S.mobilityLog=DB.get('mobilityLog',[]);
+  S.clubLogo=DB.get('clubLogo',null);
+}
+
+// ── Launch app after auth ──
+function launchApp(){
+  applyTheme(DB.get('appTheme','original'));
+  applyClubLogo();
+  checkOnboarding();
+  renderHome();
+  document.getElementById('app').style.display='';
+}
+
+// ── Boot: check for existing session ──
+async function bootAuth(){
+  const{data:{session}}=await supa.auth.getSession();
+  if(session&&session.user){
+    _currentUser=session.user;
+    // Pull fresh cloud data on every boot
+    await syncFromCloud();
+    reloadStateFromStorage();
+    launchApp();
+  } else {
+    showAuthScreen();
+  }
+}
+
+// ── Patch DB.set to schedule a cloud sync on every write ──
+const _origDBset=DB.set.bind(DB);
+DB.set=function(k,v){_origDBset(k,v);scheduleSyncToCloud();};
+
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
 const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
 const LONG_TERM_GOALS=[
@@ -11486,17 +11773,15 @@ function showSection(name){
   }
   if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();updateLegalContact();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();updateLegalContact();const _ae=document.getElementById('more-account-email');if(_ae&&_currentUser)_ae.textContent='Signed in as '+(_currentUser.email||'');}
 
 }
 
 // ── Swim Log ──
 // openSwimLog and saveSwimLog retired — pool check-in is the single source of truth for pool distance
 
-// INIT
-if(S.appTheme&&S.appTheme!=='original')applyTheme(S.appTheme);
-checkOnboarding();
-applyClubLogo();
+// INIT — hide app until auth completes, then bootAuth() takes over
+document.getElementById('app').style.display='none';
 // Deduplicate any daySchedule entries that have repeated session types (stale off-season data)
 (function cleanDaySchedule(){
   let dirty=false;
@@ -11508,7 +11793,7 @@ applyClubLogo();
   });
   if(dirty)DB.set('daySchedule',S.daySchedule);
 })();
-renderHome();
+bootAuth(); // handles session check → auth screen or app launch
 maybeShowCheckinSheet();
 renderCustomTargetMeets();
 // Register service worker for offline support
