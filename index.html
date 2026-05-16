@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v117 -->
+  <!-- cache-bust: v118 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -567,8 +567,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div id="more-account-email" style="display:none;"></div>
-        <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 117</div>
+        <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" style="width:100%;margin-bottom:8px;" onclick="confirmReset()">Reset All Data</button><button class="btn btn-danger" style="width:100%;background:#7f1d1d;" onclick="requestAccountDeletion()">Delete My Account</button><div id="delete-account-msg" style="display:none;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;text-align:center;">Your deletion request has been submitted. Your data has been cleared from this device and you've been signed out. Your account will be permanently deleted within 48 hours.</div></div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 118</div>
       </div>
 
       <!-- ── Legal ── -->
@@ -10123,6 +10123,22 @@ function initKmTargetInput(){
   if(lbl)lbl.textContent=S.useKm?'km':'mi';
 }
 function confirmReset(){if(confirm('Delete ALL data? Export a backup first!')){localStorage.clear();location.reload();}}
+
+async function requestAccountDeletion(){
+  if(!confirm('Are you sure you want to delete your account? This cannot be undone. All your data will be permanently removed.'))return;
+  // Flag account for deletion in Supabase so admin can process it
+  if(_currentUser){
+    await supa.from('swimmer_data').upsert({id:_currentUser.id,data:{_deletion_requested:true,_deletion_email:_currentUser.email,_deletion_requested_at:new Date().toISOString()}},{onConflict:'id'});
+  }
+  // Clear local data and sign out
+  await supa.auth.signOut();
+  _currentUser=null;
+  localStorage.clear();
+  // Show confirmation before reload
+  const msgEl=document.getElementById('delete-account-msg');
+  if(msgEl){msgEl.style.display='block';}
+  setTimeout(()=>location.reload(),4000);
+}
 
 // ── Backup & Restore ──
 function exportData(){
