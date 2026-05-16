@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 109</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 110</div>
       </div>
     </div>
 
@@ -9480,8 +9480,8 @@ function renderPerformanceInsightsTimes(){
 
   // Gate 1: passive display only — matches Home tab Performance Insights tile exactly
   if(pp.gate===1){
-    const _racesLogged=pp.totalRacesLogged||0;
-    const _arcsCompleted=pp.fullCyclesCompleted||0;
+    const _racesLogged=pp.racesLogged||0;
+    const _arcsCompleted=pp.cyclesCompleted||0;
     const _racePct=Math.min(100,Math.round(_racesLogged/10*100));
     const _arcPct=Math.min(100,Math.round(_arcsCompleted/2*100));
     const _raceNeed=Math.max(0,10-_racesLogged);
@@ -9589,7 +9589,7 @@ function renderPerformanceInsightsTimes(){
     <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
       <div>
         <div style="font-size:12px;font-weight:700;color:${gateColor};">📊 Performance Insights</div>
-        <div style="font-size:10px;color:var(--muted);">${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} training arc${pp.fullCyclesCompleted!==1?'s':''} · ${gateLabel}</div>
+        <div style="font-size:10px;color:var(--muted);">${pp.racesLogged} races · ${pp.cyclesCompleted} training arc${pp.cyclesCompleted!==1?'s':''} · ${gateLabel}</div>
       </div>
       <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
     </div>
@@ -9635,7 +9635,7 @@ function renderDrylandProfileHint(){
     <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.5;">${topReason}</div>
     <div class="dryland-hint-body" style="display:none;margin-top:8px;">
       ${pp.prescription.reasoning.slice(1).map(r=>`<div style="font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);">• ${r}</div>`).join('')}
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.totalRacesLogged} races · ${pp.fullCyclesCompleted} training arc${pp.fullCyclesCompleted!==1?'s':''} · Confidence: ${pp.prescription.confidence}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.racesLogged} races · ${pp.cyclesCompleted} training arc${pp.cyclesCompleted!==1?'s':''} · Confidence: ${pp.prescription.confidence}</div>
       ${pp.cycleDetail?`<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:2px;">${pp.cycleDetail}</div>`:''}
     </div>
   </div>`;
@@ -10913,7 +10913,7 @@ function buildPerformanceProfile(){
 
   const prescription=pceBuildPrescription(blockCorrelation,tagProfile,gate,raceFeel);
 
-  const profile={gate,gateReason:reason,totalRacesLogged:racesLogged,fullCyclesCompleted:cyclesCompleted,scmPattern,lcmPattern,blockCorrelation,bestBlock,weakBlock,tagProfile,raceFeel,prescription,builtAt:new Date().toISOString(),dataWarnings};
+  const profile={gate,gateReason:reason,racesLogged,cyclesCompleted,scmPattern,lcmPattern,blockCorrelation,bestBlock,weakBlock,tagProfile,raceFeel,prescription,builtAt:new Date().toISOString(),dataWarnings};
   S.performanceProfile=profile;
   DB.set('performanceProfile',profile);
   return profile;
