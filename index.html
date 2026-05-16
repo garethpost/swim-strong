@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 111</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 112</div>
       </div>
     </div>
 
@@ -6568,7 +6568,11 @@ function renderHome(){
   if(tp.yes&&az)az.innerHTML+=`<div class="alert-banner alert-taper">⚡ Dryland taper active — ${tp.meet.name} in ${tp.daysOut}d</div>`;
   S.meets.forEach(m=>{const md=localDate(m.date);const d=Math.round((md-today)/86400000);if(d>=0&&d<=7&&az)az.innerHTML+=`<div class="alert-banner alert-meet">🏆 ${m.name} in ${d===0?'TODAY':d+'d'}!</div>`;});
   // Performance profile nudge — shown at Gate 2+ if there's an actionable insight
-  const _pp=S.performanceProfile||buildPerformanceProfile();
+  // Always call buildPerformanceProfile() — never short-circuit with S.performanceProfile
+  // The cache inside buildPerformanceProfile() handles performance; the || would serve stale data
+  const _liveRaceCount=(S.meetRaceLog||[]).filter(l=>{const s=_pceTSec(l.time);return s!==Infinity&&s>0;}).length;
+  if(S.performanceProfile&&S.performanceProfile.racesLogged!==_liveRaceCount)buildPerformanceProfile._force=true;
+  const _pp=buildPerformanceProfile();
   if(_pp&&_pp.gate>=2&&_pp.prescription&&_pp.prescription.reasoning.length&&az){
     az.innerHTML+=`<div class="alert-banner" style="background:rgba(0,198,255,0.07);border:1px solid rgba(0,198,255,0.2);cursor:pointer;" onclick="showSection('times')">📊 <span style="color:var(--accent);font-weight:700;">Training Insight:</span> ${_pp.prescription.reasoning[0]}</div>`;
   }
@@ -9470,8 +9474,10 @@ function toggleHistoryDetail(el,idx){
 function renderPerformanceInsightsTimes(){
   const el=document.getElementById('perf-insights-times');
   if(!el)return;
-  // Ensure profile is built (may be null on first load)
-  const pp=S.performanceProfile||buildPerformanceProfile();
+  // Always rebuild if live race count differs from cached count — never serve stale data
+  const _timesLiveCount=(S.meetRaceLog||[]).filter(l=>{const s=_pceTSec(l.time);return s!==Infinity&&s>0;}).length;
+  if(S.performanceProfile&&S.performanceProfile.racesLogged!==_timesLiveCount)buildPerformanceProfile._force=true;
+  const pp=buildPerformanceProfile();
   if(!pp){el.innerHTML='';return;}
 
   const gateColors={1:'var(--muted)',2:'var(--gold)',3:'var(--accent)'};
