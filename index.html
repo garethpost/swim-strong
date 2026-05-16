@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 113</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 114</div>
       </div>
 
       <!-- ── Legal ── -->
@@ -568,10 +568,21 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         <div class="card">
           <div class="card-title">Privacy &amp; Terms</div>
           <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">SwimFitPro is committed to protecting your personal information. All data is stored locally on your device — nothing is transmitted to external servers.</p>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
             <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="showLegalModal('privacy')">Privacy Policy</button>
             <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="showLegalModal('terms')">Terms of Use</button>
           </div>
+          <div class="card-title" style="margin-top:4px;">Your Region</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Privacy practices and your rights may vary by country. Select your region to see the relevant contact information.</p>
+          <select id="legal-country-sel" onchange="updateLegalContact()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 12px;font-family:var(--font);margin-bottom:12px;">
+            <option value="CA">🇨🇦 Canada</option>
+            <option value="AU">🇦🇺 Australia</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="GB">🇬🇧 United Kingdom</option>
+            <option value="EU">🇪🇺 European Union</option>
+            <option value="OTHER">🌍 Other</option>
+          </select>
+          <div id="legal-contact-note" style="font-size:12px;color:var(--muted);line-height:1.6;background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--border);"></div>
         </div>
       </div>
 
@@ -898,6 +909,15 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </button>
       </div>
       <input type="hidden" id="ob-equip-val" value="gym">
+    </div>
+
+    <!-- Consent checkbox -->
+    <div style="background:linear-gradient(135deg,rgba(0,198,255,0.06),rgba(100,60,255,0.06));border:1px solid rgba(0,198,255,0.15);border-radius:14px;padding:14px 16px;margin-top:4px;margin-bottom:12px;">
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+        <input type="checkbox" id="ob-consent" style="width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex-shrink:0;">
+        <span style="font-size:12px;color:var(--muted);line-height:1.6;">I have read and agree to the <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="event.preventDefault();showLegalModal('terms')">Terms of Use</span> and <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="event.preventDefault();showLegalModal('privacy')">Privacy Policy</span>. I understand that all data is stored locally on my device.</span>
+      </label>
+      <div id="ob-consent-error" style="display:none;font-size:11px;color:var(--red);margin-top:8px;padding-left:30px;">Please agree to the Terms and Privacy Policy to continue.</div>
     </div>
 
     <button class="btn btn-primary" onclick="saveProfile(true)" style="margin-top:4px;">Let's go →</button>
@@ -2028,6 +2048,22 @@ function localDate(str){const p=str.split('-');return new Date(parseInt(p[0]),pa
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
+function updateLegalContact(){
+  const sel=document.getElementById('legal-country-sel');
+  const note=document.getElementById('legal-contact-note');
+  if(!sel||!note)return;
+  const country=sel.value;
+  const contacts={
+    CA:`<strong style="color:var(--text);">Governing law:</strong> PIPEDA (Canada). Your data stays on your device — you have full access and deletion rights at any time via the Data section above.<br><br><strong style="color:var(--text);">Contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>If you have a privacy concern or request, we will respond within 30 days in accordance with PIPEDA.`,
+    AU:`<strong style="color:var(--text);">Governing law:</strong> Privacy Act 1988 (Australia). Your data stays on your device — you have the right to access and correct your information at any time.<br><br><strong style="color:var(--text);">Contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>For privacy enquiries under Australian law, we aim to respond within 30 days. If you are not satisfied with our response, you may contact the <strong style="color:var(--text);">Office of the Australian Information Commissioner (OAIC)</strong> at oaic.gov.au.`,
+    US:`<strong style="color:var(--text);">Governing law:</strong> SwimFitPro is operated from Canada and subject to Canadian privacy law. If you are a California resident, you may have additional rights under the CCPA.<br><br><strong style="color:var(--text);">Contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>We do not sell personal data. All data remains on your device. For CCPA inquiries, contact us directly and we will respond within 45 days.`,
+    GB:`<strong style="color:var(--text);">Governing law:</strong> UK GDPR (post-Brexit). SwimFitPro operates from Canada. As all data is stored locally on your device and no data is transmitted to our servers, standard GDPR data transfer provisions do not currently apply.<br><br><strong style="color:var(--text);">Contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>You have the right to access, rectify, and erase your data — all exercisable directly within the app via the Data section. For unresolved concerns, you may contact the <strong style="color:var(--text);">ICO</strong> at ico.org.uk.`,
+    EU:`<strong style="color:var(--text);">Governing law:</strong> GDPR (EU). SwimFitPro operates from Canada, which the European Commission recognises as providing an adequate level of data protection under PIPEDA.<br><br><strong style="color:var(--text);">Contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>All data is stored locally on your device — no data is transferred to SwimFitPro servers. You have the right to access, rectify, erase, and port your data at any time via the Data section above. For unresolved complaints, you may contact your national Data Protection Authority.`,
+    OTHER:`<strong style="color:var(--text);">General contact:</strong> <span style="color:var(--accent);">support@swimfitpro.app</span><br><br>All SwimFitPro data is stored locally on your device. We apply Canadian privacy standards (PIPEDA) as a baseline. If you have a specific privacy concern relating to your jurisdiction, contact us and we will do our best to assist.`
+  };
+  note.innerHTML=contacts[country]||contacts['OTHER'];
+}
+
 function showLegalModal(type){
   const title=document.getElementById('legal-modal-title');
   const body=document.getElementById('legal-modal-body');
@@ -2481,6 +2517,16 @@ function saveProfile(fromOnboarding){
   if(!nameEl||!dobEl||!genderEl)return;
   const name=nameEl.value.trim();const dob=dobEl.value;const gender=genderEl.value;
   if(!name||!dob||!gender){alert('Please fill in your name, date of birth, and gender.');return;}
+  if(fromOnboarding){
+    const consentBox=document.getElementById('ob-consent');
+    const consentErr=document.getElementById('ob-consent-error');
+    if(consentBox&&!consentBox.checked){
+      if(consentErr)consentErr.style.display='block';
+      consentBox.closest('div').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    if(consentErr)consentErr.style.display='none';
+  }
   const primaryEvents=getPickedEvents(evContainerId);
   if(fromOnboarding){
     // Save new onboarding-only fields
@@ -11440,7 +11486,7 @@ function showSection(name){
   }
   if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
-  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();}
+  if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();updateLegalContact();}
 
 }
 
