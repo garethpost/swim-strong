@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <!-- cache-bust: v98 -->
+  <!-- cache-bust: v117 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -563,7 +563,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <button class="btn btn-secondary" style="width:100%;" onclick="authLogOut()">Log Out</button>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 116</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 117</div>
       </div>
 
       <!-- ── Legal ── -->
@@ -1684,7 +1684,10 @@ async function authLogOut(){
 // ── After successful auth: sync data, then launch app ──
 async function onAuthSuccess(isNewUser){
   hideAuthScreen();
-  if(!isNewUser){
+  if(isNewUser){
+    // New user: immediately create their row in swimmer_data so it exists in Supabase
+    await syncToCloud();
+  } else {
     // Existing user: pull cloud data down first
     const pulled=await syncFromCloud();
     if(pulled){
@@ -1692,7 +1695,6 @@ async function onAuthSuccess(isNewUser){
       reloadStateFromStorage();
     }
   }
-  // New user: their localStorage (if any) will sync up on first scheduleSyncToCloud
   launchApp();
 }
 
