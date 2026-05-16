@@ -1639,7 +1639,7 @@ async function authSignUp(){
   if(!code||!email||!password){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
   if(password.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
   // Validate invite code — hardcoded list for beta (simpler + no DB permission issues)
-  const VALID_CODES=['SWIMFIT2025','BETA2025','SWIM2025','POOLSIDE25','FASTLANE25','DRYLAND25','LANESIX25','TAPER25'];
+  const VALID_CODES=['SWIMFIT2025','BETA2025','SWIM2025','POOLSIDE25','FASTLANE25','DRYLAND25','LANESIX25','TAPER25','SPLASH25','GOGGLE25','BLOCKS25'];
   if(!VALID_CODES.includes(code)){errEl.textContent='Invalid invite code. Contact Gareth for access.';errEl.style.display='block';return;}
   // Create account
   const{data:signUpData,error:signUpErr}=await supa.auth.signUp({email,password});
