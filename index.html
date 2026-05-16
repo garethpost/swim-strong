@@ -556,7 +556,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <div id="backup-status" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;"></div>
         </div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" onclick="confirmReset()">Reset All Data</button></div>
-        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 108</div>
+        <div style="text-align:center;padding:12px 0 24px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 109</div>
       </div>
     </div>
 
@@ -6581,7 +6581,7 @@ function renderHome(){
     const arcNeed=Math.max(0,2-arcsCompleted);
     az.innerHTML+=`<div style="background:linear-gradient(135deg,rgba(0,198,255,0.06),rgba(100,60,255,0.06));border:1px solid rgba(0,198,255,0.15);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);">Performance Engine</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);">Performance Insights</div>
         <div style="font-size:10px;color:var(--muted);background:var(--surface);border-radius:20px;padding:3px 8px;">Building</div>
       </div>
       <div style="margin-bottom:8px;">
@@ -9478,30 +9478,36 @@ function renderPerformanceInsightsTimes(){
   const gateColor=gateColors[pp.gate]||'var(--muted)';
   const gateLabel=gateLabels[pp.gate]||'';
 
-  // Gate 1: passive display only
+  // Gate 1: passive display only — matches Home tab Performance Insights tile exactly
   if(pp.gate===1){
+    const _racesLogged=pp.totalRacesLogged||0;
+    const _arcsCompleted=pp.fullCyclesCompleted||0;
+    const _racePct=Math.min(100,Math.round(_racesLogged/10*100));
+    const _arcPct=Math.min(100,Math.round(_arcsCompleted/2*100));
+    const _raceNeed=Math.max(0,10-_racesLogged);
+    const _arcNeed=Math.max(0,2-_arcsCompleted);
     el.innerHTML=`<div class="card" style="margin-bottom:12px;border:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
         <div style="font-size:12px;font-weight:700;color:var(--muted);">📊 Performance Insights — <span style="color:var(--muted);">Building</span></div>
         <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
       </div>
-      <div class="perf-body" style="display:none;margin-top:10px;">
-        <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:8px;">${pp.gateReason}. Keep logging races and training sessions — insights unlock automatically.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
-            <div style="font-size:18px;font-weight:900;color:var(--text);">${pp.totalRacesLogged}</div>
-            <div style="font-size:10px;color:var(--muted);">races logged</div>
+      <div class="perf-body" style="display:none;margin-top:12px;">
+        <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:12px;">${pp.gateReason}. Keep logging races and completing training blocks — insights unlock automatically.</div>
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-size:11px;color:var(--muted);">Races logged</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">${_racesLogged} / 10${_raceNeed>0?` · ${_raceNeed} to go`:' ✓'}</div>
           </div>
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
-            <div style="font-size:18px;font-weight:900;color:var(--text);">${pp.fullCyclesCompleted}</div>
-            <div style="font-size:10px;color:var(--muted);">training arcs</div>
-          </div>
-          <div style="background:var(--surface);border-radius:8px;padding:8px 12px;text-align:center;flex:1;">
-            <div style="font-size:18px;font-weight:900;color:var(--text);">${(S.history||[]).length}</div>
-            <div style="font-size:10px;color:var(--muted);">dryland sessions</div>
-          </div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:5px;overflow:hidden;"><div style="background:var(--accent);height:100%;width:${_racePct}%;border-radius:4px;transition:width 0.4s;"></div></div>
         </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted);">Unlocks at 10 races + 2 completed training arcs (GPP → Strength/Power)</div>
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-size:11px;color:var(--muted);">Training arcs</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">${_arcsCompleted} / 2${_arcNeed>0?` · ${_arcNeed} to go`:' ✓'}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:5px;overflow:hidden;"><div style="background:var(--purple);height:100%;width:${_arcPct}%;border-radius:4px;transition:width 0.4s;"></div></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;">A training arc = a GPP block followed by a Strength or Power block. The more you log, the more the engine learns about what drives your best performances.</div>
         ${pp.cycleDetail?`<div style="margin-top:4px;font-size:10px;color:var(--muted);font-style:italic;">${pp.cycleDetail}</div>`:''}
       </div>
     </div>`;
