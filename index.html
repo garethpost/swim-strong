@@ -568,7 +568,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div id="more-account-email" style="display:none;"></div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" style="width:100%;margin-bottom:8px;" onclick="confirmReset()">Reset All Data</button><button class="btn btn-danger" style="width:100%;background:#7f1d1d;" onclick="requestAccountDeletion()">Delete My Account</button><div id="delete-account-msg" style="display:none;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;text-align:center;">Your deletion request has been submitted. Your data has been cleared from this device and you've been signed out. Your account will be permanently deleted within 48 hours.</div></div>
-        <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 123</div>
+        <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 124</div>
 <div id="_sync_debug" style="text-align:center;padding:0 0 24px;font-size:10px;color:var(--muted);letter-spacing:0.5px;"></div>
       </div>
 
@@ -11871,6 +11871,8 @@ function showSection(name){
 // openSwimLog and saveSwimLog retired — pool check-in is the single source of truth for pool distance
 
 // INIT — hide app until auth completes, then bootAuth() takes over
+// Apply saved theme immediately so there's no flash of default on load/logout
+(function(){const t=localStorage.getItem('appTheme');if(t){try{const parsed=JSON.parse(t);if(parsed&&THEMES[parsed])applyTheme(parsed);}catch(e){if(THEMES[t])applyTheme(t);}}})();
 document.getElementById('app').style.display='none';
 // Deduplicate any daySchedule entries that have repeated session types (stale off-season data)
 (function cleanDaySchedule(){
