@@ -568,7 +568,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
         <div id="more-account-email" style="display:none;"></div>
         <div class="card"><div class="card-title" style="color:var(--red)">Danger Zone</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export a backup first before resetting.</p><button class="btn btn-danger" style="width:100%;margin-bottom:8px;" onclick="confirmReset()">Reset All Data</button><button class="btn btn-danger" style="width:100%;background:#7f1d1d;" onclick="requestAccountDeletion()">Delete My Account</button><div id="delete-account-msg" style="display:none;margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;text-align:center;">Your deletion request has been submitted. Your data has been cleared from this device and you've been signed out. Your account will be permanently deleted within 48 hours.</div></div>
-        <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 127</div>
+        <div style="text-align:center;padding:12px 0 4px;font-size:11px;color:var(--muted);letter-spacing:0.5px;">SwimFitPro · Build 128</div>
 <div id="_sync_debug" style="text-align:center;padding:0 0 24px;font-size:10px;color:var(--muted);letter-spacing:0.5px;"></div>
       </div>
 
@@ -8921,9 +8921,17 @@ function getFoodServings(food){
   }
   if(food.per100g){
     // API food with no custom servings — base is per 100g
-    const servings=[{label:'100g',mult:1},{label:'50g',mult:0.5},{label:'150g',mult:1.5},{label:'200g',mult:2},{label:'1 oz (28g)',mult:0.28}];
+    // Detect drinks: swap units to ml (1g ≈ 1ml for beverages)
+    const isDrink=/beverage|drink|juice|soda|cola|fanta|sprite|pepsi|water|milk|shake|smoothie|tea|coffee|lemonade|energy drink|sports drink|squash|cordial|kombucha|kefir/i.test(food.name||(food.category||''));
+    let servings;
+    if(isDrink){
+      servings=[{label:'100ml',mult:1},{label:'200ml',mult:2},{label:'250ml (1 cup)',mult:2.5},{label:'330ml (can)',mult:3.3},{label:'500ml (bottle)',mult:5},{label:'50ml',mult:0.5}];
+    } else {
+      servings=[{label:'100g',mult:1},{label:'50g',mult:0.5},{label:'150g',mult:1.5},{label:'200g',mult:2},{label:'1 oz (28g)',mult:0.28}];
+    }
     if(food.servingG&&food.servingLabel){
-      servings.unshift({label:food.servingLabel+' ('+food.servingG+'g)',mult:food.servingG/100});
+      const unit=isDrink?'ml':'g';
+      servings.unshift({label:food.servingLabel+' ('+food.servingG+unit+')',mult:food.servingG/100});
     }
     return servings;
   }
