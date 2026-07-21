@@ -9258,13 +9258,8 @@ function _buildFoodPanel(){
     }
   }
 
-  // API search results area (only shown when searching)
-  let apiHtml='';
-  if(q){
-    apiHtml=`<div id="food-api-results" style="margin-top:8px;">
-      <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>
-    </div>`;
-  }
+  // (An unused `apiHtml` block used to sit here — the results div is built inline
+  // in the return below, so it was dead. Removed.)
 
   return`
     <input type="text" id="food-search-input"
@@ -9278,7 +9273,7 @@ function _buildFoodPanel(){
     <div id="food-recents-strip" style="${!q&&recentsHtml?'':'display:none'}">${recentsHtml}</div>
     <div id="food-favs-strip" style="${!q&&favsHtml?'':'display:none'}">${favsHtml}</div>
     <div id="food-library-rows">${libraryHtml}</div>
-    <div id="food-api-results" style="${q?'margin-top:8px;':'display:none'}">${q?'<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>':''}</div>`;
+    <div id="food-api-results" style="${q?'margin-top:8px;':'display:none'}">${q?(_foodResultsFor(q)||FOOD_SPINNER):''}</div>`;
 }
 
 function _refreshFoodPanel(){
@@ -9344,9 +9339,31 @@ function _updateFoodPanelContent(){
   const apiEl=document.getElementById('food-api-results');
   if(apiEl){
     apiEl.style.display=q?'':'none';
-    if(q)apiEl.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>`;
+    // Only show the spinner when we genuinely have nothing for this query. This
+    // used to reset to "Searching..." on every keystroke — and, worse, after
+    // adding a food — with nothing left running to replace it.
+    if(q)apiEl.innerHTML=_foodResultsFor(q)||FOOD_SPINNER;
   }
 }
+
+// ── Food search state ──
+// Results are cached per query so that a re-render of the Fuel tab does not wipe
+// them. addMealEntry() rebuilds the whole tree, which re-emitted the "Searching…"
+// placeholder with nothing left running to resolve it: the swimmer added a food,
+// saw the list replaced by a spinner that span forever, concluded it had not
+// worked, and added it again.
+const FOOD_SPINNER='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">🔍 Searching...</div>';
+let _foodSearchSeq=0;      // generation counter — only the newest search may paint
+let _foodAbort=null;       // in-flight request, cancelled when superseded
+let _foodResultCache={q:'',html:''};
+function _foodResultsFor(q){
+  return (q&&_foodResultCache.q===q&&_foodResultCache.html)?_foodResultCache.html:'';
+}
+
+// USDA fallback. DEMO_KEY is rate-limited to roughly 30 requests/hour per IP and
+// will start returning 429 under real use — replace with a free registered key
+// from https://fdc.nal.usda.gov/api-key-signup.html before launch.
+const USDA_API_KEY='DEMO_KEY';
 
 // Unified search handler — never rebuilds the input, so keyboard stays up on iOS
 function onFoodSearch(val){
@@ -9360,13 +9377,31 @@ function onFoodSearch(val){
 
 // API search — Open Food Facts primary (global coverage), USDA fallback
 async function foodApiSearch(query){
-  const r=document.getElementById('food-api-results');
-  if(!r)return;
+  if(!document.getElementById('food-api-results'))return;
+
+  // Claim this generation and cancel anything still in flight. Typing "ban" then
+  // "banana" used to leave both requests racing; Open Food Facts routinely takes
+  // several seconds, so if the earlier one resolved last it overwrote the correct
+  // results with stale ones under the swimmer's finger.
+  const seq=++_foodSearchSeq;
+  if(_foodAbort){try{_foodAbort.abort();}catch(e){}}
+  const ctrl=new AbortController();
+  _foodAbort=ctrl;
+  const timer=setTimeout(()=>{try{ctrl.abort();}catch(e){}},4000);
+  const superseded=()=>seq!==_foodSearchSeq;
+  // Paint only if we are still the newest search, and remember the result so a
+  // re-render can restore it instead of falling back to the spinner.
+  const paint=html=>{
+    if(superseded())return;
+    _foodResultCache={q:query,html};
+    const el=document.getElementById('food-api-results');
+    if(el)el.innerHTML=html;
+  };
 
   // ── Primary: Open Food Facts (global, 3M+ products) ──
   try{
     const offUrl=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&lc=en&fields=product_name,product_name_en,brands,nutriments,_id,lang`;
-    const offResp=await fetch(offUrl,{signal:AbortSignal.timeout(8000)});
+    const offResp=await fetch(offUrl,{signal:ctrl.signal});
     if(!offResp.ok)throw new Error('OFF error');
     const offData=await offResp.json();
     function getBestName(p){
@@ -9396,15 +9431,19 @@ async function foodApiSearch(query){
       return _foodRow(food);
     }).filter(Boolean).join('');
     if(offRows){
-      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · Open Food Facts</div>`+offRows;
+      clearTimeout(timer);
+      paint(`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · Open Food Facts</div>`+offRows);
       return;
     }
     throw new Error('OFF no results');
   } catch(offErr){
+    // Superseded by a newer keystroke, or deliberately aborted — stop silently
+    // rather than falling through to the USDA fallback for a query nobody wants.
+    if(superseded()){clearTimeout(timer);return;}
     // ── Fallback: USDA FoodData Central ──
     try{
-      const usdaUrl=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=DEMO_KEY`;
-      const usdaResp=await fetch(usdaUrl,{signal:AbortSignal.timeout(6000)});
+      const usdaUrl=`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=25&dataType=Branded,SR%20Legacy,Survey%20(FNDDS)&api_key=${USDA_API_KEY}`;
+      const usdaResp=await fetch(usdaUrl,{signal:ctrl.signal});
       if(!usdaResp.ok)throw new Error('USDA error');
       const usdaData=await usdaResp.json();
       const foods=(usdaData.foods||[]);
@@ -9429,12 +9468,16 @@ async function foodApiSearch(query){
         const food={id:'usda_'+f.fdcId,name,cal,carbs,protein,fat,per100g:true};
         return _foodRow(food);
       }).filter(Boolean).join('');
-      if(!usdaRows){r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`;return;}
-      r.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · USDA FoodData Central</div>`+usdaRows;
+      clearTimeout(timer);
+      if(!usdaRows){paint(`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">No results found. Try a different name or add a Custom food.</div>`);return;}
+      paint(`<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px;">Results · per 100g · USDA FoodData Central</div>`+usdaRows);
     } catch(usdaErr){
-      r.innerHTML=`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable right now. Check your connection or add a Custom food.</div>`;
+      clearTimeout(timer);
+      if(superseded())return;
+      paint(`<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Search unavailable right now. Check your connection or add a Custom food.</div>`);
     }
   }
+  clearTimeout(timer);
 }
 
 // Keep these for compatibility
