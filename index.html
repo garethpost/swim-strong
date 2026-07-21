@@ -7856,6 +7856,7 @@ function deleteMeet(id){
   // Also clean up any races + race logs tied to this meet
   S.meetRaces=S.meetRaces.filter(r=>r.meetId!==id);
   S.meetRaceLog=S.meetRaceLog.filter(l=>l.meetId!==id);
+  pruneMirroredTimes(e=>e.meetId!=null&&String(e.meetId)===String(id));
   DB.set('meets',S.meets);
   DB.set('meetRaces',S.meetRaces);
   DB.set('meetRaceLog',S.meetRaceLog);
@@ -11671,10 +11672,33 @@ function buildPerformanceProfile(){
 }
 
 // ── Meet Day Banner ──
+// Remove timeHistory entries that were mirrored from a meet race.
+// saveMeetRaceResult() writes a copy of every race result into timeHistory so it
+// counts as a PB; this is the other half of that contract. Entries logged before
+// raceId/meetId were added carry neither key and cannot be matched — those have to
+// be removed by hand from the Times tab.
+function pruneMirroredTimes(match){
+  let removed=0;
+  Object.keys(S.timeHistory||{}).forEach(ev=>{
+    const arr=S.timeHistory[ev];
+    if(!Array.isArray(arr))return;
+    const before=arr.length;
+    S.timeHistory[ev]=arr.filter(e=>!match(e));
+    removed+=before-S.timeHistory[ev].length;
+    if(!S.timeHistory[ev].length)delete S.timeHistory[ev];
+  });
+  if(removed){
+    DB.set('timeHistory',S.timeHistory);
+    buildPerformanceProfile._force=true;buildPerformanceProfile();
+  }
+  return removed;
+}
+
 function deleteRace(raceId){
-  if(!confirm('Delete this race?'))return;
+  if(!confirm('Delete this race? Any time it logged will be removed from your PBs too.'))return;
   S.meetRaces=S.meetRaces.filter(r=>String(r.id)!==String(raceId));
   S.meetRaceLog=S.meetRaceLog.filter(l=>String(l.raceId)!==String(raceId));
+  pruneMirroredTimes(e=>e.raceId!=null&&String(e.raceId)===String(raceId));
   DB.set('meetRaces',S.meetRaces);
   DB.set('meetRaceLog',S.meetRaceLog);
   renderMeetDayBanner();
@@ -12035,6 +12059,12 @@ function saveMeetRaceResult(){
   const time=document.getElementById('ml-time').value.trim();
   const notes=document.getElementById('ml-notes').value.trim();
   if(!time)return alert('Enter your race time.');
+  // Race Mode previously accepted ANY string here while the Times tab validated.
+  // "2.05.50" for a 2:05.50 swim parsed as 2.05 seconds — an instant permanent PB
+  // beating every qualifying standard. Non-numeric input parsed as NaN, and since
+  // every NaN comparison is false, a garbage entry at the earliest date was never
+  // displaced and returned as the PB forever.
+  if(!_validTime(time))return alert('Time format should be like 24.50 or 1:02.34');
   const race=S.meetRaces.find(r=>String(r.id)===String(_logRaceId));
   const entry={
     id:Date.now(),
@@ -12065,8 +12095,28 @@ function saveMeetRaceResult(){
     // Capture previous best BEFORE adding new entry
     const prevBestLCM=getBest(ev,'lcm');
     const prevBestSCM=getBest(ev,'scm');
-    const meetName=S.meets.find(m=>String(m.id)===String(race.meetId))?.name||'Meet';
-    const timeEntry={date:dKey(new Date()),meet:meetName,entryType:'race',programmeId:S.currentProgrammeId||'programme_1'};
+    const meet=S.meets.find(m=>String(m.id)===String(race.meetId));
+    const meetName=meet?.name||'Meet';
+    // Date the entry to the RACE, not to now. Logging Saturday's final on Sunday
+    // evening used to record it as Sunday, which silently corrupts progression
+    // charts (timeHistory is date-sorted) and the correlation engine's 42-day
+    // lookback. Falls back to today only if the meet has no usable start date.
+    let raceDate=dKey(new Date());
+    if(meet&&meet.date){
+      try{
+        const d=localDate(meet.date);
+        if(d instanceof Date&&!isNaN(d.getTime())){
+          d.setDate(d.getDate()+Math.max(0,(parseInt(race.day,10)||1)-1));
+          raceDate=dKey(d);
+        }
+      }catch(e){/* malformed meet date — keep today's date */}
+    }
+    // raceId/meetId make the mirror removable. Without them deleteRace() and
+    // deleteMeet() had no key to match on, so a mistyped race left a phantom PB
+    // in the Times tab that no part of the UI could delete.
+    const timeEntry={date:raceDate,meet:meetName,entryType:'race',
+      raceId:race.id,meetId:race.meetId??null,
+      programmeId:S.currentProgrammeId||'programme_1'};
     if(pool==='scm'){timeEntry.scm=time;timeEntry.lcm='—';}
     else{timeEntry.lcm=time;timeEntry.scm='—';}
     S.timeHistory[ev].push(timeEntry);
