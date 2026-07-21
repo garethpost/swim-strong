@@ -1867,6 +1867,10 @@ async function bootAuth(){
     // Pull fresh cloud data on every boot
     await syncFromCloud();
     reloadStateFromStorage();
+    // Repair AFTER the pull. Anything fixed before it would simply be overwritten
+    // by the untagged cloud row. The DB.set calls inside mark state dirty, so the
+    // repaired data is pushed back up on the next scheduled sync.
+    if(repairProgrammeTags()>0)reloadStateFromStorage();
     launchApp();
   } else {
     showAuthScreen();
@@ -2256,47 +2260,71 @@ const TRIALS={'50 Free':'23.27','100 Free':'51.09','200 Free':'1:53.00','400 Fre
 
 // Version gate — migrate data forward, never wipe user data
 const APP_VER='v10';
+
+// Compare versions numerically. The old gate compared version STRINGS, so
+// 'v9' < 'v10' evaluated FALSE — '9' sorts after '1' at index 1 — and the v10
+// migration was skipped for every v7/v8/v9 user while still stamping
+// appVer='v10', burning it permanently. Confirmed on a live account: appVer is
+// 'v10' with untagged entries still present.
+function _verNum(v){const n=parseInt(String(v||'').replace(/^v/,''),10);return isNaN(n)?0:n;}
+
+// Idempotent repair for the migration that never ran. Safe to call on every boot:
+// it exits immediately when there is nothing to fix, and returns how many records
+// it touched. Deliberately NOT version-gated — a version gate is exactly what
+// failed here, and a self-healing pass cannot be burned by a future off-by-one.
+//
+// Must run AFTER syncFromCloud(). Running it before a pull would fix localStorage
+// and then have the fix overwritten by the untagged cloud row, forever.
+function repairProgrammeTags(){
+  const progId=DB.get('currentProgrammeId','programme_1')||'programme_1';
+  let fixed=0,changed;
+
+  const mrl=DB.get('meetRaceLog',[]);
+  changed=false;
+  mrl.forEach(l=>{if(l&&!l.programmeId){l.programmeId=progId;changed=true;fixed++;}});
+  if(changed)DB.set('meetRaceLog',mrl);
+
+  const th=DB.get('timeHistory',{});
+  changed=false;
+  Object.values(th).forEach(arr=>(arr||[]).forEach(e=>{if(e&&!e.programmeId){e.programmeId=progId;changed=true;fixed++;}}));
+  if(changed)DB.set('timeHistory',th);
+
+  const hist=DB.get('history',[]);
+  changed=false;
+  hist.forEach(h=>{if(h&&!h.programmeId){h.programmeId=progId;changed=true;fixed++;}});
+  if(changed)DB.set('history',hist);
+
+  // Make sure the programme those ids point at actually exists — otherwise the
+  // programme views filter against a record that was never created and show zero.
+  const progs=DB.get('programmes',[]);
+  if(!progs.length){
+    const profile=DB.get('profile',null);
+    progs.push({
+      id:'programme_1',
+      name:(profile&&profile.club)||'Club Programme',
+      club:(profile&&profile.club)||'',
+      country:(profile&&profile.country)||'',
+      coachName:'',
+      transitionReason:'origin',
+      startDate:'2020-01-01', // conservative origin date
+      endDate:null,
+    });
+    DB.set('programmes',progs);
+    DB.set('currentProgrammeId','programme_1');
+    fixed++;
+  }
+  if(fixed)console.log('repairProgrammeTags: repaired',fixed,'record(s)');
+  return fixed;
+}
+
 (function(){
   const prev=DB.get('appVer','');
-  if(prev===APP_VER)return; // already current
+  if(_verNum(prev)===_verNum(APP_VER))return; // already current
   // v7 → v8: preserve bodyStats
   // v8 → v9: race feedback loop, entry type tagging, PCE weighting
-  // v9 → v10: programme transition system — tag all existing data as programme_1
-  if(prev<'v10'){
-    const progId='programme_1';
-    // Tag existing meetRaceLog entries
-    const mrl=DB.get('meetRaceLog',[]);
-    let mrlChanged=false;
-    mrl.forEach(l=>{if(!l.programmeId){l.programmeId=progId;mrlChanged=true;}});
-    if(mrlChanged)DB.set('meetRaceLog',mrl);
-    // Tag existing timeHistory entries
-    const th=DB.get('timeHistory',{});
-    let thChanged=false;
-    Object.values(th).forEach(arr=>(arr||[]).forEach(e=>{if(!e.programmeId){e.programmeId=progId;thChanged=true;}}));
-    if(thChanged)DB.set('timeHistory',th);
-    // Tag existing dryland history
-    const hist=DB.get('history',[]);
-    let hChanged=false;
-    hist.forEach(h=>{if(!h.programmeId){h.programmeId=progId;hChanged=true;}});
-    if(hChanged)DB.set('history',hist);
-    // Create programme_1 entry if no programmes exist yet
-    const progs=DB.get('programmes',[]);
-    if(!progs.length){
-      const profile=DB.get('profile',null);
-      progs.push({
-        id:progId,
-        name:(profile&&profile.club)||'Club Programme',
-        club:(profile&&profile.club)||'',
-        country:(profile&&profile.country)||'',
-        coachName:'',
-        transitionReason:'origin',
-        startDate:'2020-01-01', // conservative origin date
-        endDate:null,
-      });
-      DB.set('programmes',progs);
-      DB.set('currentProgrammeId',progId);
-    }
-  }
+  // v9 → v10: programme transition system — now handled by repairProgrammeTags(),
+  //           which runs on every boot rather than behind a one-shot version gate.
+  // Future migrations: gate on _verNum(prev) < N, never on string comparison.
   DB.set('appVer',APP_VER);
 })();
 
