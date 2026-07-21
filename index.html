@@ -164,8 +164,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:6px;}
 select option{background:var(--surface);}
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </style>
-<!-- Supabase JS client -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase JS client.
+     `defer` matters: without it HTML parsing halts here until a third-party CDN
+     resolves DNS, negotiates TLS and executes ~120KB — 1-3s of blank screen on a
+     mobile connection. Deferred scripts still run in order and always before
+     DOMContentLoaded, which is where the client is now created. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 </head>
 <body>
 <div id="app">
@@ -1581,7 +1585,9 @@ const DB={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 // ── Supabase client ──
 const SUPA_URL='https://dvcdglckrglnszrctmup.supabase.co';
 const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2Y2RnbGNrcmdsbnN6cmN0bXVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0OTkyODUsImV4cCI6MjA5MzA3NTI4NX0.w2R6xqVjWTMpmisxjPYquVOawcEde4UsUTZWmfX4f1c';
-const supa=supabase.createClient(SUPA_URL,SUPA_ANON);
+// Assigned on DOMContentLoaded, once the deferred CDN script has run. Every other
+// use of `supa` is inside a function called after boot, so none of them race this.
+let supa=null;
 let _currentUser=null; // set after auth
 
 // ── All localStorage keys we sync to Supabase ──
@@ -2369,7 +2375,7 @@ function applyUnitSettings(){
   // Update pickers immediately — no re-render touches the More tab settings card
   updateUnitPickers();
   // If fuel tab is currently visible, re-render so height field updates cm↔ft+in
-  if(document.getElementById('section-fuel').classList.contains('active'))renderNutrition();
+  if(document.getElementById('section-fuel').classList.contains('active')){renderNutrition();renderMealTracker();}
 }
 function setWeightUnit(kg){
   S.useKg=kg;DB.set('useKg',kg);
@@ -10063,7 +10069,6 @@ function renderNutrition(){
         </div>
         <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="expandBodyStats()">Update</button>
       </div>`;
-      renderMealTracker();
       return;
     }
     // Full form — build it
@@ -10129,8 +10134,11 @@ function renderNutrition(){
   const days=S.lastStatsUpdate?Math.round((new Date()-new Date(S.lastStatsUpdate))/86400000):999;
   const badge2=document.getElementById('update-due-badge');
   if(badge2)badge2.innerHTML=days>=updateDays2?'<span style="background:#2a2a0a;color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;">⚠️ Update due</span>':'';
-  // Render dynamic today card
-  renderMealTracker();
+  // NOTE: renderMealTracker() is deliberately NOT called here. This function owns
+  // the body-stats card only. It used to call it from both exit paths while every
+  // caller called it again, so a single interaction rebuilt the entire nine-section
+  // Fuel tree — the largest in the app — two or three times over. Callers that need
+  // the tracker refreshed now call it themselves.
 }
 
 // ── More ──
@@ -12179,7 +12187,12 @@ document.getElementById('app').style.display='none';
   });
   if(dirty)DB.set('daySchedule',S.daySchedule);
 })();
-bootAuth(); // handles session check → auth screen or app launch
+// The Supabase CDN script is deferred, so `supabase` is guaranteed to exist by
+// DOMContentLoaded but not during parsing. Create the client and boot from there.
+document.addEventListener('DOMContentLoaded',()=>{
+  supa=supabase.createClient(SUPA_URL,SUPA_ANON);
+  bootAuth(); // handles session check → auth screen or app launch
+});
 maybeShowCheckinSheet();
 renderCustomTargetMeets();
 // Register service worker for offline support
