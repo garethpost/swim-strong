@@ -1612,6 +1612,13 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
 // what makes it safe even if the final flush below never reaches the network.
 const DIRTY_KEY='_localDirty';
 const LAST_SYNC_KEY='_lastSyncedAt';
+// clubLogo is a base64 data URI. Measured on a real account it is 291KB of a
+// 299KB payload — 97% of every sync — despite changing perhaps once a season.
+// We send it only when it differs from what the cloud last confirmed. Omitting a
+// key is safe: syncFromCloud only overwrites keys the cloud actually returns, so
+// the stored logo survives.
+const LOGO_SIG_KEY='_clubLogoSig';
+function _logoSig(v){const s=String(v);return s.length+':'+s.slice(-24);}
 function markLocalDirty(){
   if(!_currentUser)return; // signed out: nothing to reconcile against
   try{localStorage.setItem(DIRTY_KEY,String(Date.now()));}catch(e){}
@@ -1626,6 +1633,13 @@ async function syncToCloud(){
     const v=localStorage.getItem(k);
     if(v!==null){try{payload[k]=JSON.parse(v);}catch(e){payload[k]=v;}}
   });
+  // Drop the club logo from the payload when the cloud already has this exact one.
+  let sentLogoSig=null;
+  if(payload.clubLogo!==undefined){
+    const sig=_logoSig(payload.clubLogo);
+    if(localStorage.getItem(LOGO_SIG_KEY)===sig)delete payload.clubLogo;
+    else sentLogoSig=sig;
+  }
   const stamp=new Date().toISOString();
   const{error}=await supa.from('swimmer_data').upsert({id:_currentUser.id,data:payload,updated_at:stamp},{onConflict:'id'}).select();
   const dbg=document.getElementById('_sync_debug');
@@ -1635,7 +1649,11 @@ async function syncToCloud(){
     if(dbg)dbg.textContent='Sync pending — will retry';
     return false;
   }
-  try{localStorage.removeItem(DIRTY_KEY);localStorage.setItem(LAST_SYNC_KEY,stamp);}catch(e){}
+  try{
+    localStorage.removeItem(DIRTY_KEY);
+    localStorage.setItem(LAST_SYNC_KEY,stamp);
+    if(sentLogoSig)localStorage.setItem(LOGO_SIG_KEY,sentLogoSig); // cloud now holds this logo
+  }catch(e){}
   if(dbg)dbg.textContent='Sync OK: '+new Date().toLocaleTimeString();
   return true;
 }
@@ -1656,6 +1674,13 @@ async function syncFromCloud(){
   SYNC_KEYS.forEach(k=>{
     if(d[k]!==undefined)localStorage.setItem(k,JSON.stringify(d[k]));
   });
+  // A pull proves what the cloud holds, so record (or clear) the logo signature
+  // accordingly. Without this a fresh device would re-upload a logo the cloud
+  // already has, and a cloud row missing the logo would never get it back.
+  try{
+    if(d.clubLogo!==undefined)localStorage.setItem(LOGO_SIG_KEY,_logoSig(d.clubLogo));
+    else localStorage.removeItem(LOGO_SIG_KEY);
+  }catch(e){}
   if(data.updated_at){try{localStorage.setItem(LAST_SYNC_KEY,data.updated_at);}catch(e){}}
   return true;
 }
