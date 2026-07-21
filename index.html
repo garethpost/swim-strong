@@ -1591,49 +1591,90 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
   'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
   'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','workoutMode',
   'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
-  'lastBaselineDate','autoDeload','mobilityLog','clubLogo'];
+  'lastBaselineDate','autoDeload','mobilityLog','clubLogo',
+  // Added: these were persisted locally but never reached the cloud, so they were
+  // lost on every device switch, reinstall or cache clear. mealLog is the entire
+  // nutrition feature. foodCache is deliberately NOT synced — it is a rebuildable
+  // cache that grows without bound.
+  'mealLog','savedMeals','foodFavourites','foodRecents','todayReadiness','todaySleep',
+  'rpeCalibrationBias','rpeCalibrationNote','poolLoadToday','activeMeetId'];
+
+// ── Local-first sync bookkeeping ──
+// localStorage is the source of truth between syncs. _localDirty records that we
+// hold writes the cloud has not yet confirmed, so a boot-time pull can never
+// overwrite work the swimmer just did. This flag survives a page close, which is
+// what makes it safe even if the final flush below never reaches the network.
+const DIRTY_KEY='_localDirty';
+const LAST_SYNC_KEY='_lastSyncedAt';
+function markLocalDirty(){
+  if(!_currentUser)return; // signed out: nothing to reconcile against
+  try{localStorage.setItem(DIRTY_KEY,String(Date.now()));}catch(e){}
+}
+function isLocalDirty(){return !!localStorage.getItem(DIRTY_KEY);}
 
 // ── Push all localStorage to Supabase (called after login/signup and on key saves) ──
 async function syncToCloud(){
-  if(!_currentUser){console.warn('syncToCloud: no user');return;}
+  if(!_currentUser){console.warn('syncToCloud: no user');return false;}
   const payload={};
   SYNC_KEYS.forEach(k=>{
     const v=localStorage.getItem(k);
     if(v!==null){try{payload[k]=JSON.parse(v);}catch(e){payload[k]=v;}}
   });
-  console.log('syncToCloud: upserting for',_currentUser.id,'keys:',Object.keys(payload).length);
-  const{data,error}=await supa.from('swimmer_data').upsert({id:_currentUser.id,data:payload,updated_at:new Date().toISOString()},{onConflict:'id'}).select();
+  const stamp=new Date().toISOString();
+  const{error}=await supa.from('swimmer_data').upsert({id:_currentUser.id,data:payload,updated_at:stamp},{onConflict:'id'}).select();
+  const dbg=document.getElementById('_sync_debug');
   if(error){
+    // Stay dirty on failure — the write is retried on the next save or next launch.
     console.error('Cloud sync failed:',error.message,error.code,error.details,error.hint);
-    // Show visible error so we can debug on device
-    const dbg=document.getElementById('_sync_debug');
-    if(dbg)dbg.textContent='Sync error: '+error.message;
-  } else {
-    console.log('syncToCloud: success',data);
-    const dbg=document.getElementById('_sync_debug');
-    if(dbg)dbg.textContent='Sync OK: '+new Date().toLocaleTimeString();
+    if(dbg)dbg.textContent='Sync pending — will retry';
+    return false;
   }
+  try{localStorage.removeItem(DIRTY_KEY);localStorage.setItem(LAST_SYNC_KEY,stamp);}catch(e){}
+  if(dbg)dbg.textContent='Sync OK: '+new Date().toLocaleTimeString();
+  return true;
 }
 
 // ── Pull from Supabase into localStorage (called on login) ──
+// Never clobbers unsynced local work. If we are holding writes the cloud has not
+// confirmed, we push them up instead of pulling down over the top of them.
 async function syncFromCloud(){
   if(!_currentUser)return false;
-  const{data,error}=await supa.from('swimmer_data').select('data').eq('id',_currentUser.id).single();
+  if(isLocalDirty()){
+    console.warn('syncFromCloud: local has unsynced writes — pushing instead of pulling');
+    await syncToCloud();
+    return false;
+  }
+  const{data,error}=await supa.from('swimmer_data').select('data,updated_at').eq('id',_currentUser.id).single();
   if(error||!data)return false;
   const d=data.data||{};
   SYNC_KEYS.forEach(k=>{
     if(d[k]!==undefined)localStorage.setItem(k,JSON.stringify(d[k]));
   });
+  if(data.updated_at){try{localStorage.setItem(LAST_SYNC_KEY,data.updated_at);}catch(e){}}
   return true;
 }
 
-// ── Throttled cloud sync — max once every 30 seconds to avoid hammering ──
+// ── Debounced cloud sync ──
 let _syncTimer=null;
 function scheduleSyncToCloud(){
   if(!_currentUser)return;
   if(_syncTimer)return; // already scheduled
-  _syncTimer=setTimeout(()=>{_syncTimer=null;syncToCloud();},5000);
+  _syncTimer=setTimeout(()=>{_syncTimer=null;syncToCloud();},1200);
 }
+
+// ── Flush before the page goes away ──
+// Backgrounding the app inside the debounce window used to destroy the pending
+// write, because the timer dies with the page. On a phone that is normal
+// behaviour, not an edge case.
+function flushSyncNow(){
+  if(!_currentUser||!isLocalDirty())return;
+  if(_syncTimer){clearTimeout(_syncTimer);_syncTimer=null;}
+  syncToCloud();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')flushSyncNow();
+});
+window.addEventListener('pagehide',flushSyncNow);
 
 // ── Auth UI helpers ──
 function switchAuthTab(tab){
@@ -1803,7 +1844,7 @@ async function bootAuth(){
 
 // ── Patch DB.set to schedule a cloud sync on every write ──
 const _origDBset=DB.set.bind(DB);
-DB.set=function(k,v){_origDBset(k,v);scheduleSyncToCloud();};
+DB.set=function(k,v){_origDBset(k,v);markLocalDirty();scheduleSyncToCloud();};
 
 const ALL_EVENTS=['50 Free','100 Free','200 Free','400 Free','800 Free','1500 Free','50 Back','100 Back','200 Back','50 Breast','100 Breast','200 Breast','50 Fly','100 Fly','200 Fly','200 IM','400 IM'];
 const PRIMARY=['50 Free','100 Free','200 Free','50 Fly','100 Fly'];
@@ -2767,7 +2808,9 @@ function getTrainingLevel(){return(S.profile&&S.profile.trainingLevel)||'interme
 function getAgeGroup(){
   // Returns 'youth' (<13), 'teen' (13-15), or 'senior' (16+)
   const age=getRealAge();
-  if(age===null)return'senior'; // no DOB = assume adult
+  // No DOB → assume the youngest teen, not an adult. This app serves 11-18s, so
+  // an unknown age must fall to the conservative side, never the permissive one.
+  if(age===null)return'teen';
   if(age<13)return'youth';
   if(age<16)return'teen';
   return'senior';
@@ -4086,6 +4129,53 @@ function equipOk(exName){
   return (EQUIP_RANK[S.equipmentMode||'gym']||1)>=(EQUIP_RANK[req]||1);
 }
 
+// ── Minimum age by exercise ──
+// Gates on RISK, not on whether an exercise happens to carry load. The previous
+// filter used `!e.weighted`, which let every depth jump through to an 11-year-old
+// while stripping the light shoulder-prehab work they most need.
+//
+// Sources:
+//  · Swimming Australia — no athlete under 16 performs advanced lifts (Olympic
+//    derivatives, deadlifts, cleans, snatches); pre-growth-spurt is bodyweight only.
+//  · British Swimming Swim21 — barbell/dumbbell work introduced at Level 4 (16+),
+//    with lifting *education* and light machines from Level 3 (14-16).
+//  · NSCA Youth Resistance Training position stand — age-appropriate plyometrics
+//    are safe for youth and need NO strength prerequisite, but the documented harm
+//    case involved very high-volume repetitive jumping.
+//
+// Anything not listed here is unrestricted. Keep names EXACTLY matching EX entries.
+const EX_MIN_AGE={
+  // Advanced lifts — 16+ per Swimming Australia. Maximal axial loading and/or
+  // high technical demand requiring qualified supervision.
+  'Hang Power Clean':16,'Clean and Press':16,
+  'Conventional Deadlift':16,'Sumo Deadlift':16,'Trap Bar Deadlift':16,
+
+  // Loaded barbell patterns — 14+. Introduced with technique coaching before
+  // the advanced lifts above.
+  'Back Squat':14,'Front Squat':14,'Box Squat':14,'Pause Squat':14,'Zercher Squat':14,
+  'Good Mornings':14,'Barbell Row':14,'Bench Press':14,
+  'Romanian Deadlift':14,'Suitcase Deadlift':14,
+  'Kettlebell Swing':14,'Kettlebell Single-Arm Swing':14,
+  'Weighted Pull-Ups':14,
+
+  // High-impact plyometrics — 14+. Low-amplitude hops and countermovement jumps
+  // stay open: those are exactly what the two prepubertal swimmer RCTs used
+  // (ankle hops over a 20cm hurdle + CMJ, zero injuries at ages 10-11).
+  'Depth Jump':14,'Depth Drop':14,'Hurdle Hops':14,
+  'Box Jumps':14,'Single-Leg Box Jump':14,
+
+  // High-force eccentric — 14+.
+  'Nordic Ham Curls':14,'Glute-Ham Raise':14,
+
+  // Advanced core requiring mature spinal control — 14+.
+  'Dragon Flag':14,'Barbell Rollout':14,'Ab Wheel Rollout':14,
+  'Toes to Bar':14,'L-Sit':14,'V-Sit':14
+};
+function ageOk(exName,age){
+  const min=EX_MIN_AGE[exName];
+  return !min||age>=min;
+}
+
 // Stroke-specific filter profiles
 // priority: tags to favour | suppress: exact exercise names to exclude | mandatory: always include if in pool
 const STROKE_FILTERS={
@@ -4898,9 +4988,13 @@ function generateWorkout(forceType){
   // Age-group exercise filter: youth=bodyweight only, teen=beginner level enforced
   const effLevel=ag==='youth'?'beginner':ag==='teen'?'beginner':trainingLevel;
   function ageFilter(exArr){
-    if(ag==='youth')return exArr.filter(e=>!e.weighted&&equipOk(e.name));
-    if(ag==='teen')return exArr.filter(e=>equipOk(e.name));
-    return exArr.filter(e=>equipOk(e.name));
+    // Gate on per-exercise risk (EX_MIN_AGE), not on the `weighted` flag.
+    // Using `weighted` both under- and over-restricted: it admitted every depth
+    // jump to an 11-year-old while removing Face Pulls and Prone Y-T-W — the
+    // shoulder-health work the youngest swimmers most need.
+    const age=getRealAge();
+    const effAge=(age===null)?13:age; // unknown DOB → treat as youngest teen, not adult
+    return exArr.filter(e=>ageOk(e.name,effAge)&&equipOk(e.name));
   }
 
   // Stroke-specific mobility picks: lower body focus for breaststroke/fly, shoulder for back/free
