@@ -2,6 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Content Security Policy — defence in depth.
+     script-src must keep 'unsafe-inline': the app is built on inline onclick
+     handlers, so a strict script policy would disable the entire UI. The value
+     here is in the OTHER directives: connect-src limits where any injected code
+     could send data (only Supabase and the two food APIs — not an attacker's
+     server), object-src none and base-uri self block plugin and base-tag
+     hijacks, and frame-ancestors none prevents clickjacking. Combined with the
+     input sanitiser and output escaping, this bounds the blast radius of an XSS
+     rather than relying on any single layer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://world.openfoodfacts.org https://api.nal.usda.gov; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
   <!-- cache-bust: v123 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2458,7 +2468,52 @@ function updateUnitPickers(){
 function toggleUnits(){setWeightUnit(!S.useKg);}
 
 // Helpers
-function esc(s){return(s||'').replace(/'/g,"\\'");}
+// ── Output escaping ──
+// Two contexts, two escapers. Using the wrong one is a hole, so the names are
+// explicit about where each belongs.
+//
+// escHtml — for HTML text and double-quoted attribute values:
+//   <div>${escHtml(x)}</div>   title="${escHtml(x)}"
+// Encodes the five characters that can break out of those contexts.
+function escHtml(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+// esc — for a value placed inside a JS string literal in an inline handler:
+//   onclick="fn('${esc(x)}')"
+// A plain HTML-entity escape is NOT safe here: the HTML parser decodes entities
+// before the JS runs, so &#39; would become a real quote and break out. Instead
+// we neutralise user-supplied entities (& first), escape the JS string delimiters
+// and backslash at the JS level, encode " so it cannot close the "-delimited
+// attribute, and escape newlines that would terminate the string. The previous
+// version escaped only ' and let <, >, ", \ and entities through.
+function esc(s){
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;')
+    .replace(/\\/g,'\\\\')
+    .replace(/'/g,"\\'")
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/\r/g,'\\r')
+    .replace(/\n/g,'\\n');
+}
+// Write-boundary sanitiser for free-text the user types (meet names, food names,
+// notes, club/coach). Strips the angle brackets that enable tag injection and any
+// control characters, so no stored value can carry an HTML tag no matter which
+// render path later prints it. Runs alongside render-side escaping as defence in
+// depth — a render site that forgets to escape still cannot be made to inject.
+// Quotes, apostrophes, ampersands and unicode are preserved: "St Mary's",
+// 5'10", "Smith & Jones" all survive intact.
+function sanitizeText(s,maxLen){
+  let out=String(s==null?'':s).replace(/[<>]/g,'').replace(/[\x00-\x1F\x7F]/g,'');
+  if(maxLen&&out.length>maxLen)out=out.slice(0,maxLen);
+  return out.trim();
+}
 function tSec(t){if(!t||t==='n/a'||t===''||t==='—')return Infinity;t=t.trim();if(t.includes(':')){const[m,s]=t.split(':');return parseInt(m)*60+parseFloat(s);}return parseFloat(t);}
 function secDisp(s){if(s===Infinity)return'—';if(s<60)return s.toFixed(2);const m=Math.floor(s/60),r=(s%60).toFixed(2).padStart(5,'0');return`${m}:${r}`;}
 function gapSec(curr,tgt){const c=tSec(curr),t=tSec(tgt);if(c===Infinity||t===Infinity)return null;return c-t;}
@@ -2961,7 +3016,7 @@ function saveProfile(fromOnboarding){
   const genderEl=document.getElementById(fromOnboarding?'ob-gender':'pm-gender');
   const evContainerId=fromOnboarding?'ob-events':'pm-events';
   if(!nameEl||!dobEl||!genderEl)return;
-  const name=nameEl.value.trim();const dob=dobEl.value;const gender=genderEl.value;
+  const name=sanitizeText(nameEl.value,60);const dob=dobEl.value;const gender=genderEl.value;
   if(!name||!dob||!gender){alert('Please fill in your name, date of birth, and gender.');return;}
   if(fromOnboarding){
     // Check parental consent if block is visible
@@ -3003,7 +3058,7 @@ function saveProfile(fromOnboarding){
     const secondaryStrokeOb=document.getElementById('ob-secondary-stroke');
     const countryOb=(document.getElementById('ob-country')||{}).value||'CA';
     const provinceOb=(document.getElementById('ob-province')||{}).value||'AB';
-    S.profile={name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,preferredStandard,trainingLevel:trainingLevelOb,primaryStroke:primaryStrokeOb?primaryStrokeOb.value:'',secondaryStroke:secondaryStrokeOb?secondaryStrokeOb.value:'',country:countryOb,province:provinceOb};
+    S.profile={name,club:clubEl?sanitizeText(clubEl.value,60):'',dob,gender,primaryEvents,longTermGoals,preferredStandard,trainingLevel:trainingLevelOb,primaryStroke:primaryStrokeOb?primaryStrokeOb.value:'',secondaryStroke:secondaryStrokeOb?secondaryStrokeOb.value:'',country:countryOb,province:provinceOb};
     S.equipmentMode=equipModeOb;DB.set('equipmentMode',equipModeOb);
     // Apply preferred standard and units immediately
     S.activeStandard=preferredStandard;DB.set('activeStandard',preferredStandard);
@@ -3018,7 +3073,7 @@ function saveProfile(fromOnboarding){
     const pmSecStroke=document.getElementById('pm-secondary-stroke');
     const pmCountry=(document.getElementById('pm-country')||{}).value||(S.profile.country||'CA');
     const pmProvince=(document.getElementById('pm-province')||{}).value||(S.profile.province||'AB');
-    S.profile={...S.profile,name,club:clubEl?clubEl.value.trim():'',dob,gender,primaryEvents,longTermGoals,trainingLevel,primaryStroke:pmPrimStroke?pmPrimStroke.value:(S.profile.primaryStroke||''),secondaryStroke:pmSecStroke?pmSecStroke.value:(S.profile.secondaryStroke||''),country:pmCountry,province:pmProvince};
+    S.profile={...S.profile,name,club:clubEl?sanitizeText(clubEl.value,60):'',dob,gender,primaryEvents,longTermGoals,trainingLevel,primaryStroke:pmPrimStroke?pmPrimStroke.value:(S.profile.primaryStroke||''),secondaryStroke:pmSecStroke?pmSecStroke.value:(S.profile.secondaryStroke||''),country:pmCountry,province:pmProvince};
     // Update active standard to match new province if it was a provincial standard
     const provKeys=getProvStandardKeys();
     const validKeys=provKeys.map(k=>k.key);
@@ -6442,7 +6497,7 @@ function renderTimesContent(){
     // Programme badge — show if more than one programme exists
     const _progs=S.programmes||[];
     const _eprog=e.programmeId?_progs.find(p=>p.id===e.programmeId):null;
-    const progBadge=_progs.length>1&&_eprog?`<span style="font-size:9px;background:rgba(26,188,191,0.12);color:var(--accent);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:600;">${esc(_eprog.name.split(' ')[0])}</span>`:'';
+    const progBadge=_progs.length>1&&_eprog?`<span style="font-size:9px;background:rgba(26,188,191,0.12);color:var(--accent);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:600;">${escHtml(_eprog.name.split(' ')[0])}</span>`:'';
     return`<div class="time-entry-row">
       <div class="time-entry-date">${d}</div>
       <div class="time-entry-meet" style="flex:1;"><div>${e.meet||'—'}${isPB?'<span class="pb-badge">PB</span>':''}${gPill}${progBadge}</div>${splitStr}</div>
@@ -7858,7 +7913,7 @@ function autoMeetEndDate(){
 function addMeet(){
   const date=document.getElementById('meet-date-input').value.trim();
   const endDate=document.getElementById('meet-end-input').value.trim();
-  const name=document.getElementById('meet-name-input').value.trim();
+  const name=sanitizeText(document.getElementById('meet-name-input').value,80);
   const priority=document.getElementById('meet-priority-input').value;
   if(!date||!name)return alert('Enter start date and meet name.');
   S.meets.push({date,endDate:endDate||date,name,priority,id:Date.now()});
@@ -7894,7 +7949,7 @@ function editMeet(id){
 }
 function saveMeetEdit(){
   const id=parseInt(document.getElementById('edit-meet-id').value);
-  const name=document.getElementById('edit-meet-name').value.trim();
+  const name=sanitizeText(document.getElementById('edit-meet-name').value,80);
   const date=document.getElementById('edit-meet-date').value.trim();
   const endDate=document.getElementById('edit-meet-end').value.trim();
   const priority=document.getElementById('edit-meet-priority').value;
@@ -8409,8 +8464,8 @@ function renderCareerProgrammes(){
     const sessionCount=(S.history||[]).filter(h=>h.programmeId===currentId).length;
     const startDisp=current.startDate?new Date(current.startDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'—';
     html+=`<div style="background:var(--surface);border-radius:10px;padding:12px;border:1px solid var(--accent);margin-bottom:12px;">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;">${esc(current.name||'—')}</div>
-      ${current.country?`<div style="font-size:11px;color:var(--muted);">${esc(current.country)}${current.coachName?' · Coach: '+esc(current.coachName):''}</div>`:''}
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:2px;">${escHtml(current.name||'—')}</div>
+      ${current.country?`<div style="font-size:11px;color:var(--muted);">${escHtml(current.country)}${current.coachName?' · Coach: '+escHtml(current.coachName):''}</div>`:''}
       <div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:700;">Since ${startDisp}</div>
       <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
         <span style="background:var(--bg);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--text);">🏁 ${raceCount} races</span>
@@ -8430,8 +8485,8 @@ function renderCareerProgrammes(){
       const sd=p.startDate?new Date(p.startDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'?';
       const ed=p.endDate?new Date(p.endDate).toLocaleDateString('en-CA',{month:'short',year:'numeric'}):'?';
       html+=`<div style="background:var(--surface);border-radius:10px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);">
-        <div style="font-size:13px;font-weight:700;color:var(--text);">${esc(p.name||'—')}</div>
-        <div style="font-size:10px;color:var(--muted);">${esc(p.country||'')} · ${sd} → ${ed}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(p.name||'—')}</div>
+        <div style="font-size:10px;color:var(--muted);">${escHtml(p.country||'')} · ${sd} → ${ed}</div>
         ${p.transitionReason?`<div style="font-size:10px;color:var(--muted);margin-top:2px;">${REASON_LABELS[p.transitionReason]||p.transitionReason}</div>`:''}
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
           <span style="background:var(--bg);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--muted);">🏁 ${rc} races</span>
@@ -8455,9 +8510,9 @@ function openNewProgramme(){
 }
 
 function saveNewProgramme(){
-  const name=document.getElementById('np-name').value.trim();
-  const country=document.getElementById('np-country').value.trim();
-  const coach=document.getElementById('np-coach').value.trim();
+  const name=sanitizeText(document.getElementById('np-name').value,60);
+  const country=sanitizeText(document.getElementById('np-country').value,40);
+  const coach=sanitizeText(document.getElementById('np-coach').value,60);
   const startDate=document.getElementById('np-start').value;
   const reason=document.getElementById('np-reason').value;
   if(!name)return alert('Enter a programme or club name.');
@@ -9218,7 +9273,7 @@ function _foodRow(food,opts){
   const defaultCarbs=Math.round(food.carbs*defaultMult*10)/10;
   const defaultProt=Math.round(food.protein*defaultMult*10)/10;
   // Build serving options dropdown
-  const optionsHtml=servings.map((s,i)=>`<option value="${s.mult}" data-label="${esc(s.label)}"${i===0?'selected':''}>${s.label}</option>`).join('');
+  const optionsHtml=servings.map((s,i)=>`<option value="${s.mult}" data-label="${escHtml(s.label)}"${i===0?'selected':''}>${s.label}</option>`).join('');
   // Inline update function stored on window to avoid closure issues
   const updateFn=`_updateFoodMacro('${safeId}',${food.cal},${food.carbs},${food.protein},${food.fat})`;
   return`<div style="display:flex;flex-direction:column;padding:9px 0;border-bottom:1px solid var(--border);gap:6px;">
@@ -9271,7 +9326,7 @@ function _buildFoodPanel(){
   // Recents strip (horizontal chips) — only show when not searching
   let recentsHtml='';
   if(!q&&recents.length){
-    const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+    const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)}">${escHtml(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
     recentsHtml=`<div style="margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div>
       <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
@@ -9283,7 +9338,7 @@ function _buildFoodPanel(){
   if(!q&&favIds.length){
     const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
     if(favFoods.length){
-      const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)}">★ ${escHtml(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
       favsHtml=`<div style="margin-bottom:8px;">
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div>
         <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>
@@ -9317,7 +9372,7 @@ function _buildFoodPanel(){
   return`
     <input type="text" id="food-search-input"
       placeholder="Search foods (e.g. banana, chicken, quest bar)..."
-      value="${esc(q)}"
+      value="${escHtml(q)}"
       oninput="onFoodSearch(this.value)"
       style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:9px 12px;font-family:var(--font);margin-bottom:8px;box-sizing:border-box;">
     <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
@@ -9346,7 +9401,7 @@ function _updateFoodPanelContent(){
   const recentsEl=document.getElementById('food-recents-strip');
   if(recentsEl){
     if(!q&&recents.length){
-      const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+      const chips=recents.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)}">${escHtml(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
       recentsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">🕐 Recent</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
       recentsEl.style.display='';
     } else {
@@ -9360,7 +9415,7 @@ function _updateFoodPanelContent(){
     if(!q&&favIds.length){
       const favFoods=favIds.map(id=>resolveFood(id)).filter(Boolean);
       if(favFoods.length){
-        const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">★ ${esc(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
+        const chips=favFoods.slice(0,8).map(f=>`<button onclick="addFoodById('${f.id.replace(/'/g,"\\'")}',1)" style="flex-shrink:0;padding:5px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(255,200,0,0.08);color:var(--gold);font-size:11px;font-weight:600;cursor:pointer;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)}">★ ${escHtml(f.name.split(' ').slice(0,3).join(' '))}</button>`).join('');
         favsEl.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">★ Favourites</div><div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;">${chips}</div>`;
         favsEl.style.display='';
       }
@@ -9552,7 +9607,7 @@ function openCustomFoodModal(){
   }
 }
 function saveCustomFood(){
-  const name=document.getElementById('cf-name').value.trim();
+  const name=sanitizeText(document.getElementById('cf-name').value,60);
   const cal=parseFloat(document.getElementById('cf-cal').value)||0;
   const carbs=parseFloat(document.getElementById('cf-carbs').value)||0;
   const protein=parseFloat(document.getElementById('cf-protein').value)||0;
@@ -9652,7 +9707,7 @@ function _renderEditSlotFoods(slot){
     const q=item.qty||1;
     return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
       <div>
-        <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(food.name)}${q>1?` ×${q}`:''}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(food.name)}${q>1?` ×${q}`:''}</div>
         <div style="font-size:11px;color:var(--muted);">${Math.round(food.cal*q)} kcal · ${Math.round(food.protein*q)}g P</div>
       </div>
       <button onclick="_removeEditSlotItem(${idx})" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;">×</button>
@@ -9671,7 +9726,7 @@ function confirmEditSlot(){
   const slot=(S.savedMeals||[]).find(s=>s.id===S._editingSlotId);
   if(!slot)return;
   const nameInp=document.getElementById('edit-slot-name-input');
-  const name=nameInp?nameInp.value.trim():'';
+  const name=nameInp?sanitizeText(nameInp.value,60):'';
   if(!name){showToast('Enter a name for this slot');return;}
   slot.name=name;
   slot.mealType=S._editSlotMealType||slot.mealType||'Breakfast';
@@ -9700,7 +9755,7 @@ function openSaveMealModal(){
 
 function confirmSaveMealSlot(){
   const inp=document.getElementById('save-slot-name-input');
-  const name=inp?inp.value.trim():'';
+  const name=inp?sanitizeText(inp.value,60):'';
   if(!name){showToast('Enter a name for this meal slot');return;}
   S.mealLog=DB.get('mealLog',S.mealLog||{});
   const existing=getTodayMeals();
@@ -9734,7 +9789,7 @@ function renderSavedMealsSection(){
     return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(slot.name)}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(slot.name)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">${mealTypeLabel} · ${itemCount} food${itemCount!==1?'s':''} · ${totals.cal} kcal · ${totals.protein}g P · ${lastUsedStr}</div>
         </div>
       </div>
@@ -10414,7 +10469,7 @@ function renderPerformanceInsightsTimes(){
       const sc=(S.history||[]).filter(h=>h.programmeId===p.id).length;
       const isCurrent=p.id===S.currentProgrammeId;
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
-        <span style="font-size:11px;color:${isCurrent?'var(--accent)':'var(--muted)'};">${esc(p.name)}${isCurrent?' ●':''}</span>
+        <span style="font-size:11px;color:${isCurrent?'var(--accent)':'var(--muted)'};">${escHtml(p.name)}${isCurrent?' ●':''}</span>
         <span style="font-size:10px;color:var(--muted);">🏁 ${rc} races · 🏋️ ${sc} sessions</span>
       </div>`;
     }).join('');
@@ -10614,8 +10669,22 @@ function importData(event){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const data=JSON.parse(e.target.result);
+      let data=JSON.parse(e.target.result);
+      if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Invalid backup file.');
       if(!data.version||!data.timeHistory)throw new Error('Invalid backup file.');
+      // A backup is imported data — treat it as untrusted, exactly like typed
+      // input. It bypasses the write-boundary sanitiser by going straight to
+      // DB.set, and a crafted file could otherwise plant a script in profile.name
+      // or a meet name that executes on every load. Strip tag characters from
+      // every string in the structure. sanitizeText only removes <>/control
+      // chars, so times, dates and ids pass through unchanged.
+      const scrub=v=>{
+        if(typeof v==='string')return sanitizeText(v,5000);
+        if(Array.isArray(v))return v.map(scrub);
+        if(v&&typeof v==='object'){const o={};for(const k in v)if(Object.prototype.hasOwnProperty.call(v,k))o[k]=scrub(v[k]);return o;}
+        return v;
+      };
+      data=scrub(data);
       if(!confirm('This will replace ALL current data with the backup. Continue?'))return;
       if(data.timeHistory)DB.set('timeHistory',data.timeHistory);
       if(data.history)DB.set('history',data.history);
@@ -10865,7 +10934,7 @@ function renderSchedulePoolShortcut(){
         <div>
           <div class="card-title" style="margin-bottom:4px;">Today's Pool Session</div>
           <div style="font-size:13px;color:var(--text);">${feelEmojis[todayLog.feel]||''} ${distStr?distStr+' logged':'Logged'}</div>
-          ${todayLog.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${todayLog.notes}"</div>`:''}
+          ${todayLog.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${escHtml(todayLog.notes)}"</div>`:''}
         </div>
         <button onclick="openPoolCheckinEdit('${key}')" style="font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-family:var(--font);cursor:pointer;">Edit</button>
       </div>
@@ -10899,7 +10968,7 @@ function renderPoolLog(){
     const dStr=d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
     const distStr=e.distKm?(S.useKm?e.distKm.toFixed(1)+'km':(e.distKm*0.621371).toFixed(1)+'mi'):'';
     const timedStr=e.timedSwim?`⏱ ${e.timedEvent} ${e.timedTime}`:'';
-    const notesStr=e.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${e.notes}"</div>`:'';
+    const notesStr=e.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;">"${escHtml(e.notes)}"</div>`:'';
     return`<div style="padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
         <div style="font-size:12px;font-weight:700;color:var(--text);">${dStr}</div>
@@ -10957,7 +11026,7 @@ function savePoolCheckin(){
   const distKm=distRaw>0?(S.useKm?distRaw:distRaw*1.60934):0;
   const timedEvent=document.getElementById('pool-timed-event').value.trim();
   const timedTime=document.getElementById('pool-timed-time').value.trim();
-  const notes=document.getElementById('pool-notes-input').value.trim();
+  const notes=sanitizeText(document.getElementById('pool-notes-input').value,500);
   const entryDate=_editingPoolDate||dKey(new Date());
   const entry={
     date:entryDate,
@@ -12161,7 +12230,7 @@ function toggleCoachTag(id){
 }
 function saveMeetRaceResult(){
   const time=document.getElementById('ml-time').value.trim();
-  const notes=document.getElementById('ml-notes').value.trim();
+  const notes=sanitizeText(document.getElementById('ml-notes').value,500);
   if(!time)return alert('Enter your race time.');
   // Race Mode previously accepted ANY string here while the Times tab validated.
   // "2.05.50" for a 2:05.50 swim parsed as 2.05 seconds — an instant permanent PB
