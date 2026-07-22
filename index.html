@@ -1038,7 +1038,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 24px;"></div>
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:32px;margin-bottom:6px;">👋</div>
-      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;">Morning check-in</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;">Daily check-in</div>
       <div style="font-size:13px;color:var(--muted);">How are you feeling today? This shapes your workout load.</div>
     </div>
     <div style="margin-bottom:20px;">
@@ -1053,7 +1053,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     </div>
     <div style="margin-bottom:28px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text);">⚡ How's your body feel?</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">⚡ How does your body feel?</div>
         <div style="font-size:18px;font-weight:800;color:var(--accent);" id="sheet-readiness-val">3/5</div>
       </div>
       <input type="range" id="sheet-readiness-slider" min="1" max="5" value="3"
@@ -7401,7 +7401,8 @@ function renderTodayV2(){
         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Phase</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${escHtml((d.phase.label||'—').split(' ')[0])}</div></div>
       </div>
       <div style="text-align:center;margin-top:9px;font-family:var(--t-mono);font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t-aqua)">${d.checked?'Tap to update check-in':'Tap to log sleep &amp; readiness →'}</div>
-    </div>`;
+    </div>
+    ${d.checked?'':`<button class="t2-cta" style="margin-top:9px" onclick="event.stopPropagation();showCheckinSheet()">Log today's check-in →</button>`}`;
 
   const statRow=`<div class="t2-r3">
     <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Streak</span><span class="t2-v" style="font-size:1.3rem">${d.streak}</span></div>
@@ -7506,6 +7507,21 @@ function renderTodayV2(){
 }
 
 function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); }
+
+// Live, in-place update of the vessel + load label + check-in values as the
+// check-in sliders move — no full re-render, so the water glides rather than
+// restarting the fill animation each tick.
+function updateV2Live(){
+  const el=document.getElementById('today-v2'); if(!el||el.style.display==='none')return;
+  let m=1.0,l={label:'Standard',msg:''}; try{m=getLoadMult();l=getLoadDesc(m);}catch(e){}
+  const pct=Math.max(0.08,Math.min(0.96,(m-0.3)/1.0));
+  const lift=el.querySelector('.t2-lift'); if(lift)lift.style.transform='translateY('+(198-pct*176-10)+'px)';
+  const big=el.querySelector('.t2-read .big'); if(big)big.textContent=l.label;
+  const msg=el.querySelector('.t2-read .msg'); if(msg&&l.msg)msg.textContent=l.msg;
+  const vals=el.querySelectorAll('.t2-checkin .t2-v');
+  if(vals[0])vals[0].textContent=(typeof S.sleep==='number'?S.sleep+'h':'—');
+  if(vals[1])vals[1].textContent=(typeof S.readiness==='number'?S.readiness+'/5':'—');
+}
 
 // Single dispatch: flag ON → v2, OFF → legacy. Every home re-render routes here.
 function renderHomeDispatch(){ if(window.FLAGS&&FLAGS.v2){try{renderTodayV2();return;}catch(e){console.error('v2 render failed, falling back',e);}} renderHome(); }
@@ -7667,6 +7683,7 @@ function updateCheckin(){
   const m=getLoadMult(),l=getLoadDesc(m);
   // Re-render the home load card live as sliders move
   renderHomLoadPill();
+  if(window.FLAGS&&FLAGS.v2)updateV2Live(); // live vessel + values on the v2 Today
   // Keep sheet load rec live while open
   const slr=document.getElementById('sheet-load-rec');
   if(slr)slr.innerHTML=`<b style="color:${l.color}">${l.label}</b> — ${l.msg}`;
@@ -7738,6 +7755,9 @@ function submitCheckinSheet(){
   dismissCheckinSheet();
   // Show the load pill on home
   renderHomLoadPill();
+  // Re-render whichever home is active so the vessel, "right now" line and check-in
+  // row reflect the just-logged check-in (v2 was previously left stale here).
+  renderHomeDispatch();
 }
 function renderHomLoadPill(){
   const pill=document.getElementById('home-load-pill');
