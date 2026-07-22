@@ -12352,6 +12352,33 @@ document.getElementById('app').style.display='none';
   });
   if(dirty)DB.set('daySchedule',S.daySchedule);
 })();
+
+// Compact null/non-object debris out of the log arrays. Earlier builds left stray
+// nulls (e.g. meetRaceLog:[null,{...}], observed on a live account), and roughly a
+// dozen render paths do l.time / l.programmeId with no per-entry guard — one null
+// throws and takes renderHome down with it. Cleaning at the source fixes every one
+// of those sites at once, the same way cleanDaySchedule does above.
+(function compactLogArrays(){
+  ['meetRaceLog','meetRaces','history','poolLog','sessionRPELog','weightLog','swimKmLog','checkinHistory'].forEach(key=>{
+    const arr=S[key];
+    if(!Array.isArray(arr))return;
+    const clean=arr.filter(e=>e&&typeof e==='object');
+    if(clean.length!==arr.length){S[key]=clean;DB.set(key,clean);}
+  });
+  // timeHistory is an object of event -> array; drop null-valued event keys and
+  // null entries inside each (e.g. {"50 Free": null}, observed live).
+  const th=S.timeHistory;
+  if(th&&typeof th==='object'){
+    let dirty=false;
+    Object.keys(th).forEach(ev=>{
+      if(!Array.isArray(th[ev])){delete th[ev];dirty=true;return;}
+      const clean=th[ev].filter(e=>e&&typeof e==='object');
+      if(clean.length!==th[ev].length){th[ev]=clean;dirty=true;}
+      if(!th[ev].length){delete th[ev];dirty=true;}
+    });
+    if(dirty)DB.set('timeHistory',th);
+  }
+})();
 // The Supabase CDN script is deferred, so `supabase` is guaranteed to exist by
 // DOMContentLoaded but not during parsing. Create the client and boot from there.
 document.addEventListener('DOMContentLoaded',()=>{
