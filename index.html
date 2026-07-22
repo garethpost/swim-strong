@@ -1861,7 +1861,7 @@ function launchApp(){
   applyTheme(DB.get('appTheme','original'));
   applyClubLogo();
   checkOnboarding();
-  renderHome();
+  renderHomeDispatch();
   document.getElementById('app').style.display='';
   // Always sync to cloud on launch to ensure data is up to date
   if(_currentUser) syncToCloud();
@@ -2692,7 +2692,7 @@ function applyTheme(key){
   DB.set('appTheme',key);
   S.appTheme=key;
   renderThemePicker();
-  renderHome();
+  renderHomeDispatch();
 }
 
 function renderThemePicker(){
@@ -7175,6 +7175,257 @@ function renderHomeWeekProgress(){
    +bar('Cal target hit',calHits,daysElapsed,'var(--orange)',`${calHits} days`)
    +bar('Recovery check',checkinDays,daysElapsed,'var(--purple)',`${checkinDays} / ${daysElapsed}`);
 }
+// ════════════════════════════════════════════════════════════════════════
+//  v2 "Today" — redesigned home, flag-gated. Pure presentation: it READS the
+//  existing training logic (getLoadMult / getLoadDesc / phases / check-in) and
+//  never changes it. Lives in its own #today-v2 container so the legacy
+//  #section-home and all its stubs stay 100% intact behind the flag.
+// ════════════════════════════════════════════════════════════════════════
+
+// Theme = a clean token swap. Deep Water is default; adding a theme is just
+// another token set (fixes the old half-wired themes where hardcoded colours
+// defeated the picker). Stored separately from the legacy appTheme.
+const V2_THEMES={
+  deep:  {name:'Deep Water'},
+  noir:  {name:'Bioluminescence'},
+  tide:  {name:'Pool Deck'},
+};
+function v2Theme(){ const t=localStorage.getItem('sfp_v2theme')||'deep'; return V2_THEMES[t]?t:'deep'; }
+function setV2Theme(t){ if(V2_THEMES[t]){localStorage.setItem('sfp_v2theme',t); const el=document.getElementById('today-v2'); if(el)el.setAttribute('data-sfp-theme',t);} }
+
+function ensureV2Styles(){
+  if(document.getElementById('v2-css'))return;
+  const css=`
+  #today-v2{
+    --t-deep:#04141A;--t-surface:#0A2028;--t-raised:#123039;--t-line:#1C4550;
+    --t-aqua:#3DE0C8;--t-aqua-d:#1F8C7E;--t-gold:#F5B544;--t-violet:#A98BFF;--t-red:#FF6B5B;
+    --t-ink:#EAF6F5;--t-ink2:#A6C3C6;--t-mute:#6E8D95;
+    --t-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+    position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    background:var(--t-deep);color:var(--t-ink);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+    padding:0 0 90px;display:none;
+  }
+  #today-v2[data-sfp-theme="noir"]{--t-deep:#000;--t-surface:#0A0E11;--t-raised:#12181C;--t-line:#20282E;--t-aqua:#2BF5D6;--t-aqua-d:#159C86;}
+  #today-v2[data-sfp-theme="tide"]{--t-deep:#EDF2F1;--t-surface:#FFF;--t-raised:#F2F6F5;--t-line:#D6E0DE;--t-aqua:#0C8574;--t-aqua-d:#7FD0C2;--t-gold:#B07C10;--t-violet:#6A4FD0;--t-ink:#072027;--t-ink2:#3A555C;--t-mute:#6A8189;}
+  #today-v2 .t2-body{padding:calc(env(safe-area-inset-top) + 14px) 16px 16px;display:flex;flex-direction:column;gap:11px;max-width:520px;margin:0 auto;}
+  #today-v2 .t2-vh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:2px 2px 4px;}
+  #today-v2 .t2-vh h2{margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-.03em;line-height:1.1;}
+  #today-v2 .t2-vh .s{font-family:var(--t-mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-mute);margin-top:3px;}
+  #today-v2 .t2-th{flex-shrink:0;background:none;border:1px solid var(--t-line);color:var(--t-mute);border-radius:999px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;font-size:14px;}
+  #today-v2 .t2-tile{background:var(--t-surface);border:1px solid var(--t-line);border-radius:16px;padding:13px;display:flex;flex-direction:column;gap:8px;}
+  #today-v2 .t2-lbl{font-family:var(--t-mono);font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;color:var(--t-mute);}
+  #today-v2 .t2-v{font-family:var(--t-mono);font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-.03em;line-height:1;}
+  #today-v2 .t2-nt{font-size:.76rem;line-height:1.45;color:var(--t-ink2);margin:0;}
+  #today-v2 .t2-r3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+  #today-v2 .t2-chip{display:inline-flex;align-self:flex-start;font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid currentColor;}
+  #today-v2 .t2-chip.g{color:var(--t-aqua);} #today-v2 .t2-chip.w{color:var(--t-gold);} #today-v2 .t2-chip.v{color:var(--t-violet);}
+  #today-v2 .t2-bar{height:5px;border-radius:3px;background:var(--t-line);overflow:hidden;}
+  #today-v2 .t2-bar i{display:block;height:100%;border-radius:3px;background:var(--t-aqua);}
+  #today-v2 .t2-vessel{position:relative;display:grid;place-items:center;width:190px;margin:2px auto 0;}
+  #today-v2 .t2-vessel svg{width:100%;display:block;}
+  #today-v2 .t2-lift{transition:transform 1.1s cubic-bezier(.22,1,.36,1);}
+  #today-v2 .t2-wave{animation:t2drift 8s linear infinite;}
+  @keyframes t2drift{from{transform:translateX(0);}to{transform:translateX(-108px);}}
+  @media (prefers-reduced-motion:reduce){#today-v2 .t2-wave{animation:none;} #today-v2 .t2-lift{transition:none;}}
+  #today-v2 .t2-read{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;pointer-events:none;text-align:center;text-shadow:0 1px 6px rgba(2,10,14,.55);}
+  #today-v2 .t2-read .k{font-family:var(--t-mono);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--t-ink);opacity:.85;}
+  #today-v2 .t2-read .big{font-size:1.85rem;font-weight:800;letter-spacing:-.03em;color:#fff;margin-top:5px;}
+  #today-v2 .t2-read .msg{font-family:var(--t-mono);font-size:.58rem;letter-spacing:.03em;color:var(--t-ink);opacity:.92;margin-top:6px;max-width:16ch;}
+  #today-v2[data-sfp-theme="tide"] .t2-read{text-shadow:0 1px 6px rgba(255,255,255,.6);}
+  #today-v2[data-sfp-theme="tide"] .t2-read .big{color:var(--t-ink);}
+  #today-v2 .t2-tap{cursor:pointer;}
+  #today-v2 .t2-cta{padding:12px;border-radius:12px;background:var(--t-aqua);color:var(--t-deep);font-size:.86rem;font-weight:750;text-align:center;border:none;width:100%;font-family:inherit;cursor:pointer;}
+  `;
+  const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
+}
+
+// Gather everything the Today screen shows, defensively — any missing datum
+// degrades to a sensible empty state rather than throwing.
+function v2Data(){
+  const now=new Date();
+  const h=now.getHours();
+  const first=(S.profile&&S.profile.name)?S.profile.name.split(' ')[0]:'';
+  const greet=(h<12?'Morning':h<17?'Afternoon':'Evening')+(first?', '+first:'')+'.';
+
+  // Phase (calendar-derived, same as legacy header)
+  let phase={label:'',detail:''};
+  try{ const p=getSeasonPhaseFromDates(); if(p)phase=p; }catch(e){}
+
+  // Today's load
+  let mult=1.0,load={label:'Standard',msg:''};
+  try{ mult=getLoadMult(); load=getLoadDesc(mult); }catch(e){}
+
+  // Check-in
+  let checked=false; try{ checked=hasCheckedInToday(); }catch(e){}
+  const sleep=(typeof S.sleep==='number')?S.sleep:null;
+  const readiness=(typeof S.readiness==='number')?S.readiness:null;
+
+  // Streak (reused verbatim from legacy renderHome)
+  let streak=0;
+  try{
+    const days=new Set((S.history||[]).map(x=>{const d=new Date(x.date);d.setHours(0,0,0,0);return d.getTime();}));
+    const t2=new Date();t2.setHours(0,0,0,0);
+    const off=days.has(t2.getTime())?0:1;
+    for(let i=off;i<365;i++){const c=new Date(t2);c.setDate(t2.getDate()-i);if(days.has(c.getTime()))streak++;else break;}
+  }catch(e){}
+
+  // Next meet
+  let meet=null;
+  try{
+    const today=new Date();today.setHours(0,0,0,0);
+    const up=(S.meets||[]).filter(m=>m&&m.date).slice().sort((a,b)=>localDate(a.date)-localDate(b.date))
+      .find(m=>localDate(m.endDate||m.date)>=today);
+    if(up){const dO=Math.round((localDate(up.date)-today)/86400000);meet={name:up.name,days:dO,priority:up.priority};}
+  }catch(e){}
+
+  // Season km
+  let km=0; try{ km=(S.poolLog||[]).reduce((a,e)=>a+((e&&e.distKm)||0),0); }catch(e){}
+  const kmGoal=S.kmYearGoal||(S.useKm?500:300);
+
+  // Today's session label
+  let session='';
+  try{
+    const codes=getSessionsForDate(now)||[];
+    if(codes.length){
+      session=codes.map(c=>String(c).replace(/^dry_/,'').replace(/^swim_/,'Swim ').replace(/^oos_/,'').replace(/_/g,' ')).join(' + ');
+      session=session.replace(/\b\w/g,ch=>ch.toUpperCase());
+    }
+  }catch(e){}
+
+  // Chasing: gap to standard for the main event
+  let chase=null;
+  try{
+    const ev=(S.profile&&S.profile.primaryEvents&&S.profile.primaryEvents[0])||null;
+    if(ev){
+      const best=getBest(ev,'lcm'); const std=getStandard(ev,'lcm');
+      if(best&&best.lcm&&best.lcm!=='—'&&std){
+        const g=gapSec(best.lcm,std);
+        if(g!=null)chase={ev,pb:best.lcm,std,gap:g};
+      }
+    }
+  }catch(e){}
+
+  // Fuel
+  let fuel=null;
+  try{
+    const key=dKey(now); const tgt=getDailyCalFromSchedule(key);
+    if(tgt&&tgt.cal){
+      let cal=0,pro=0,carb=0;
+      (S.mealLog&&S.mealLog[key]||[]).forEach(m=>{const f=resolveFood(m.foodId);const mac=entryMacros(m,f);if(mac){cal+=mac.cal||0;pro+=mac.protein||0;carb+=mac.carbs||0;}});
+      fuel={cal:Math.round(cal),calT:Math.round(tgt.cal),pro:Math.round(pro),proT:Math.round(tgt.protein||0),carb:Math.round(carb),carbT:Math.round(tgt.carbs||0)};
+    }
+  }catch(e){}
+
+  return {greet,phase,mult,load,checked,sleep,readiness,streak,meet,km,kmGoal,session,chase,fuel,uKm:S.useKm};
+}
+
+function renderTodayV2(){
+  ensureV2Styles();
+  let el=document.getElementById('today-v2');
+  if(!el){ el=document.createElement('div'); el.id='today-v2';
+    const c=document.getElementById('content'); (c||document.body).appendChild(el); }
+  el.setAttribute('data-sfp-theme', v2Theme());
+  document.getElementById('header').style.display='none';
+  const sh=document.getElementById('section-home'); if(sh)sh.style.display='none';
+  el.style.display='block';
+
+  const d=v2Data();
+  const hard=(d.load.label==='Hard'||d.load.label==='Maximum');
+  const accent=hard?'var(--t-gold)':'var(--t-aqua)';
+  // Load → water level. getLoadMult ∈ [0.3,1.3]; full tank = a maximum day.
+  const pct=Math.max(0.08,Math.min(0.96,(d.mult-0.3)/1.0));
+  const waterTopY=198-pct*176;           // circle spans y 22..198 (cy110 r88)
+  const liftY=waterTopY-10;              // wave surface sits at y=10 in its group
+
+  const phaseLine=[d.phase.label,d.phase.detail].filter(Boolean).join(' · ')||'—';
+  const dayName=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+
+  const checkRow = d.checked
+    ? `<div class="t2-r3" style="width:100%;margin-top:2px">
+         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Sleep</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${d.sleep!=null?d.sleep+'h':'—'}</div></div>
+         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Readiness</div><div class="t2-v" style="font-size:.95rem;margin-top:4px;color:var(--t-aqua)">${d.readiness!=null?d.readiness+'/5':'—'}</div></div>
+         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Phase</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${escHtml((d.phase.label||'—').split(' ')[0])}</div></div>
+       </div>`
+    : `<button class="t2-cta" style="margin-top:6px" onclick="showCheckinSheet()">Log today's check-in →</button>`;
+
+  const statRow=`<div class="t2-r3">
+    <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Streak</span><span class="t2-v" style="font-size:1.3rem">${d.streak}</span></div>
+    <div class="t2-tile t2-tap" style="padding:11px;gap:5px;align-items:flex-start" onclick="showSection('schedule')"><span class="t2-lbl">Next meet</span><span class="t2-v" style="font-size:1.3rem;color:var(--t-violet)">${d.meet?d.meet.days+'<small style="font-size:.6rem">d</small>':'—'}</span></div>
+    <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Season</span><span class="t2-v" style="font-size:1.3rem">${d.km.toFixed(0)}<small style="font-size:.6rem">${d.uKm?'km':'mi'}</small></span></div>
+  </div>`;
+
+  const sessionTile=`<div class="t2-tile">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="t2-lbl">Today · ${dayName}</span>${d.session?`<span class="t2-chip w">${escHtml(d.session.length>22?d.session.slice(0,22)+'…':d.session)}</span>`:''}</div>
+    <div style="font-size:.95rem;font-weight:700">${d.session?escHtml(d.session):'Rest day'}</div>
+    <div class="t2-bar"><i style="width:0%"></i></div>
+    <p class="t2-nt">Tap Train to start your session</p>
+  </div>`;
+
+  const chaseTile = d.chase ? `<div class="t2-tile t2-tap" onclick="showSection('times')" style="border-color:var(--t-aqua-d)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">Chasing · ${escHtml(d.chase.ev)}</span><span class="t2-v" style="font-size:.78rem;color:${d.chase.gap<=0?'var(--t-aqua)':'var(--t-gold)'}">${d.chase.gap<=0?'qualified ✓':(d.chase.gap>0?'−':'')+Math.abs(d.chase.gap).toFixed(2)+'s'}</span></div>
+    <p class="t2-nt" style="font-size:.7rem">PB <span class="t2-v" style="font-size:.7rem">${escHtml(d.chase.pb)}</span> · standard <span class="t2-v" style="font-size:.7rem">${escHtml(d.chase.std)}</span></p>
+  </div>` : '';
+
+  const fuelTile = d.fuel ? `<div class="t2-tile t2-tap" onclick="showSection('fuel')">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">Fuel</span><span class="t2-v" style="font-size:.74rem;color:var(--t-mute)">${d.fuel.cal} / ${d.fuel.calT} kcal</span></div>
+    <div class="t2-r3" style="gap:8px">
+      <div><div class="t2-bar"><i style="width:${Math.min(100,d.fuel.cal/d.fuel.calT*100)}%"></i></div><p class="t2-nt" style="margin-top:5px;font-size:.62rem">Calories</p></div>
+      <div><div class="t2-bar"><i style="width:${d.fuel.proT?Math.min(100,d.fuel.pro/d.fuel.proT*100):0}%;background:var(--t-gold)"></i></div><p class="t2-nt" style="margin-top:5px;font-size:.62rem">${d.fuel.pro}/${d.fuel.proT}g P</p></div>
+      <div><div class="t2-bar"><i style="width:${d.fuel.carbT?Math.min(100,d.fuel.carb/d.fuel.carbT*100):0}%;background:var(--t-violet)"></i></div><p class="t2-nt" style="margin-top:5px;font-size:.62rem">${d.fuel.carb}/${d.fuel.carbT}g C</p></div>
+    </div>
+  </div>` : '';
+
+  const meetTile = d.meet ? `<div class="t2-tile" style="border-color:var(--t-violet);border-style:dashed">
+    <span class="t2-lbl" style="color:var(--t-violet)">Coming up</span>
+    <p class="t2-nt"><b style="color:var(--t-ink)">${escHtml(d.meet.name)}</b> — ${d.meet.days} day${d.meet.days===1?'':'s'} away${d.meet.priority?` · ${escHtml(d.meet.priority)}-meet`:''}.</p>
+  </div>` : '';
+
+  el.innerHTML=`<div class="t2-body">
+    <div class="t2-vh">
+      <div><h2>${escHtml(d.greet)}</h2><div class="s">${escHtml(phaseLine)}</div></div>
+      <button class="t2-th" onclick="cycleV2Theme()" title="Theme" aria-label="Change theme">◑</button>
+    </div>
+
+    <div class="t2-tile" style="align-items:center;padding:16px 12px;gap:8px;border-color:${hard?'var(--t-gold)':'var(--t-line)'}">
+      <div class="t2-vessel">
+        <svg viewBox="0 0 220 220" role="img" aria-label="Today's load: ${escHtml(d.load.label)}">
+          <defs>
+            <clipPath id="t2clip"><circle cx="110" cy="110" r="88"/></clipPath>
+            <linearGradient id="t2water" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${accent}" stop-opacity=".95"/>
+              <stop offset="100%" stop-color="var(--t-aqua-d)" stop-opacity=".72"/>
+            </linearGradient>
+          </defs>
+          <circle cx="110" cy="110" r="88" fill="var(--t-raised)"/>
+          <g clip-path="url(#t2clip)">
+            <g class="t2-lift" style="transform:translateY(200px)" data-lift="${liftY}">
+              <g class="t2-wave"><path fill="url(#t2water)" d="M0,10 q27,-12 54,0 t54,0 t54,0 t54,0 t54,0 t54,0 V240 H0 Z"/></g>
+            </g>
+          </g>
+          <circle cx="110" cy="110" r="88" fill="none" stroke="var(--t-line)" stroke-width="1.5"/>
+        </svg>
+        <div class="t2-read"><span class="k">Today's load</span><span class="big">${escHtml(d.load.label)}</span>${d.load.msg?`<span class="msg">${escHtml(d.load.msg)}</span>`:''}</div>
+      </div>
+      ${checkRow}
+    </div>
+
+    ${statRow}
+    ${sessionTile}
+    ${chaseTile}
+    ${fuelTile}
+    ${meetTile}
+  </div>`;
+
+  // Fill the vessel after paint (empty → today's level) for the settle animation.
+  requestAnimationFrame(()=>{ const lift=el.querySelector('.t2-lift'); if(lift)lift.style.transform='translateY('+lift.getAttribute('data-lift')+'px)'; });
+}
+
+function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); }
+
+// Single dispatch: flag ON → v2, OFF → legacy. Every home re-render routes here.
+function renderHomeDispatch(){ if(window.FLAGS&&FLAGS.v2){try{renderTodayV2();return;}catch(e){console.error('v2 render failed, falling back',e);}} renderHome(); }
+
 function renderHome(){
   const h=new Date().getHours();
   const firstName=S.profile&&S.profile.name?S.profile.name.split(' ')[0]:'';
@@ -8386,7 +8637,7 @@ function activateOffSeason(){
   DB.set('daySchedule',S.daySchedule);
   renderOffSeasonCard();
   renderCalendar();
-  renderHome();
+  renderHomeDispatch();
   alert('✅ Off-season plan activated!\n\n'+result.phases.map(p=>`${p.name}: ${p.weeks} week${p.weeks>1?'s':''}`).join('\n')+'\n\nCalendar updated. Workout tab will reflect off-season phases.');
 }
 
@@ -8401,7 +8652,7 @@ function deactivateOffSeason(){
   DB.set('offSeason',S.offSeason);
   renderOffSeasonCard();
   renderCalendar();
-  renderHome();
+  renderHomeDispatch();
 }
 
 function saveNextSeasonStart(){
@@ -10601,7 +10852,7 @@ function adjustWeek(d){
   DB.set('programWeek',S.programWeek);
   document.getElementById('week-display').textContent=S.programWeek;
   document.getElementById('cycle-display').textContent=S.programCycle||1;
-  renderHome();
+  renderHomeDispatch();
 }
 function updateKmTarget(){
   const inp=document.getElementById('km-target-input');
@@ -11079,7 +11330,7 @@ function savePoolCheckin(){
     DB.set('poolLoadToday',S.poolLoadToday);
   }
   closeModal('pool-checkin-modal');
-  renderHome();
+  renderHomeDispatch();
   if(document.getElementById('section-schedule')&&document.getElementById('section-schedule').classList.contains('active')){
     renderSchedulePoolShortcut();
   }
@@ -12344,7 +12595,12 @@ function showSection(name){
   document.getElementById('section-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   // unit-btn removed — units live in More > Settings
-  if(name==='home')renderHome();
+  // v2: hide the app header + legacy home while the redesigned Today is active
+  const _v2=window.FLAGS&&FLAGS.v2;
+  const _hdr=document.getElementById('header'); if(_hdr)_hdr.style.display=(name==='home'&&_v2)?'none':'';
+  const _tv2=document.getElementById('today-v2'); if(_tv2)_tv2.style.display=(name==='home'&&_v2)?'block':'none';
+  const _sh=document.getElementById('section-home'); if(_sh&&_v2&&name!=='home')_sh.style.display='';
+  if(name==='home')renderHomeDispatch();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
   if(name==='schedule'){
     renderMeetDayBanner(); // drives race mode vs normal mode toggle
@@ -12367,6 +12623,19 @@ function showSection(name){
 // INIT — hide app until auth completes, then bootAuth() takes over
 // Apply saved theme immediately so there's no flash of default on load/logout
 (function(){const t=localStorage.getItem('appTheme');if(t){try{const parsed=JSON.parse(t);if(parsed&&THEMES[parsed])applyTheme(parsed);}catch(e){if(THEMES[t])applyTheme(t);}}})();
+
+// ── v2 redesign feature flag ──
+// ?v2 (or ?v2=1) turns the redesigned Today screen on and remembers it; ?v2=0
+// turns it back off. Read at parse time so FLAGS.v2 is set before the first render.
+// The rest of the app is untouched while the flag is off.
+window.FLAGS = window.FLAGS || {};
+(function(){
+  try{
+    const p=new URLSearchParams(location.search);
+    if(p.has('v2'))localStorage.setItem('sfp_v2', p.get('v2')==='0'?'0':'1');
+  }catch(e){}
+  FLAGS.v2 = localStorage.getItem('sfp_v2')==='1';
+})();
 document.getElementById('app').style.display='none';
 // Deduplicate any daySchedule entries that have repeated session types (stale off-season data)
 (function cleanDaySchedule(){
