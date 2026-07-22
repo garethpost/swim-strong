@@ -7391,13 +7391,17 @@ function renderTodayV2(){
   const phaseLine=[d.phase.label,d.phase.detail].filter(Boolean).join(' · ')||'—';
   const dayName=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
 
-  const checkRow = d.checked
-    ? `<div class="t2-r3" style="width:100%;margin-top:2px">
-         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Sleep</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${d.sleep!=null?d.sleep+'h':'—'}</div></div>
-         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Readiness</div><div class="t2-v" style="font-size:.95rem;margin-top:4px;color:var(--t-aqua)">${d.readiness!=null?d.readiness+'/5':'—'}</div></div>
-         <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Phase</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${escHtml((d.phase.label||'—').split(' ')[0])}</div></div>
-       </div>`
-    : `<button class="t2-cta" style="margin-top:6px" onclick="showCheckinSheet()">Log today's check-in →</button>`;
+  // Check-in row is ALWAYS present and ALWAYS tappable — the way Whoop/Oura keep
+  // your inputs visible. Shows values once logged, em-dashes with a tap hint until
+  // then. Tapping anywhere on it opens the existing check-in sheet.
+  const checkRow = `<div class="t2-checkin t2-tap" onclick="showCheckinSheet()" style="width:100%;margin-top:4px;border-top:1px solid var(--t-line);padding-top:11px">
+      <div class="t2-r3">
+        <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Sleep</div><div class="t2-v" style="font-size:.95rem;margin-top:4px;color:${d.sleep!=null?'var(--t-ink)':'var(--t-mute)'}">${d.sleep!=null?d.sleep+'h':'—'}</div></div>
+        <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Readiness</div><div class="t2-v" style="font-size:.95rem;margin-top:4px;color:${d.readiness!=null?'var(--t-aqua)':'var(--t-mute)'}">${d.readiness!=null?d.readiness+'/5':'—'}</div></div>
+        <div style="text-align:center"><div class="t2-lbl" style="font-size:.5rem">Phase</div><div class="t2-v" style="font-size:.95rem;margin-top:4px">${escHtml((d.phase.label||'—').split(' ')[0])}</div></div>
+      </div>
+      <div style="text-align:center;margin-top:9px;font-family:var(--t-mono);font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t-aqua)">${d.checked?'Tap to update check-in':'Tap to log sleep &amp; readiness →'}</div>
+    </div>`;
 
   const statRow=`<div class="t2-r3">
     <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Streak</span><span class="t2-v" style="font-size:1.3rem">${d.streak}</span></div>
