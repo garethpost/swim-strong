@@ -1877,10 +1877,13 @@ async function bootAuth(){
     // Pull fresh cloud data on every boot
     await syncFromCloud();
     reloadStateFromStorage();
-    // Repair AFTER the pull. Anything fixed before it would simply be overwritten
-    // by the untagged cloud row. The DB.set calls inside mark state dirty, so the
-    // repaired data is pushed back up on the next scheduled sync.
-    if(repairProgrammeTags()>0)reloadStateFromStorage();
+    // Both of these run AFTER the pull. The cloud blob can carry the same debris
+    // and stale tags the parse-time passes just cleaned locally, so cleaning only
+    // before the pull lets it slip back in before renderHome reads it. Compaction
+    // first — it removes the null entries that would otherwise crash renderHome.
+    let _mutated=compactLogArrays()>0;
+    if(repairProgrammeTags()>0)_mutated=true;
+    if(_mutated)reloadStateFromStorage();
     launchApp();
   } else {
     showAuthScreen();
@@ -12358,12 +12361,18 @@ document.getElementById('app').style.display='none';
 // dozen render paths do l.time / l.programmeId with no per-entry guard — one null
 // throws and takes renderHome down with it. Cleaning at the source fixes every one
 // of those sites at once, the same way cleanDaySchedule does above.
-(function compactLogArrays(){
+// Returns the number of null/debris entries removed. Must run at parse time (for
+// the signed-out case) AND after syncFromCloud() in bootAuth — a cloud blob that
+// still carries the debris is pulled over localStorage after the parse-time pass,
+// so cleaning only once at parse time lets the null slip back in before renderHome
+// reads it. Same ordering trap as repairProgrammeTags().
+function compactLogArrays(){
+  let removed=0;
   ['meetRaceLog','meetRaces','history','poolLog','sessionRPELog','weightLog','swimKmLog','checkinHistory'].forEach(key=>{
     const arr=S[key];
     if(!Array.isArray(arr))return;
     const clean=arr.filter(e=>e&&typeof e==='object');
-    if(clean.length!==arr.length){S[key]=clean;DB.set(key,clean);}
+    if(clean.length!==arr.length){removed+=arr.length-clean.length;S[key]=clean;DB.set(key,clean);}
   });
   // timeHistory is an object of event -> array; drop null-valued event keys and
   // null entries inside each (e.g. {"50 Free": null}, observed live).
@@ -12373,12 +12382,14 @@ document.getElementById('app').style.display='none';
     Object.keys(th).forEach(ev=>{
       if(!Array.isArray(th[ev])){delete th[ev];dirty=true;return;}
       const clean=th[ev].filter(e=>e&&typeof e==='object');
-      if(clean.length!==th[ev].length){th[ev]=clean;dirty=true;}
+      if(clean.length!==th[ev].length){removed+=th[ev].length-clean.length;th[ev]=clean;dirty=true;}
       if(!th[ev].length){delete th[ev];dirty=true;}
     });
     if(dirty)DB.set('timeHistory',th);
   }
-})();
+  return removed;
+}
+compactLogArrays(); // parse-time pass (covers the signed-out / no-pull case)
 // The Supabase CDN script is deferred, so `supabase` is guaranteed to exist by
 // DOMContentLoaded but not during parsing. Create the client and boot from there.
 document.addEventListener('DOMContentLoaded',()=>{
