@@ -4656,9 +4656,17 @@ function getSwapFor(exName){
     (S.history.slice(-4)||[])
       .flatMap(h=>(h.blocks||[]).flatMap(b=>(b.exercises||[]).map(e=>e.name)))
   );
-  // Find from EX library by name
+  // Find from EX library by name, but only offer swaps the swimmer can actually
+  // perform: equipment-available and age-appropriate. Previously any named
+  // alternative was offered, so a bodyweight day could suggest a dumbbell press
+  // and a 13-year-old could be swapped onto a barbell deadlift.
+  const _a=getRealAge();
+  const _effAge=(_a===null)?13:_a;
   const allEx=[...EX.warmup,...EX.lower,...EX.upper,...EX.core,...EX.plyos,...EX.mobility,...EX.cardio];
-  const findEx=name=>allEx.find(e=>e.name===name);
+  const findEx=name=>{
+    const ex=allEx.find(e=>e.name===name);
+    return (ex&&equipOk(ex.name)&&ageOk(ex.name,_effAge))?ex:null;
+  };
   // Tier 1: not in workout, not recent
   for(const alt of alts){
     if(!inWorkout.has(alt)&&!recent.has(alt)){const ex=findEx(alt);if(ex)return ex;}
@@ -8695,11 +8703,15 @@ function generateOffSeasonWorkout(forceType){
 
   if(dayType==='lower'){
     let pool=[...EX.lower];
-    // Remove Nordic from general pool — we'll mandate it separately for sprinters
-    const poolNoNordic=pool.filter(e=>e.name!=='Nordic Ham Curls');
-    if(emphasisNames.length)poolNoNordic.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
+    // Remove Nordic from general pool — we'll mandate it separately for sprinters.
+    // Filter for equipment + age BEFORE pickFresh: filtering after (the old order)
+    // let pickFresh choose from the full pool and then stripped unavailable ones,
+    // so a bodyweight or youth block could come back short or empty. (The broken
+    // emphasisNames sort — non-transitive and immediately reshuffled by pickFresh —
+    // was removed; emphasis weighting is a training-engine concern, not this sort.)
+    const poolNoNordic=filterAvailable(pool.filter(e=>e.name!=='Nordic Ham Curls'));
     const mainCount=isHypertrophy||isStrength?4:3;
-    const exs=filterByEquipment(pickFresh(poolNoNordic,mainCount)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+    const exs=pickFresh(poolNoNordic,mainCount).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
 
     // ── Nordic Ham Curl mandate for sprint swimmers ──
     // Eccentric hamstring loading is non-negotiable in lower sessions for sprinters.
@@ -8720,10 +8732,10 @@ function generateOffSeasonWorkout(forceType){
     blocks.push({title:'Core Finisher',exercises:pickFresh(EX.core||[],isHypertrophy||isStrength?3:2)});
 
   } else if(dayType==='upper'){
-    let pool=[...EX.upper];
-    if(emphasisNames.length)pool.sort((a,b)=>emphasisNames.includes(b.name)?1:-1);
+    // Equipment + age filtered before pickFresh (see Lower block for rationale).
+    const pool=filterAvailable([...EX.upper]);
     const mainCount=isHypertrophy||isStrength?4:3;
-    const exs=filterByEquipment(pickFresh(pool,mainCount)).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
+    const exs=pickFresh(pool,mainCount).map(e=>({...e,sets:scheme.sets,detail:`${scheme.sets}×${scheme.reps}`}));
 
     const blockNote=isHypertrophy
       ?`${scheme.note} Rest ${scheme.rest} between sets.`
@@ -8756,8 +8768,12 @@ function generateOffSeasonWorkout(forceType){
     }
 
   } else if(dayType==='power'){
-    const pool=filterByEquipment(EX.plyos||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
-    const exs=pickFresh(pool.length?pool:EX.lower,4).map(e=>({...e,sets:4,detail:'4×4-5 explosive'}));
+    // Equipment + age filtered. The fallback is also filtered — the old fallback
+    // to raw EX.lower would serve gym/age-inappropriate lifts to a bodyweight or
+    // youth athlete when the primary pool came back empty.
+    const pool=filterAvailable(EX.plyos||EX.lower.filter(e=>e.tags&&e.tags.includes('explosive')));
+    const fallback=filterAvailable(EX.lower);
+    const exs=pickFresh(pool.length?pool:fallback,4).map(e=>({...e,sets:4,detail:'4×4-5 explosive'}));
     blocks.push({
       title:'Specific Prep — Power',
       desc:'Explosive intent on every rep. Bar speed is the goal, not load. Full 2-3 min rest between sets — power output degrades with fatigue.',
@@ -8781,14 +8797,22 @@ function generateOffSeasonWorkout(forceType){
   };
 }
 
+// Delegates to equipOk so there is one source of truth. The old local rank map
+// had no 'bodyweight' key — the picker stores 'bodyweight', so rank['bodyweight']
+// was undefined and fell back to gym, serving barbell exercises to a swimmer who
+// chose Bodyweight Only. equipOk's EQUIP_RANK handles both 'bw' and 'bodyweight'.
 function filterByEquipment(arr){
-  const mode=S.equipmentMode||'gym';
-  const rank={bw:1,minimal:2,gym:3};
-  const modeRank=rank[mode]||3;
-  return arr.filter(e=>{
-    const req=EX_EQUIP[e.name]||'bw';
-    return rank[req]<=modeRank;
-  });
+  return arr.filter(e=>equipOk(e.name));
+}
+
+// Equipment + age in one pass, matching the in-season ageFilter policy: unknown
+// DOB is treated as the youngest teen (13), never as an adult. The off-season
+// generator previously filtered equipment only, so it served age-inappropriate
+// lifts (deadlifts, high-impact plyos) to youth that the in-season path blocks.
+function filterAvailable(arr){
+  const a=getRealAge();
+  const effAge=(a===null)?13:a;
+  return arr.filter(e=>equipOk(e.name)&&ageOk(e.name,effAge));
 }
 
 // ── Home tab off-season phase display ──
