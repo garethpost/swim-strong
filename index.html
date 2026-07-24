@@ -7340,24 +7340,37 @@ function v2Data(){
   else if(doneToday) rightNow={txt:'Session done today — nice work',act:null,tone:'done'};
   else rightNow={txt:'Your '+session+' is ready',act:'train',tone:'do'};
 
-  // Weekly consistency (Mon–Sun): scheduled training days vs completed. Counts a day
-  // done if it has a logged dryland session OR a pool check-in — broad, per the
-  // research that a weekly, broadly-defined target retains better than a daily streak.
+  // Weekly consistency (Mon–Sun): ALL sessions, swim + dryland, counted N of X.
+  // X = sessions the schedule plans this week (the Schedule tab makes this reliable,
+  // including doubles). N = completed: dryland auto-counts (logged in-app), swims
+  // count from pool check-ins. When no schedule exists we fall back to a plain
+  // count of logged sessions (see hasSchedule). A weekly, forgiving target retains
+  // better than a daily streak that a coached programme breaks on rest days.
   const week=(()=>{
     const t=new Date();t.setHours(0,0,0,0);
     const dow=(t.getDay()+6)%7; const mon=new Date(t); mon.setDate(t.getDate()-dow);
-    const hist=new Set((S.history||[]).map(x=>{const d=new Date(x.date);d.setHours(0,0,0,0);return d.getTime();}));
-    const pool=new Set((S.poolLog||[]).map(p=>p&&p.date).filter(Boolean));
-    const days=[]; let planned=0,done=0;
+    // completions per day: dryland from history, swims from pool check-ins
+    const dryByDay={}; (S.history||[]).forEach(x=>{if(!x||!x.date)return;const d=new Date(x.date);d.setHours(0,0,0,0);dryByDay[d.getTime()]=(dryByDay[d.getTime()]||0)+1;});
+    const swimByDay={}; (S.poolLog||[]).forEach(p=>{if(!p||!p.date)return;swimByDay[p.date]=(swimByDay[p.date]||0)+1;});
+    const days=[]; let planned=0,done=0,hasSchedule=false,logged=0;
     for(let i=0;i<7;i++){
-      const d=new Date(mon); d.setDate(mon.getDate()+i);
+      const d=new Date(mon); d.setDate(mon.getDate()+i); const k=d.getTime(); const dk=dKey(d);
       let codes=[]; try{codes=getSessionsForDate(d)||[];}catch(e){}
-      const training=codes.length && !codes.every(c=>/rest/i.test(String(c)));
-      const isDone=hist.has(d.getTime())||pool.has(dKey(d));
-      if(training)planned++; if(training&&isDone)done++;
-      days.push({training,done:isDone, today:d.getTime()===t.getTime(), future:d.getTime()>t.getTime()});
+      const sess=codes.filter(c=>!/rest/i.test(String(c)));
+      const swimsP=sess.filter(c=>/swim/i.test(String(c))).length;
+      const dryP=sess.length-swimsP;
+      const swimsD=Math.min(swimsP, swimByDay[dk]||0);
+      const dryD=Math.min(dryP, dryByDay[k]||0);
+      const dayP=sess.length, dayD=swimsD+dryD;
+      if(dayP>0)hasSchedule=true;
+      planned+=dayP; done+=dayD;
+      logged+=(dryByDay[k]||0)+(swimByDay[dk]||0);
+      days.push({planned:dayP, done:dayD,
+        complete:dayP>0&&dayD>=dayP, partial:dayD>0&&dayD<dayP,
+        today:k===t.getTime(), future:k>t.getTime(),
+        swimPending:k===t.getTime()&&swimsP>swimsD});
     }
-    return {planned,done,days};
+    return {planned,done,days,hasSchedule,logged,swimPendingToday:days.some(x=>x.swimPending)};
   })();
 
   // Why the load is what it is. Surfaced so a taper day — where maxing readiness
@@ -7430,17 +7443,29 @@ function renderTodayV2(){
     ${d.rightNow.act?`<span style="color:${rnAccent};font-size:1.1rem;flex-shrink:0">→</span>`:''}
   </div>`;
 
-  // Weekly consistency — day dots + "N of M". The retention mechanic that beats a
-  // daily streak against a coached schedule with rest days.
+  // Weekly consistency — day dots + "N of X sessions" (swim + dryland). Rewards
+  // showing up against the coach's plan, never volume — it can't exceed what was
+  // scheduled, so it never nudges overtraining. Falls back to a plain logged count
+  // (+ a nudge) when no schedule is set up.
   const wkDots=d.week.days.map(dy=>{
-    const bg=dy.done?'var(--t-aqua)':(dy.training&&!dy.future)?'var(--t-line)':'transparent';
-    const bd=dy.training?(dy.done?'var(--t-aqua)':'var(--t-line)'):'var(--t-line)';
+    const bg=dy.complete?'var(--t-aqua)':dy.partial?'var(--t-aqua-d)':(dy.planned&&!dy.future?'var(--t-line)':'transparent');
+    const bd=dy.planned?(dy.complete?'var(--t-aqua)':'var(--t-line)'):'var(--t-line)';
     const ring=dy.today?';box-shadow:0 0 0 2px var(--t-aqua-d)':'';
     return `<span style="flex:1;height:9px;border-radius:5px;background:${bg};border:1.5px solid ${bd}${ring}"></span>`;
   }).join('');
+  const weekRight=d.week.hasSchedule
+    ? `${d.week.done} <span style="color:var(--t-mute)">of ${d.week.planned} sessions</span>`
+    : `${d.week.logged} <span style="color:var(--t-mute)">session${d.week.logged===1?'':'s'}</span>`;
+  const weekSwimBtn=d.week.swimPendingToday
+    ? `<button class="seg" onclick="event.stopPropagation();logSwimQuick()" style="margin-top:2px;align-self:flex-start;background:var(--t-surface);border:1px solid var(--t-aqua-d);color:var(--t-aqua)">＋ Log today's swim</button>`
+    : '';
+  const weekNudge=(!d.week.hasSchedule)
+    ? `<div class="t2-tap" onclick="showSection('schedule')" style="font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-aqua)">Set up your week to track sessions →</div>`
+    : '';
   const weekCard=`<div class="t2-tile" style="gap:9px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">This week</span><span class="t2-v" style="font-size:.82rem">${d.week.done} <span style="color:var(--t-mute)">of ${d.week.planned}</span></span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">This week</span><span class="t2-v" style="font-size:.82rem">${weekRight}</span></div>
     <div style="display:flex;gap:5px">${wkDots}</div>
+    ${weekSwimBtn}${weekNudge}
   </div>`;
 
   // Pool line — the coach's session, which the app supports.
@@ -7519,6 +7544,20 @@ function renderTodayV2(){
 }
 
 function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); const el=document.getElementById('today-v2'); if(el&&el.style.display==='block')renderTodayV2(); }
+
+// One-tap "I swam today" — the frictionless completion for a scheduled swim, since
+// the schedule already knows one is planned. Writes a minimal pool-log entry (no
+// distance required) so it counts toward the weekly session tally and the pool
+// line. The swimmer can still add distance/feel later via the full pool check-in.
+function logSwimQuick(){
+  const key=dKey(new Date());
+  S.poolLog=S.poolLog||[];
+  if(!S.poolLog.some(p=>p&&p.date===key)){
+    S.poolLog.push({date:key,distKm:0,feel:null,quick:true});
+    DB.set('poolLog',S.poolLog);
+  }
+  renderHomeDispatch();
+}
 
 // The 5-tab v2 nav (Today / Train / Times / Fuel / Me). Schedule folds into Today
 // (reached from the meet tiles); Race day is a contextual takeover handled later.
