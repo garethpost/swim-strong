@@ -7515,9 +7515,38 @@ function renderTodayV2(){
 
   // Fill the vessel after paint (empty → today's level) for the settle animation.
   requestAnimationFrame(()=>{ const lift=el.querySelector('.t2-lift'); if(lift)lift.style.transform='translateY('+lift.getAttribute('data-lift')+'px)'; });
+  syncV2Nav('home'); // ensure the v2 nav shows + Today active on boot (not via showSection)
 }
 
-function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); }
+function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); const el=document.getElementById('today-v2'); if(el&&el.style.display==='block')renderTodayV2(); }
+
+// The 5-tab v2 nav (Today / Train / Times / Fuel / Me). Schedule folds into Today
+// (reached from the meet tiles); Race day is a contextual takeover handled later.
+// Maps to existing sections so routing is unchanged: Me → the legacy 'more' area.
+function ensureV2Nav(){
+  if(document.getElementById('nav-v2'))return;
+  const tabs=[
+    {sec:'home',   label:'Today', icon:'<path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/>'},
+    {sec:'workout',label:'Train', icon:'<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>'},
+    {sec:'times',  label:'Times', icon:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>'},
+    {sec:'fuel',   label:'Fuel',  icon:'<path d="M12 3c3 4 5 6 5 9a5 5 0 01-10 0c0-3 2-5 5-9z"/>'},
+    {sec:'more',   label:'Me',    icon:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'},
+  ];
+  const nav=document.createElement('nav'); nav.id='nav-v2'; nav.setAttribute('aria-label','Main navigation');
+  nav.innerHTML=tabs.map(t=>`<button data-sec="${t.sec}" onclick="showSection('${t.sec}')" aria-label="${t.label}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${t.icon}</svg>${t.label}</button>`).join('');
+  document.body.appendChild(nav);
+}
+// Show/hide + active-state sync for the v2 nav, called from showSection.
+function syncV2Nav(name){
+  const v2=window.FLAGS&&FLAGS.v2;
+  const legacy=document.getElementById('nav');
+  if(!v2){ if(legacy)legacy.style.display=''; const n2=document.getElementById('nav-v2'); if(n2)n2.classList.remove('on'); return; }
+  ensureV2Nav();
+  if(legacy)legacy.style.display='none';
+  const n2=document.getElementById('nav-v2');
+  if(n2){ n2.setAttribute('data-sfp-theme',v2Theme()); n2.classList.add('on');
+    n2.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.sec===name)); }
+}
 
 // Live, in-place update of the vessel + load label + check-in values as the
 // check-in sliders move — no full re-render, so the water glides rather than
@@ -12723,6 +12752,7 @@ function showSection(name){
   const _hdr=document.getElementById('header'); if(_hdr)_hdr.style.display=(name==='home'&&_v2)?'none':'';
   const _tv2=document.getElementById('today-v2'); if(_tv2)_tv2.style.display=(name==='home'&&_v2)?'block':'none';
   const _sh=document.getElementById('section-home'); if(_sh&&_v2&&name!=='home')_sh.style.display='';
+  syncV2Nav(name); // show the 5-tab v2 nav (or restore the legacy nav) + active state
   if(name==='home')renderHomeDispatch();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
   if(name==='schedule'){
