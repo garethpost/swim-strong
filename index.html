@@ -11017,20 +11017,37 @@ function renderDrylandProfileHint(){
   const el=document.getElementById('dryland-profile-hint');
   if(!el)return;
   const pp=S.performanceProfile;
-  if(!pp||pp.gate<2||!pp.prescription||!pp.prescription.reasoning.length){el.innerHTML='';return;}
-  const gateColor=pp.gate===3?'var(--accent)':'var(--gold)';
-  const topReason=pp.prescription.reasoning[0]||'';
-  el.innerHTML=`<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface);border-radius:10px;border-left:3px solid ${gateColor};">
-    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="this.parentElement.querySelector('.dryland-hint-body').style.display=this.parentElement.querySelector('.dryland-hint-body').style.display==='none'?'block':'none';this.querySelector('.dhc').style.transform=this.querySelector('.dhc').style.transform?'':'rotate(90deg)';">
-      <div style="font-size:12px;font-weight:700;color:${gateColor};">${pp.gate===3?'📈 Profile Active':'💡 Profile Hint'}</div>
-      <span class="dhc" style="font-size:14px;color:var(--muted);transition:transform 0.25s;">›</span>
+  const races=(pp&&pp.racesLogged)||0;
+  const arcs=(pp&&pp.cyclesCompleted)||0;
+
+  // ── Prescription ready (Gate 2+): surface it prominently, not collapsed. This
+  //    is the Performance Correlation Engine — what the swimmer's own race data
+  //    says to emphasise in dryland. The differentiator, made visible.
+  if(pp&&pp.gate>=2&&pp.prescription&&pp.prescription.reasoning&&pp.prescription.reasoning.length){
+    const gateColor=pp.gate===3?'var(--accent)':'var(--gold)';
+    const reasons=pp.prescription.reasoning.slice(0,3);
+    el.innerHTML=`<div style="margin-bottom:12px;padding:12px 14px;background:var(--surface);border-radius:12px;border-left:3px solid ${gateColor};">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:${gateColor};margin-bottom:6px;">${pp.gate===3?'What your race data says':'Early read on your data'}</div>
+      ${reasons.map((r,i)=>`<div style="font-size:${i===0?'13px':'12px'};color:${i===0?'var(--text)':'var(--muted)'};line-height:1.5;padding:2px 0;">${i===0?'':'· '}${r}</div>`).join('')}
+      <div style="font-size:10px;color:var(--muted);margin-top:7px;padding-top:6px;border-top:1px solid var(--border);">Built from ${races} race${races!==1?'s':''} · ${arcs} training arc${arcs!==1?'s':''}${pp.prescription.confidence?' · '+pp.prescription.confidence+' confidence':''}</div>
+    </div>`;
+    return;
+  }
+
+  // ── Still building (Gate 1 / not enough data): show the honest progress toward
+  //    unlocking, which turns the wait into a reason to log. Gate 2 needs 10 races
+  //    + 2 training arcs. This building state was previously invisible.
+  const RG=10, AG=2;
+  const rp=Math.min(100,Math.round(races/RG*100)), ap=Math.min(100,Math.round(arcs/AG*100));
+  const ev=(S.profile&&S.profile.primaryEvents&&S.profile.primaryEvents[0])||'your events';
+  el.innerHTML=`<div style="margin-bottom:12px;padding:12px 14px;background:var(--surface);border-radius:12px;border-left:3px solid var(--muted);">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Learning what drives ${ev==='your events'?'your times':ev}</div>
+    <div style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:9px;">Keep logging races and training — the app is finding which of your blocks actually make you faster.</div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;"><span>Races logged</span><span>${races} / ${RG}</span></div><div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${rp}%;background:var(--accent);border-radius:3px;"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;"><span>Training arcs</span><span>${arcs} / ${AG}</span></div><div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${ap}%;background:var(--gold);border-radius:3px;"></div></div></div>
     </div>
-    <div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.5;">${topReason}</div>
-    <div class="dryland-hint-body" style="display:none;margin-top:8px;">
-      ${pp.prescription.reasoning.slice(1).map(r=>`<div style="font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border);">• ${r}</div>`).join('')}
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Gate ${pp.gate} · ${pp.racesLogged} races · ${pp.cyclesCompleted} training arc${pp.cyclesCompleted!==1?'s':''} · Confidence: ${pp.prescription.confidence}</div>
-      ${pp.cycleDetail?`<div style="font-size:10px;color:var(--muted);font-style:italic;margin-top:2px;">${pp.cycleDetail}</div>`:''}
-    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:8px;font-style:italic;">A training arc = a GPP → Strength/Power block. Two of them + 10 races unlocks your personalised read.</div>
   </div>`;
 }
 
