@@ -5870,6 +5870,11 @@ function renderWorkout(w){
   const _wibBg=['rgba(255,255,255,0.04)','rgba(0,198,255,0.08)','rgba(255,56,56,0.08)','rgba(0,230,118,0.08)'];
   html+=`<div class="alert-banner" style="background:${_wibBg[_wib-1]};border:1px solid ${_wibColors[_wib-1]};color:var(--text);">📅 <strong style="color:${_wibColors[_wib-1]};">Block Wk ${_wib}/4 — ${_wibLabels[_wib-1]}</strong><span style="color:var(--muted);"> · ${_wibDescs[_wib-1]}</span></div>`;
   html+=`<div class="alert-banner" style="background:var(--card);border:1px solid var(--accent);color:var(--text);">📊 <strong style="color:var(--accent);">${w.load.label}</strong> — ${w.load.msg}${w.scheme.note?'<span style="color:var(--muted);"> · '+w.scheme.note+'</span>':''}</div>`;
+  // Surface the RPE calibration reasoning — the self-tuning loop silently adjusts
+  // your loads; this finally tells the swimmer WHY (was computed-but-invisible).
+  if(S.rpeCalibrationNote){
+    html+=`<div class="alert-banner" style="background:rgba(61,224,200,0.06);border:1px solid var(--accent);color:var(--text);">🎚️ <strong style="color:var(--accent);">Auto-tuning:</strong> <span style="color:var(--muted);">${esc(S.rpeCalibrationNote)}</span></div>`;
+  }
   if(w.schedNote)html+=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:5px 8px;background:var(--surface);border-radius:6px;">📅 Session type: <b style="color:var(--text);">${w.schedNote}</b></div>`;
   if(w.doubleDayNote)html+=`<div style="font-size:11px;color:var(--gold);margin-bottom:8px;padding:5px 8px;background:rgba(245,200,66,0.06);border-radius:6px;border-left:2px solid var(--gold);">⚡ ${w.doubleDayNote}</div>`;
   w.blocks.forEach((block,bi)=>{
@@ -7248,6 +7253,20 @@ function ensureV2Styles(){
   #today-v2[data-sfp-theme="tide"] .t2-read .big{color:var(--t-ink);}
   #today-v2 .t2-tap{cursor:pointer;}
   #today-v2 .t2-cta{padding:12px;border-radius:12px;background:var(--t-aqua);color:var(--t-deep);font-size:.86rem;font-weight:750;text-align:center;border:none;width:100%;font-family:inherit;cursor:pointer;}
+
+  /* v2 skin — remap the legacy palette tokens to the water theme for the still-legacy
+     sections (Train/Times/Fuel/Me). Every child using var(--card)/var(--accent)/etc.
+     picks up the water values automatically, so the whole screen reskins with no
+     render changes and all its intelligence (stall analysis, targets, adaptNote)
+     comes along, now water-themed. */
+  .section.v2skin{
+    --bg:#04141A;--surface:#0A2028;--card:#123039;--border:#1C4550;
+    --accent:#3DE0C8;--accent2:#0A2028;--text:#EAF6F5;--muted:#6E8D95;
+    --green:#3DE0C8;--gold:#F5B544;--orange:#F5B544;--purple:#A98BFF;--red:#FF6B5B;--radius:16px;
+    background:#04141A;padding-top:calc(env(safe-area-inset-top) + 18px);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+  }
+  .section.v2skin .section-title{font-size:1.6rem;font-weight:800;letter-spacing:-.03em;}
   `;
   const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
 }
@@ -12786,11 +12805,17 @@ function showSection(name){
   document.getElementById('section-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
   // unit-btn removed — units live in More > Settings
-  // v2: hide the app header + legacy home while the redesigned Today is active
+  // v2: hide the app header on every redesigned tab; toggle the redesigned Today.
   const _v2=window.FLAGS&&FLAGS.v2;
-  const _hdr=document.getElementById('header'); if(_hdr)_hdr.style.display=(name==='home'&&_v2)?'none':'';
+  const _hdr=document.getElementById('header'); if(_hdr)_hdr.style.display=_v2?'none':'';
   const _tv2=document.getElementById('today-v2'); if(_tv2)_tv2.style.display=(name==='home'&&_v2)?'block':'none';
   const _sh=document.getElementById('section-home'); if(_sh&&_v2&&name!=='home')_sh.style.display='';
+  // v2 "skin": remap the legacy palette tokens to the water theme for redesigned
+  // sections that still use the legacy render (Train/Times/Fuel/Me), so they match
+  // Today without rewriting their intricate render logic. Adds top padding since
+  // the app header is hidden.
+  if(_v2)ensureV2Styles(); // the .v2skin rules live in the v2 stylesheet
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('v2skin', !!_v2));
   syncV2Nav(name); // show the 5-tab v2 nav (or restore the legacy nav) + active state
   if(name==='home')renderHomeDispatch();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
