@@ -7274,6 +7274,10 @@ function ensureV2Styles(){
   .section.v2skin label,.section.v2skin p,.section.v2skin span,.section.v2skin div{color:inherit;}
   .section.v2skin .section-title{color:var(--text);font-size:1.6rem;font-weight:800;letter-spacing:-.03em;}
   .section.v2skin .set-input{color:var(--text);}
+  /* .card-title carries its own color:var(--muted), but the broad div{color:inherit}
+     above strips it — inside a bare <button> (Fuel section toggles) it then inherits
+     the UA default black. Pin it light so headers read on the dark ground. */
+  .section.v2skin .card-title{color:var(--text);}
   /* Paint the whole page dark under v2 so a light legacy theme can't show white
      behind short screens. */
   body.v2on,html.v2on{background:#04141A;}
