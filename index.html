@@ -8034,7 +8034,7 @@ function _v2RaceDayHTML(d,rd,checkRow){
       <div>
         <div style="font-family:var(--t-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--t-gold)">🏁 Race Day · ${escHtml(priority)}-Meet</div>
         <div style="font-size:1.35rem;font-weight:800;color:var(--t-ink);line-height:1.15;margin-top:3px">${escHtml(rd.meet.name)}</div>
-        <div class="t2-nt">${dayLine}</div>
+        <div class="t2-nt">${dayLine} · <span class="t2-tap" onclick="showSection('schedule')" style="color:var(--t-violet);font-weight:800">${rd.totalDays>1?'all days & full view':'full race view'} →</span></div>
       </div>
       ${rd.totalCount?`
       <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-nt">Results logged</span><span class="t2-v" style="font-size:.8rem;color:${progPct===100?'var(--t-aqua)':'var(--t-gold)'}">${rd.loggedCount} / ${rd.totalCount}</span></div>
@@ -8064,8 +8064,7 @@ function _v2RaceDayHTML(d,rd,checkRow){
 
     <div class="t2-tile" style="gap:0;padding-top:2px">${checkRow}</div>
 
-    <button class="t2-cta" onclick="showSection('schedule')" style="background:var(--t-violet);border-color:var(--t-violet);color:#0A0620">Open full Race Mode — log results →</button>
-    <button class="seg" onclick="(typeof dismissRaceMode==='function')&&dismissRaceMode();(function(){var e=document.getElementById('today-v2');if(e)renderTodayV2();})()" style="align-self:center;background:transparent;border:1px solid var(--t-line);color:var(--t-mute);margin-top:2px">Exit race mode for today</button>
+    <button class="seg" onclick="(typeof dismissRaceMode==='function')&&dismissRaceMode();(function(){var e=document.getElementById('today-v2');if(e)renderTodayV2();})()" style="align-self:center;background:transparent;border:1px solid var(--t-line);color:var(--t-mute);margin-top:6px">Exit race mode for today</button>
   </div>`;
 }
 
