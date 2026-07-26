@@ -7544,6 +7544,20 @@ function renderTodayV2(){
     <p class="t2-nt"><b style="color:var(--t-ink)">${escHtml(d.meet.name)}</b> — ${d.meet.days} day${d.meet.days===1?'':'s'} away${d.meet.priority?` · ${escHtml(d.meet.priority)}-meet`:''}.</p>
   </div>` : '';
 
+  // ── RACE DAY TAKEOVER ──────────────────────────────────────────────────────
+  // On a meet day, Today transforms: the load vessel steps aside for the race
+  // hero, the swimmer's own race-history narrator, and the adaptive warm-up (open
+  // by default). This is the v2 home for Race Mode — the Schedule tab is gone, so
+  // the full logging view is one tap away via the CTA. Concept unchanged; the
+  // intelligence (getMeetIntelligence / getWarmupProtocol / getMeetInsightSummary)
+  // is the same, just surfaced instead of buried on a tab.
+  const raceDay=_v2RaceDayData();
+  if(raceDay){
+    el.innerHTML=_v2RaceDayHTML(d,raceDay,checkRow);
+    syncV2Nav('home');
+    return;
+  }
+
   el.innerHTML=`<div class="t2-body">
     <div class="t2-vh">
       <div><h2>${escHtml(d.greet)}</h2><div class="s">${escHtml(phaseLine)}</div></div>
@@ -7589,6 +7603,109 @@ function renderTodayV2(){
 }
 
 function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); const el=document.getElementById('today-v2'); if(el&&el.style.display==='block')renderTodayV2(); }
+
+// ── Race-day takeover data ──────────────────────────────────────────────────
+// Gathers everything the meet-day Today needs, defensively. Returns null on a
+// normal day, when no meet is active, or when the swimmer has dismissed race mode
+// for today (falls back to the normal Today). Reuses the same engines the legacy
+// Schedule Race Mode uses — nothing new invented.
+function _v2RaceDayData(){
+  try{
+    const today=new Date();today.setHours(0,0,0,0);
+    if(!isMeetDay(today))return null;
+    if(S._raceModeDissmissedDate===dKey(today))return null;
+    const meet=(S.meets||[]).find(m=>{try{const ms=localDate(m.date);const me=m.endDate?localDate(m.endDate):ms;return today>=ms&&today<=me;}catch(e){return false;}});
+    if(!meet)return null;
+    const ms=localDate(meet.date);
+    const me=meet.endDate?localDate(meet.endDate):ms;
+    const realMeetDay=Math.floor((today-ms)/86400000)+1;
+    const totalDays=Math.floor((me-ms)/86400000)+1;
+    const allRaces=(S.meetRaces||[]).filter(r=>String(r.meetId)===String(meet.id));
+    const racesToday=allRaces.filter(r=>String(r.day)===String(realMeetDay));
+    const loggedCount=(S.meetRaceLog||[]).filter(l=>allRaces.some(r=>String(r.id)===String(l.raceId))).length;
+    const first=racesToday[0];
+    const primaryEvent=first?first.event:((S.profile&&S.profile.primaryEvents&&S.profile.primaryEvents[0])||(S.profile&&S.profile.primaryStroke)||'100 Free');
+    const session=first?(first.session||'prelims'):'prelims';
+    const pool=first?(first.pool||'lcm'):'lcm';
+    let warmup=[];try{warmup=getWarmupProtocol(primaryEvent,session,pool)||[];}catch(e){warmup=[];}
+    let narrator=null;try{narrator=getMeetInsightSummary(primaryEvent);}catch(e){narrator=null;}
+    return {meet,realMeetDay,totalDays,allRaces,racesToday,loggedCount,totalCount:allRaces.length,primaryEvent,session,pool,warmup,narrator};
+  }catch(e){return null;}
+}
+
+// ── Race-day takeover markup ────────────────────────────────────────────────
+// Today transforms into race day: hero, the swimmer's own race-history narrator
+// (getMeetInsightSummary — previously dead code), the adaptive warm-up OPEN by
+// default, meet-day fuel, readiness, and a CTA into full Race Mode for logging.
+function _v2RaceDayHTML(d,rd,checkRow){
+  const priority=rd.meet.priority||'A';
+  const progPct=rd.totalCount?Math.round(rd.loggedCount/rd.totalCount*100):0;
+  const dayLine=rd.totalDays>1?`Day ${rd.realMeetDay} of ${rd.totalDays}`:'Race day';
+  const wuSteps=rd.warmup.map(s=>`
+    <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--t-line)">
+      <div style="font-family:var(--t-mono);font-size:.6rem;letter-spacing:.04em;color:var(--t-gold);min-width:78px;padding-top:2px">${escHtml(s.time||'')}</div>
+      <div style="flex:1">
+        <div style="font-size:.86rem;font-weight:650;color:var(--t-ink)">${escHtml(s.label)}${s.adapted?` <span style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-violet);border:1px solid var(--t-violet);border-radius:6px;padding:1px 5px;margin-left:4px">adapted</span>`:''}</div>
+        <div style="font-size:.74rem;color:var(--t-ink2);line-height:1.45;margin-top:2px">${escHtml(s.detail)}</div>
+        ${s.adapterNote?`<div style="font-size:.66rem;color:var(--t-violet);margin-top:3px">↳ ${escHtml(s.adapterNote)}</div>`:''}
+      </div>
+    </div>`).join('');
+  const intelNote=(rd.warmup[0]&&rd.warmup[0].intelNote)||null;
+  const raceChips=rd.racesToday.length?rd.racesToday.map(r=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px">
+      <span style="font-size:.82rem;font-weight:650;color:var(--t-ink)">${escHtml(r.event)}</span>
+      <span style="font-family:var(--t-mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-mute)">${escHtml(r.session||'')}${r.seedTime?` · seed ${escHtml(r.seedTime)}`:''}</span>
+    </div>`).join(''):`<div class="t2-nt" style="color:var(--t-mute)">No races entered yet — add them in Race Mode.</div>`;
+  const narratorHTML=(rd.narrator&&rd.narrator.length)?`
+    <div class="t2-tile" style="gap:6px;border-color:var(--t-aqua-d)">
+      <span class="t2-lbl" style="color:var(--t-aqua)">What your race history says</span>
+      ${rd.narrator.map(l=>`<div style="font-size:.78rem;color:var(--t-ink2);line-height:1.5">${escHtml(l)}</div>`).join('')}
+    </div>`:'';
+
+  return `<div class="t2-body">
+    <div class="t2-vh">
+      <div><h2>${escHtml(d.greet)}</h2><div class="s" style="color:var(--t-gold)">Race day — trust your taper.</div></div>
+      <button class="t2-th" onclick="cycleV2Theme()" title="Theme" aria-label="Change theme">◑</button>
+    </div>
+
+    <div class="t2-tile" style="gap:9px;border-color:var(--t-violet);background:linear-gradient(160deg,rgba(169,139,255,.10),transparent)">
+      <div>
+        <div style="font-family:var(--t-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--t-gold)">🏁 Race Day · ${escHtml(priority)}-Meet</div>
+        <div style="font-size:1.35rem;font-weight:800;color:var(--t-ink);line-height:1.15;margin-top:3px">${escHtml(rd.meet.name)}</div>
+        <div class="t2-nt">${dayLine}</div>
+      </div>
+      ${rd.totalCount?`
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-nt">Results logged</span><span class="t2-v" style="font-size:.8rem;color:${progPct===100?'var(--t-aqua)':'var(--t-gold)'}">${rd.loggedCount} / ${rd.totalCount}</span></div>
+      <div class="t2-bar"><i style="width:${progPct}%;background:${progPct===100?'var(--t-aqua)':'var(--t-gold)'}"></i></div>`:''}
+    </div>
+
+    ${narratorHTML}
+
+    <div class="t2-tile" style="gap:8px">
+      <span class="t2-lbl">Today's races</span>
+      ${raceChips}
+    </div>
+
+    <div class="t2-tile" style="gap:4px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="t2-lbl">Warm-up · ${escHtml(rd.primaryEvent)}</span>
+        ${intelNote?`<span style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.05em;text-transform:uppercase;color:var(--t-aqua)">${escHtml(intelNote)}</span>`:''}
+      </div>
+      ${wuSteps||'<div class="t2-nt">Warm-up unavailable.</div>'}
+    </div>
+
+    <div class="t2-tile t2-tap" onclick="showSection('fuel')" style="flex-direction:row;align-items:center;gap:10px">
+      <span style="font-size:1.1rem">🥤</span>
+      <span style="font-size:.76rem;color:var(--t-ink2);line-height:1.4;flex:1">Fast carbs every 45–60 min between races. Hydrate 150–200ml every 20 min. Nothing new today.</span>
+      <span style="color:var(--t-mute)">→</span>
+    </div>
+
+    <div class="t2-tile" style="gap:0;padding-top:2px">${checkRow}</div>
+
+    <button class="t2-cta" onclick="showSection('schedule')" style="background:var(--t-violet);border-color:var(--t-violet);color:#0A0620">Open full Race Mode — log results →</button>
+    <button class="seg" onclick="(typeof dismissRaceMode==='function')&&dismissRaceMode();(function(){var e=document.getElementById('today-v2');if(e)renderTodayV2();})()" style="align-self:center;background:transparent;border:1px solid var(--t-line);color:var(--t-mute);margin-top:2px">Exit race mode for today</button>
+  </div>`;
+}
 
 // One-tap "I swam today" — the frictionless completion for a scheduled swim, since
 // the schedule already knows one is planned. Writes a minimal pool-log entry (no
