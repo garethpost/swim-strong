@@ -330,6 +330,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
           <button class="btn btn-primary btn-sm" onclick="goToToday()">Today</button>
         </div>
         <div class="card" id="cal-card">
+          <div id="cal-month-title" style="text-align:center;font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--text);margin-bottom:10px;"></div>
           <div class="month-cal" id="month-header"></div>
           <div class="month-cal" id="month-cal"></div>
           <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
@@ -7343,6 +7344,18 @@ function ensureV2Styles(){
   /* wrapper divs inside the sheet set no color — pin them so they can't inherit
      the legacy body's dark-on-light text color. */
   body.v2on #checkin-sheet-inner div:not([style*="color"]){color:#EAF6F5;}
+  /* Legacy modals (pool check-in, add-time, meet-race, save-meal, custom-food…)
+     are static HTML outside any .section, so the .v2skin remap never reaches them.
+     Redefine the water tokens on .modal so every token-based child repaints. The
+     PB share card uses hardcoded hex, so it's unaffected. */
+  body.v2on .modal{
+    --surface:#0A2028;--bg:#04141A;--card:#123039;--border:#1C4550;
+    --accent:#3DE0C8;--accent2:#0A2028;--text:#EAF6F5;--muted:#6E8D95;
+    --green:#3DE0C8;--gold:#F5B544;--purple:#A98BFF;--red:#FF6B5B;
+    background:#0A2028;color:#EAF6F5;
+  }
+  body.v2on .modal h1,body.v2on .modal h2,body.v2on .modal h3,
+  body.v2on .modal div:not([style*="color"]),body.v2on .modal p:not([style*="color"]){color:#EAF6F5;}
   `;
   const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
 }
@@ -7563,7 +7576,7 @@ function renderTodayV2(){
     ? `${d.week.done} <span style="color:var(--t-mute)">of ${d.week.planned} sessions</span>`
     : `${d.week.logged} <span style="color:var(--t-mute)">session${d.week.logged===1?'':'s'}</span>`;
   const weekSwimBtn=d.week.swimPendingToday
-    ? `<button class="seg" onclick="event.stopPropagation();logSwimQuick()" style="margin-top:2px;align-self:flex-start;background:var(--t-surface);border:1px solid var(--t-aqua-d);color:var(--t-aqua)">＋ Log today's swim</button>`
+    ? `<button class="seg" onclick="event.stopPropagation();openPoolCheckin()" style="margin-top:2px;align-self:flex-start;background:var(--t-surface);border:1px solid var(--t-aqua-d);color:var(--t-aqua)">＋ Log swim + distance</button>`
     : '';
   const weekNudge=(!d.week.hasSchedule)
     ? `<div class="t2-tap" onclick="showSection('schedule')" style="font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-aqua)">Set up your week to track sessions →</div>`
@@ -7574,10 +7587,13 @@ function renderTodayV2(){
     ${weekSwimBtn}${weekNudge}
   </div>`;
 
-  // Pool line — the coach's session, which the app supports.
+  // Pool line — the coach's session, which the app supports. Tappable to open the
+  // pool check-in (feel + distance), so KM entry is one tap from Today. When a swim
+  // is already logged, tapping edits it (add/adjust distance).
+  const poolTap=d.pool.logged?`onclick="openPoolCheckinEdit('${dKey(new Date())}')"`:`onclick="openPoolCheckin()"`;
   const poolLine=d.pool.logged
-    ? `<p class="t2-nt" style="color:var(--t-aqua)">Pool — ${d.pool.km?d.pool.km.toFixed(1)+(d.uKm?'km':'mi')+' logged ✓':'logged ✓'}</p>`
-    : (d.pool.scheduled?`<p class="t2-nt">Pool session — <span style="color:var(--t-gold)">not logged yet</span></p>`:'');
+    ? `<p class="t2-nt t2-tap" ${poolTap} style="color:var(--t-aqua)">Pool — ${d.pool.km?d.pool.km.toFixed(1)+(d.uKm?'km':'mi')+' logged ✓':'logged ✓ · tap to add distance'}</p>`
+    : (d.pool.scheduled?`<p class="t2-nt t2-tap" ${poolTap}>Pool session — <span style="color:var(--t-gold)">tap to log + distance</span></p>`:'');
 
   // Planned-week strip — the Schedule tab's dosing signal, surfaced on Today.
   const wsColors={meet:'var(--t-gold)',double:'var(--t-gold)',swim:'var(--t-aqua)',dryland:'var(--t-violet)',rest:'var(--t-line)'};
@@ -7642,7 +7658,7 @@ function renderTodayV2(){
 
     ${rightNowCard}
 
-    <div class="t2-tile" style="align-items:center;padding:16px 12px;gap:8px;border-color:${hard?'var(--t-gold)':'var(--t-line)'}">
+    <div class="t2-tile t2-tap" onclick="showCheckinSheet()" style="align-items:center;padding:16px 12px;gap:8px;border-color:${hard?'var(--t-gold)':'var(--t-line)'}">
       <div class="t2-vessel">
         <svg viewBox="0 0 220 220" role="img" aria-label="Today's load: ${escHtml(d.load.label)}">
           <defs>
@@ -7862,6 +7878,26 @@ function syncV2Nav(name){
   const n2=document.getElementById('nav-v2');
   if(n2){ n2.setAttribute('data-sfp-theme',v2Theme()); n2.classList.add('on');
     n2.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.sec===name)); }
+}
+
+// Drill-in header for sections reached OUTSIDE the 5-tab nav (Schedule). Since
+// there's no nav tab for them in v2, a sticky bar with an ✕ gives an obvious way
+// back to Today — the "popup with an X" feel without rebuilding the section as a
+// modal. No-op (and removed) when v2 is off.
+function _v2DrillHeader(sectionId,title){
+  const sec=document.getElementById(sectionId); if(!sec)return;
+  let bar=document.getElementById('v2-drill-'+sectionId);
+  const legacyTitle=sec.querySelector('.section-title');
+  if(!(window.FLAGS&&FLAGS.v2)){ if(bar)bar.remove(); if(legacyTitle)legacyTitle.style.display=''; return; }
+  if(legacyTitle)legacyTitle.style.display='none'; // drill header carries the title in v2
+  if(!bar){
+    bar=document.createElement('div'); bar.id='v2-drill-'+sectionId;
+    bar.style.cssText='display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;background:#04141A;padding:calc(env(safe-area-inset-top) + 12px) 2px 12px;margin-bottom:6px;border-bottom:1px solid #123039';
+    bar.innerHTML=`<span style="font-size:1.5rem;font-weight:800;color:#EAF6F5;letter-spacing:-.03em">${title}</span>`
+      +`<button onclick="showSection('home')" aria-label="Back to Today" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:18px;border:1px solid #1C4550;background:#0A2028;color:#A6C3C6;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer">Done ✕</button>`;
+    sec.insertBefore(bar,sec.firstChild);
+  }
+  bar.style.display='flex';
 }
 
 // Live, in-place update of the vessel + load label + check-in values as the
@@ -8444,7 +8480,9 @@ function renderSeasonSnapshot(){
 }
 function renderCalendar(){
   const yr=S.calYear,mo=S.calMonth;
-  document.getElementById('sched-month-label').textContent=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'})+' — tap any day to edit';
+  const _monthStr=new Date(yr,mo,1).toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+  document.getElementById('sched-month-label').textContent=_monthStr+' — tap any day to edit';
+  const _cmt=document.getElementById('cal-month-title'); if(_cmt)_cmt.textContent=_monthStr;
   renderSeasonSnapshot();
   // Show setup guide when: no season template set, or season has ended
   // Hide when: season template active and today is within season dates
@@ -13104,6 +13142,7 @@ function showSection(name){
   if(name==='home')renderHomeDispatch();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
   if(name==='schedule'){
+    _v2DrillHeader('section-schedule','Schedule'); // v2: sticky ✕ back to Today
     renderMeetDayBanner(); // drives race mode vs normal mode toggle
     renderCalendar();
     renderSchedulePoolShortcut();
