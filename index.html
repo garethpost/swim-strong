@@ -10870,6 +10870,11 @@ function renderPerformanceInsightsTimes(){
   const gateLabels={1:'Building Data',2:'Suggestions',3:'Active Prescription'};
   const gateColor=gateColors[pp.gate]||'var(--muted)';
   const gateLabel=gateLabels[pp.gate]||'';
+  // v2 surfaces the engine — it's the differentiator, not a footnote. Open by default,
+  // chevron pre-rotated. Legacy stays collapsed.
+  const _v2=!!(window.FLAGS&&FLAGS.v2);
+  const _bodyDisp=_v2?'block':'none';
+  const _chevRot=_v2?'rotate(90deg)':'';
 
   // Gate 1: passive display only — matches Home tab Performance Insights tile exactly
   if(pp.gate===1){
@@ -10882,9 +10887,9 @@ function renderPerformanceInsightsTimes(){
     el.innerHTML=`<div class="card" style="margin-bottom:12px;border:1px solid var(--border);">
       <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="togglePerfInsights(this)">
         <div style="font-size:12px;font-weight:700;color:var(--muted);">📊 Performance Insights — <span style="color:var(--muted);">Building</span></div>
-        <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
+        <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;transform:${_chevRot};">›</span>
       </div>
-      <div class="perf-body" style="display:none;margin-top:12px;">
+      <div class="perf-body" style="display:${_bodyDisp};margin-top:12px;">
         <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:12px;">${pp.gateReason}. Keep logging races and completing training blocks — insights unlock automatically.</div>
         <div style="margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
@@ -10984,9 +10989,9 @@ function renderPerformanceInsightsTimes(){
         <div style="font-size:12px;font-weight:700;color:${gateColor};">📊 Performance Insights</div>
         <div style="font-size:10px;color:var(--muted);">${pp.racesLogged} races · ${pp.cyclesCompleted} training arc${pp.cyclesCompleted!==1?'s':''} · ${gateLabel}</div>
       </div>
-      <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;">›</span>
+      <span class="perf-chevron" style="color:var(--muted);font-size:14px;transition:transform 0.25s;transform:${_chevRot};">›</span>
     </div>
-    <div class="perf-body" style="display:none;margin-top:12px;">
+    <div class="perf-body" style="display:${_bodyDisp};margin-top:12px;">
       ${progSplitHtml}
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Pool Trends</div>
       ${poolRows}
