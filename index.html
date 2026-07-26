@@ -7844,6 +7844,14 @@ function renderTodayV2(){
   const raceDay=_v2RaceDayData();
   if(raceDay){
     el.innerHTML=_v2RaceDayHTML(d,raceDay,checkRow);
+    // Live tick for the race-day countdown — updates the "what to do now" line every
+    // 20s without re-rendering the whole screen. Cleared when it leaves the DOM.
+    if(window._raceTickTimer){clearInterval(window._raceTickTimer);window._raceTickTimer=null;}
+    if(S.raceStartTime&&S.raceStartTime.date===dKey(new Date())){
+      window._raceTickTimer=setInterval(()=>{ const c=document.getElementById('race-countdown');
+        if(!c){clearInterval(window._raceTickTimer);window._raceTickTimer=null;return;}
+        try{ c.innerHTML=_raceCountdownInner(raceDay,S.raceStartTime.time); }catch(e){} },20000);
+    }
     syncV2Nav('home');
     return;
   }
@@ -7994,7 +8002,63 @@ function _v2RaceDayData(){
 // Today transforms into race day: hero, the swimmer's own race-history narrator
 // (getMeetInsightSummary — previously dead code), the adaptive warm-up OPEN by
 // default, meet-day fuel, readiness, and a CTA into full Race Mode for logging.
+// Race-day mindset mantras — shown on the countdown, later reused as notification copy.
+const RACE_MANTRAS=[
+  'Trust your taper. The work is done.',
+  'Fast and loose — let it happen.',
+  'Control the controllables: breath, start, first 15m.',
+  'You are ready. Race your race.',
+  'Attack the first 50, hold the back half.',
+  'Calm body, sharp mind.',
+  'Nail the start, own the walls.',
+  'This is the fun part. Go get it.'
+];
+// The live "what to do now" content — recomputed each tick from the race time + the
+// swimmer's own adaptive warm-up step timings.
+function _raceCountdownInner(rd,rt){
+  const now=new Date();
+  const [hh,mm]=String(rt).split(':').map(Number);
+  const race=new Date(); race.setHours(hh||0,mm||0,0,0);
+  const mins=Math.round((race-now)/60000);
+  const wu=(rd.warmup||[]).map(s=>{const m=(String(s.time).match(/(\d+)\s*min/)||[])[1];return m?{min:+m,label:s.label,detail:s.detail}:null;}).filter(Boolean).sort((a,b)=>b.min-a.min);
+  const maxW=wu.length?wu[0].min:20;
+  const mantra=RACE_MANTRAS[Math.abs(Math.floor(mins/5))%RACE_MANTRAS.length];
+  let big,sub,tone='var(--t-aqua)';
+  if(mins<=-8){ big='Race done'; sub='Log your result below when you’re ready.'; }
+  else if(mins<=0){ big='You’re up — GO'; sub='Behind the blocks. This is your moment.'; tone='var(--t-gold)'; }
+  else{
+    const fmt=mins>=60?`${Math.floor(mins/60)}h ${String(mins%60).padStart(2,'0')}m`:`${mins} min`;
+    if(mins>maxW){ big=`Race in ${fmt}`; sub=`Warm-up starts in ${mins-maxW} min. Fuel, hydrate, stay warm.`; }
+    else{ const cur=wu.find(w=>w.min<=mins)||wu[wu.length-1]; big=`Race in ${fmt}`; tone='var(--t-gold)'; sub=cur?`NOW → ${cur.label}: ${cur.detail}`:'Into your warm-up.'; }
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl" style="color:var(--t-aqua)">Race-day timeline · ${escHtml(rt)}</span><span class="t2-tap" onclick="clearRaceStart()" style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;color:var(--t-mute)">change</span></div>
+    <div class="t2-v" style="font-size:1.55rem;color:${tone};margin-top:2px">${escHtml(big)}</div>
+    <p class="t2-nt" style="margin-top:2px">${escHtml(sub)}</p>
+    <p class="t2-nt" style="color:var(--t-violet);font-style:italic;margin-top:4px">“${escHtml(mantra)}”</p>`;
+}
+function _v2RaceCountdownHTML(rd){
+  const tk=dKey(new Date());
+  const rt=(S.raceStartTime&&S.raceStartTime.date===tk)?S.raceStartTime.time:null;
+  if(!rt) return `<div class="t2-tile" style="gap:9px;border-color:var(--t-aqua-d)">
+      <span class="t2-lbl" style="color:var(--t-aqua)">Race-day timeline</span>
+      <p class="t2-nt">Set your first race time and I’ll count you into your warm-up, step by step.</p>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="race-start-input" type="time" style="flex:1;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px;color:var(--t-ink);font-size:1rem;padding:9px 12px;font-family:var(--font)">
+        <button class="seg" onclick="setRaceStart()" style="background:var(--t-aqua);border:none;color:var(--t-deep);font-weight:800;padding:9px 16px">Set</button>
+      </div>
+    </div>`;
+  return `<div class="t2-tile" id="race-countdown" style="gap:5px;border-color:var(--t-gold)">${_raceCountdownInner(rd,rt)}</div>`;
+}
+function setRaceStart(){
+  const v=(document.getElementById('race-start-input')||{}).value;
+  if(!v)return;
+  S.raceStartTime={date:dKey(new Date()),time:v};
+  try{DB.set('raceStartTime',S.raceStartTime);}catch(e){}
+  renderTodayV2();
+}
+function clearRaceStart(){ S.raceStartTime=null; try{DB.set('raceStartTime',null);}catch(e){} renderTodayV2(); }
 function _v2RaceDayHTML(d,rd,checkRow){
+  const _countdownHTML=_v2RaceCountdownHTML(rd);
   const priority=rd.meet.priority||'A';
   const progPct=rd.totalCount?Math.round(rd.loggedCount/rd.totalCount*100):0;
   const dayLine=rd.totalDays>1?`Day ${rd.realMeetDay} of ${rd.totalDays}`:'Race day';
@@ -8040,6 +8104,8 @@ function _v2RaceDayHTML(d,rd,checkRow){
       <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-nt">Results logged</span><span class="t2-v" style="font-size:.8rem;color:${progPct===100?'var(--t-aqua)':'var(--t-gold)'}">${rd.loggedCount} / ${rd.totalCount}</span></div>
       <div class="t2-bar"><i style="width:${progPct}%;background:${progPct===100?'var(--t-aqua)':'var(--t-gold)'}"></i></div>`:''}
     </div>
+
+    ${_countdownHTML}
 
     ${narratorHTML}
 
