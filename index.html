@@ -7884,6 +7884,7 @@ function renderTodayV2(){
         </svg>
         <div class="t2-read"><span class="k">Today's load</span><span class="big">${escHtml(d.load.label)}</span>${(d.loadNote||d.load.msg)?`<span class="msg">${escHtml(d.loadNote||d.load.msg)}</span>`:''}</div>
       </div>
+      <div style="text-align:center;font-size:.76rem;font-style:italic;color:var(--t-violet);padding:2px 8px 0;line-height:1.4">“${escHtml(_loadMantra(d.load.label))}”</div>
       ${checkRow}
     </div>
 
@@ -8002,6 +8003,23 @@ function _v2RaceDayData(){
 // Today transforms into race day: hero, the swimmer's own race-history narrator
 // (getMeetInsightSummary — previously dead code), the adaptive warm-up OPEN by
 // default, meet-day fuel, readiness, and a CTA into full Race Mode for logging.
+// Load-keyed mantras for the Today load tile — the line reinforces the DAY'S PURPOSE
+// (a Max day pushes; a Recover day makes rest feel like training). Keyed to the same
+// getLoadDesc label the vessel shows, so message and intensity always agree.
+const LOAD_MANTRAS={
+  'Maximum':['Peak day — empty the tank.','Leave nothing in reserve.','This is where the gap is made.'],
+  'Hard':['Hard days build fast swimmers.','Push every set. Embrace it.','Comfort is the enemy today.'],
+  'Standard':['Consistency compounds — stack another good one.','Ordinary days, done well, win.','Show up and do the work.'],
+  'Moderate':['Quality over ego today.','Sharp, controlled, technical.','Groove the details.'],
+  'Light':['Easy means easy — let it recover.','Absorb the work. Stay loose.','Patience is training too.'],
+  'Very Light':['Flush it out, feel good.','Move easy, recover fully.'],
+  'Recover':['Rest is training — recover with intent.','Do nothing, and do it well.','Champions rebuild on the days off.']
+};
+function _loadMantra(label){
+  const pool=LOAD_MANTRAS[label]||['Trust the process — one good day at a time.'];
+  const day=Math.floor(new Date().setHours(0,0,0,0)/86400000); // stable within a day, rotates daily
+  return pool[((day%pool.length)+pool.length)%pool.length];
+}
 // Race-day mindset mantras — shown on the countdown, later reused as notification copy.
 const RACE_MANTRAS=[
   'Trust your taper. The work is done.',
