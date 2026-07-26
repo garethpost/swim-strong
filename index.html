@@ -1106,7 +1106,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div style="display:flex;gap:8px;align-items:center;">
     <input type="text" id="pool-timed-event" placeholder="Event (e.g. 100 Free)"
       style="flex:2;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
-    <input type="text" id="pool-timed-time" placeholder="Time"
+    <input type="text" inputmode="numeric" oninput="maskSwimTime(this)" id="pool-timed-time" placeholder="Time"
       style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:var(--font);">
   </div>
 </div>
@@ -1167,7 +1167,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
   <div class="form-row"><label>Seed Time</label>
-    <input id="mr-seed" type="text" placeholder="e.g. 1:02.45" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
+    <input id="mr-seed" type="text" inputmode="numeric" oninput="maskSwimTime(this)" placeholder="type 10245" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
   </div>
   <div class="form-row"><label>Meet Day</label>
     <select id="mr-day" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);">
@@ -1206,7 +1206,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <h3 style="font-size:18px;font-weight:800;margin-bottom:2px;" id="meet-log-title">Log Race Result</h3>
 <p id="meet-log-sub" style="font-size:12px;color:var(--muted);margin-bottom:16px;"></p>
 <div class="form-row"><label>Your Time</label>
-  <input id="ml-time" type="text" placeholder="e.g. 1:01.83" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:22px;font-weight:700;padding:10px 12px;font-family:var(--font);text-align:center;">
+  <input id="ml-time" type="text" inputmode="numeric" oninput="maskSwimTime(this)" placeholder="just type numbers — e.g. 10183" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:22px;font-weight:700;padding:10px 12px;font-family:var(--font);text-align:center;">
 </div>
 <div style="margin-bottom:14px;">
   <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Coach Feedback — tap all that apply</div>
@@ -1496,10 +1496,10 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <h3 style="font-size:17px;margin-bottom:12px;">Add Time</h3>
 <div class="form-row"><label>Event</label><select id="at-event" onchange="updateSplitField()" style="font-size:15px;padding:12px 10px;"></select></div>
 <div class="form-grid-2">
-  <div class="form-row"><label>SCM time</label><input type="text" id="at-time-scm" placeholder="24.50" style="font-size:16px;text-align:center;"></div>
-  <div class="form-row"><label>LCM time</label><input type="text" id="at-time-lcm" placeholder="24.90" style="font-size:16px;text-align:center;"></div>
+  <div class="form-row"><label>SCM time</label><input type="text" inputmode="numeric" oninput="maskSwimTime(this)" id="at-time-scm" placeholder="type 2450" style="font-size:16px;text-align:center;"></div>
+  <div class="form-row"><label>LCM time</label><input type="text" inputmode="numeric" oninput="maskSwimTime(this)" id="at-time-lcm" placeholder="type 2490" style="font-size:16px;text-align:center;"></div>
 </div>
-<div id="at-split-row" style="display:none;" class="form-row"><label id="at-split-label">50m split (optional)</label><input type="text" id="at-split" placeholder="e.g. 27.40" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
+<div id="at-split-row" style="display:none;" class="form-row"><label id="at-split-label">50m split (optional)</label><input type="text" inputmode="numeric" oninput="maskSwimTime(this)" id="at-split" placeholder="type 2740" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;padding:10px 12px;font-family:var(--font);"></div>
 <div class="form-grid-2">
   <div class="form-row"><label>Date</label><input type="date" id="at-date" style="font-size:13px;padding:10px 8px;"></div>
   <div class="form-row"><label>Meet name</label><input type="text" id="at-meet" placeholder="AB Provincials" style="font-size:13px;"></div>
@@ -6731,6 +6731,19 @@ function _validTime(t){
   // Accept: ss.xx  or  m:ss.xx  or  mm:ss.xx  (e.g. 24.50, 1:02.34, 4:15.99)
   return /^\d{1,2}(:\d{2}(\.\d{1,2})?|\.\d{1,2})$/.test(t.trim());
 }
+// Auto-format a swim time from digits ALONE as the swimmer types — "2860" → "28.60",
+// "10183" → "1:01.83". The last two digits are always hundredths, the next two are
+// seconds, the rest minutes. Paired with inputmode="numeric" so the number pad shows
+// and nobody has to type the : or . themselves.
+function formatSwimTime(d){
+  d=String(d).replace(/\D/g,'').slice(0,7);
+  const n=d.length; if(n===0)return '';
+  if(n<=2)return d;
+  const xx=d.slice(-2), rest=d.slice(0,-2);
+  if(rest.length<=2)return rest+'.'+xx;
+  return rest.slice(0,-2)+':'+rest.slice(-2)+'.'+xx;
+}
+function maskSwimTime(el){ if(el)el.value=formatSwimTime(el.value); }
 function saveTimeEntry(){
   const ev=document.getElementById('at-event').value;
   const meet=document.getElementById('at-meet').value.trim()||'—';
@@ -7995,11 +8008,16 @@ function _v2RaceDayHTML(d,rd,checkRow){
       </div>
     </div>`).join('');
   const intelNote=(rd.warmup[0]&&rd.warmup[0].intelNote)||null;
-  const raceChips=rd.racesToday.length?rd.racesToday.map(r=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px">
-      <span style="font-size:.82rem;font-weight:650;color:var(--t-ink)">${escHtml(r.event)}</span>
-      <span style="font-family:var(--t-mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-mute)">${escHtml(r.session||'')}${r.seedTime?` · seed ${escHtml(r.seedTime)}`:''}</span>
-    </div>`).join(''):`<div class="t2-nt" style="color:var(--t-mute)">No races entered yet — add them in Race Mode.</div>`;
+  const raceChips=rd.racesToday.length?rd.racesToday.map(r=>{
+    const logged=(S.meetRaceLog||[]).some(l=>String(l.raceId)===String(r.id));
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:650;color:var(--t-ink)">${escHtml(r.event)}</div>
+        <div style="font-family:var(--t-mono);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-mute);margin-top:2px">${escHtml(r.session||'')}${r.seedTime?` · seed ${escHtml(r.seedTime)}`:''}</div>
+      </div>
+      <button onclick="openRaceLog(${r.id})" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid ${logged?'var(--t-aqua-d)':'var(--t-aqua)'};background:${logged?'transparent':'var(--t-aqua)'};color:${logged?'var(--t-aqua)':'#04141A'};font-size:.72rem;font-weight:800;cursor:pointer;font-family:var(--font)">${logged?'✓ Logged':'Log time →'}</button>
+    </div>`;
+  }).join(''):`<div class="t2-nt" style="color:var(--t-mute)">No races entered yet — add them in Race Mode.</div>`;
   const narratorHTML=(rd.narrator&&rd.narrator.length)?`
     <div class="t2-tile" style="gap:6px;border-color:var(--t-aqua-d)">
       <span class="t2-lbl" style="color:var(--t-aqua)">What your race history says</span>
@@ -13279,7 +13297,7 @@ function saveMeetRaceResult(){
   buildPerformanceProfile._force=true;buildPerformanceProfile(); // force rebuild — race data is high value
   renderHome(); // sync Home Performance Insights tile immediately
   // Auto-sync to Times tab + PB detection
-  let pbEv=null,pbTime=null,pbCourse=null,pbMeet=null;
+  let pbEv=null,pbTime=null,pbCourse=null,pbMeet=null,pbDrop=null,pbQualified=false,pbStdLabel='Target';
   if(race&&time){
     const ev=race.event;
     const pool=race.pool||'lcm';
@@ -13321,12 +13339,22 @@ function saveMeetRaceResult(){
     const isNewPbSCM=pool==='scm'&&newBestSCM&&newBestSCM.scm===time&&(!prevBestSCM||prevBestSCM.scm==='—'||tSec(time)<tSec(prevBestSCM.scm));
     if(isNewPbLCM||isNewPbSCM){
       pbEv=ev;pbTime=time;pbCourse=pool==='lcm'?'LCM':'SCM';pbMeet=meetName;
+      const prevBest=pool==='lcm'?(prevBestLCM&&prevBestLCM.lcm):(prevBestSCM&&prevBestSCM.scm);
+      pbDrop=(prevBest&&prevBest!=='—')?(tSec(prevBest)-tSec(time)):null;
+      const std=getStandard(ev,pool);
+      const newGap=std?gapSec(time,std):null;
+      const prevGap=(std&&prevBest&&prevBest!=='—')?gapSec(prevBest,std):null;
+      pbQualified=newGap!==null&&newGap<=0&&(prevGap===null||prevGap>0);
+      pbStdLabel=STD_LABELS[S.activeStandard]||'Target';
     }
   }
   closeModal('meet-log-modal');
   renderMeetDayBanner();
-  // Show PB card AFTER modal closes so it renders on top cleanly
-  if(pbEv)setTimeout(()=>showPBCard(pbEv,pbTime,pbCourse,pbMeet),150);
+  // Refresh the Today race-day takeover so the race flips to "✓ Logged" + progress bumps.
+  if(window.FLAGS&&FLAGS.v2){const _tv=document.getElementById('today-v2');if(_tv&&_tv.style.display!=='none'){try{renderTodayV2();}catch(e){}}}
+  // Big celebration AFTER the modal closes so it renders on top cleanly. Race day is
+  // prime PB territory — logging a race PB gets the full moment, not the static card.
+  if(pbEv)setTimeout(()=>celebratePB(pbEv,pbTime,pbCourse,pbMeet,pbDrop,pbQualified,pbStdLabel),160);
 }
 
 // ── Section routing ──
