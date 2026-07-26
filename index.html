@@ -13577,6 +13577,11 @@ if('serviceWorker' in navigator){
     document.getElementById('_sw-refresh-btn').onclick=()=>{
       document.getElementById('_sw-refresh-btn').textContent='Updating…';
       if(worker)worker.postMessage({type:'SKIP_WAITING'}); // → activate → controllerchange → reload
+      // Backstop: iOS home-screen PWAs sometimes never fire controllerchange, so the
+      // reload above never happens and the button looks dead. index.html is fetched
+      // network-first, so a plain reload pulls the fresh build regardless — force one
+      // after a short beat if the worker swap hasn't already triggered it.
+      setTimeout(()=>{ if(!_reloading){ _reloading=true; try{location.reload(true);}catch(e){try{location.reload();}catch(_){}} } }, 1500);
     };
   }
 
