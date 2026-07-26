@@ -2750,6 +2750,27 @@ function applyTheme(key){
 function renderThemePicker(){
   const el=document.getElementById('theme-picker');
   if(!el)return;
+  // v2: the legacy palette themes are overridden by the water skin, so show the
+  // working v2 themes instead. Swaps instantly, never navigates.
+  if(window.FLAGS&&FLAGS.v2){
+    const cur=v2Theme();
+    el.innerHTML=Object.entries(V2_THEMES).map(([key,t])=>{
+      const active=key===cur; const [bg,accent,card]=t.sw;
+      return`<div onclick="setV2ThemePick('${key}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(61,224,200,0.08)':'var(--surface)'};cursor:pointer;transition:all 0.15s;">
+        <div style="display:flex;gap:3px;flex-shrink:0;">
+          <div style="width:18px;height:32px;border-radius:5px 0 0 5px;background:${bg};border:1px solid rgba(255,255,255,0.12);"></div>
+          <div style="width:10px;height:32px;background:${card};"></div>
+          <div style="width:5px;height:32px;border-radius:0 5px 5px 0;background:${accent};"></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:var(--text);">${t.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px;">${t.desc}</div>
+        </div>
+        ${active?`<div style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#04141A;font-size:11px;font-weight:900;">✓</span></div>`:''}
+      </div>`;
+    }).join('');
+    return;
+  }
   const current=S.appTheme||'original';
   el.innerHTML=Object.entries(THEMES).map(([key,t])=>{
     const active=key===current;
@@ -7245,13 +7266,23 @@ function renderHomeWeekProgress(){
 // Theme = a clean token swap. Deep Water is default; adding a theme is just
 // another token set (fixes the old half-wired themes where hardcoded colours
 // defeated the picker). Stored separately from the legacy appTheme.
+// v2 themes — both are dark so the whole app stays legible without per-element
+// light-mode fixes. Applied APP-WIDE via html[data-v2theme] (not just the Today
+// hero), so switching reskins every tab + modals. (A light "Pool Deck" theme is a
+// future add — it needs the hardcoded light-on-dark text swapped to tokens first.)
 const V2_THEMES={
-  deep:  {name:'Deep Water'},
-  noir:  {name:'Bioluminescence'},
-  tide:  {name:'Pool Deck'},
+  deep:  {name:'Deep Water',     desc:'Deep navy + aqua',   sw:['#04141A','#3DE0C8','#123039']},
+  noir:  {name:'Bioluminescence',desc:'True black + neon',   sw:['#05060A','#2BF5D6','#12181C']},
 };
 function v2Theme(){ const t=localStorage.getItem('sfp_v2theme')||'deep'; return V2_THEMES[t]?t:'deep'; }
-function setV2Theme(t){ if(V2_THEMES[t]){localStorage.setItem('sfp_v2theme',t); const el=document.getElementById('today-v2'); if(el)el.setAttribute('data-sfp-theme',t);} }
+function setV2Theme(t){ if(V2_THEMES[t]){localStorage.setItem('sfp_v2theme',t);
+  document.documentElement.setAttribute('data-v2theme',t);          // themes ALL v2 surfaces
+  const el=document.getElementById('today-v2'); if(el)el.setAttribute('data-sfp-theme',t);
+  const n2=document.getElementById('nav-v2'); if(n2)n2.setAttribute('data-sfp-theme',t);
+} }
+// Picker handler — swaps the theme instantly (CSS-attribute driven, no re-render)
+// and refreshes the picker's active state. Never navigates.
+function setV2ThemePick(t){ setV2Theme(t); try{ renderThemePicker(); }catch(e){} }
 
 function ensureV2Styles(){
   if(document.getElementById('v2-css'))return;
@@ -7360,6 +7391,24 @@ function ensureV2Styles(){
   }
   body.v2on .modal h1,body.v2on .modal h2,body.v2on .modal h3,
   body.v2on .modal div:not([style*="color"]),body.v2on .modal p:not([style*="color"]){color:#EAF6F5;}
+  /* ── Bioluminescence (noir): app-wide dark variant. Themes the .v2skin sections,
+     modals and the check-in sheet — not just the Today hero — so every tab changes
+     together. Text stays light, so no per-element light-mode fixes are needed. ── */
+  html.v2on[data-v2theme="noir"],html[data-v2theme="noir"] body.v2on{background:#05060A;}
+  html[data-v2theme="noir"] .section.v2skin{
+    --bg:#05060A;--surface:#0A0E11;--card:#12181C;--border:#20282E;
+    --accent:#2BF5D6;--accent2:#0A0E11;--text:#EAFDFB;--muted:#5E7A80;
+    --green:#2BF5D6;--gold:#F5B544;--orange:#F5B544;--purple:#B79BFF;--red:#FF6B5B;
+    background:#05060A;
+  }
+  html[data-v2theme="noir"] .section.v2skin .card-title,
+  html[data-v2theme="noir"] .section.v2skin .section-title{color:#EAFDFB;}
+  html[data-v2theme="noir"] .modal,html[data-v2theme="noir"] #checkin-sheet-inner{
+    --surface:#0A0E11;--bg:#05060A;--card:#12181C;--border:#20282E;
+    --accent:#2BF5D6;--accent2:#0A0E11;--text:#EAFDFB;--muted:#5E7A80;
+    --green:#2BF5D6;--gold:#F5B544;--purple:#B79BFF;--red:#FF6B5B;
+    background:#0A0E11;
+  }
   `;
   const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
 }
@@ -13164,6 +13213,7 @@ function showSection(name){
   if(_v2)ensureV2Styles(); // the .v2skin rules live in the v2 stylesheet
   document.body.classList.toggle('v2on', !!_v2);
   document.documentElement.classList.toggle('v2on', !!_v2); // dark page bg under v2
+  if(_v2)document.documentElement.setAttribute('data-v2theme', v2Theme()); // app-wide theme
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('v2skin', !!_v2));
   syncV2Nav(name); // show the 5-tab v2 nav (or restore the legacy nav) + active state
   // v2 nav labels this tab "Me"; keep the screen header consistent (legacy says "More").
