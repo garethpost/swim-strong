@@ -6762,8 +6762,78 @@ function saveTimeEntry(){
   if(isNewPbLCM||isNewPbSCM){
     const pbTime=isNewPbLCM?lcm:scm;
     const pbCourse=isNewPbLCM?'LCM':'SCM';
-    showPBCard(ev,pbTime,pbCourse,meet);
+    // How much faster than the old best (for the celebration).
+    const prevBest=isNewPbLCM?(prevBestLCM&&prevBestLCM.lcm):(prevBestSCM&&prevBestSCM.scm);
+    const dropSec=(prevBest&&prevBest!=='—')?(tSec(prevBest)-tSec(pbTime)):null;
+    // Did this swim NEWLY hit the target qualifying standard? (Not already met before.)
+    const std=getStandard(ev,pbCourse.toLowerCase());
+    const newGap=std?gapSec(pbTime,std):null;
+    const prevGap=(std&&prevBest&&prevBest!=='—')?gapSec(prevBest,std):null;
+    const justQualified=newGap!==null&&newGap<=0&&(prevGap===null||prevGap>0);
+    const stdLabel=STD_LABELS[S.activeStandard]||'Target';
+    celebratePB(ev,pbTime,pbCourse,meet,dropSec,justQualified,stdLabel);
   }
+}
+// ── PB celebration ──────────────────────────────────────────────────────────
+// A full-screen moment when a personal best is logged: confetti burst + the time
+// + how much faster. Escalates to GOLD with a bigger burst when the swim also
+// newly hits the target qualifying standard (Trials/Nationals/Provincial). The
+// existing shareable card is one tap away via Share. Respects reduced-motion.
+function celebratePB(ev,time,course,meet,dropSec,justQualified,stdLabel){
+  const old=document.getElementById('pb-celebrate'); if(old)old.remove();
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gold=!!justQualified;
+  const accent=gold?'#F5B544':'#3DE0C8';
+  const dropStr=(dropSec&&dropSec>0)?('−'+dropSec.toFixed(2)+'s'):'';
+  const headline=gold?`${escHtml(stdLabel)} QUALIFIED!`:'NEW PERSONAL BEST';
+  const overlay=document.createElement('div');
+  overlay.id='pb-celebrate';
+  overlay.style.cssText=`position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 34%, ${gold?'#241a06':'#052029'} 0%, #000 78%);overflow:hidden;`;
+  overlay.innerHTML=`
+    <canvas id="pb-confetti" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+    <div id="pb-cel-card" style="position:relative;text-align:center;max-width:340px;transform:scale(.82);opacity:0;transition:transform .55s cubic-bezier(.2,1.5,.4,1),opacity .4s;">
+      <div style="font-size:54px;margin-bottom:4px;">${gold?'🏅':'🏆'}</div>
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:${accent};font-weight:800;margin-bottom:14px;">${gold?'🎉 ':''}${headline}</div>
+      <div style="font-size:60px;font-weight:900;color:#fff;letter-spacing:-2px;line-height:1;margin-bottom:8px;">${escHtml(time)}</div>
+      <div style="font-size:19px;font-weight:700;color:#EAF6F5;margin-bottom:3px;">${escHtml(ev)}</div>
+      <div style="font-size:12px;color:#A6C3C6;margin-bottom:16px;">${course}${meet&&meet!=='—'?' · '+escHtml(meet):''}</div>
+      ${dropStr?`<div style="display:inline-block;padding:6px 18px;border-radius:20px;background:rgba(61,224,200,.14);border:1px solid #3DE0C8;color:#3DE0C8;font-size:14px;font-weight:800;margin-bottom:${gold?'10px':'22px'};">▼ ${dropStr} faster</div>`:'<div style="margin-bottom:22px;"></div>'}
+      ${gold?`<div style="margin-bottom:22px;"><span style="display:inline-block;padding:7px 18px;border-radius:20px;background:rgba(245,181,68,.16);border:1px solid #F5B544;color:#F5B544;font-size:13px;font-weight:800;">✅ You hit the ${escHtml(stdLabel)} standard</span></div>`:''}
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="document.getElementById('pb-celebrate').remove();showPBCard('${esc(ev)}','${esc(time)}','${course}','${esc(meet)}')" style="padding:13px 22px;border-radius:12px;border:none;background:${accent};color:#04141A;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font);">📤 Share</button>
+        <button onclick="document.getElementById('pb-celebrate').remove()" style="padding:13px 22px;border-radius:12px;border:1px solid #1C4550;background:transparent;color:#A6C3C6;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);">Done</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>{const c=document.getElementById('pb-cel-card');if(c){c.style.transform='scale(1)';c.style.opacity='1';}});
+  if(!reduce)_pbConfetti(gold);
+}
+function _pbConfetti(gold){
+  const canvas=document.getElementById('pb-confetti'); if(!canvas)return;
+  const ctx=canvas.getContext('2d'); if(!ctx)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.clientWidth||window.innerWidth, H=canvas.clientHeight||window.innerHeight;
+  canvas.width=W*dpr; canvas.height=H*dpr; ctx.scale(dpr,dpr);
+  const colors=gold?['#F5B544','#FFD700','#3DE0C8','#ffffff','#FFA500']:['#3DE0C8','#A98BFF','#F5B544','#ffffff','#2BF5D6'];
+  const parts=[];
+  const rnd=Math.random;
+  // Initial burst from the centre — the "pop".
+  const burst=gold?180:130;
+  for(let i=0;i<burst;i++)parts.push({x:W/2+(rnd()-0.5)*90,y:H*0.34,vx:(rnd()-0.5)*10,vy:(rnd()-1)*12-3,w:5+rnd()*6,h:8+rnd()*9,rot:rnd()*6.28,vr:(rnd()-0.5)*0.4,color:colors[i%colors.length],born:0});
+  const spawnRain=(n,frame)=>{ for(let i=0;i<n;i++)parts.push({x:rnd()*W,y:-12,vx:(rnd()-0.5)*2.5,vy:2.4+rnd()*3.2,w:5+rnd()*6,h:8+rnd()*9,rot:rnd()*6.28,vr:(rnd()-0.5)*0.35,color:colors[(i+frame)%colors.length],born:frame}); };
+  let frame=0; const rainUntil=130, maxF=320;
+  (function tick(){
+    if(!document.getElementById('pb-confetti'))return; // overlay closed
+    ctx.clearRect(0,0,W,H); frame++;
+    if(frame<rainUntil && frame%5===0) spawnRain(gold?7:5,frame); // sustained fall so it's never empty
+    const globalFade=frame>maxF-70?Math.max(0,1-(frame-(maxF-70))/70):1;
+    for(let k=parts.length-1;k>=0;k--){ const p=parts[k];
+      p.vy+=0.26; p.x+=p.vx; p.y+=p.vy; p.vx*=0.99; p.rot+=p.vr;
+      if(p.y>H+24){ parts.splice(k,1); continue; }
+      ctx.save(); ctx.globalAlpha=globalFade; ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); }
+    if(frame<maxF && parts.length)requestAnimationFrame(tick);
+  })();
 }
 function showPBCard(ev,time,course,meet){
   const name=(S.profile&&S.profile.name)||'Athlete';
