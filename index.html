@@ -7550,8 +7550,10 @@ function renderTodayV2(){
     </div>
     ${d.checked?'':`<button class="t2-cta" style="margin-top:9px" onclick="event.stopPropagation();showCheckinSheet()">Log today's check-in →</button>`}`;
 
+  // Load balance replaces the daily streak — a scientific under/over-training read.
+  const lb=_v2LoadBalance();
   const statRow=`<div class="t2-r3">
-    <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Streak</span><span class="t2-v" style="font-size:1.3rem">${d.streak}</span></div>
+    <div class="t2-tile" style="padding:11px;gap:4px;align-items:flex-start" title="This week's training load vs your 4-week average (acute:chronic). 0.8–1.3 is the sweet spot; a spike flags overreaching."><span class="t2-lbl">Load balance</span><span class="t2-v" style="font-size:1.05rem;color:${lb.color}">${lb.label}</span><span class="t2-nt" style="font-size:.55rem">${escHtml(lb.detail||'')}</span></div>
     <div class="t2-tile t2-tap" style="padding:11px;gap:5px;align-items:flex-start" onclick="showSection('schedule')"><span class="t2-lbl">Next meet</span><span class="t2-v" style="font-size:1.3rem;color:var(--t-violet)">${d.meet?d.meet.days+'<small style="font-size:.6rem">d</small>':'—'}</span></div>
     <div class="t2-tile" style="padding:11px;gap:5px;align-items:flex-start"><span class="t2-lbl">Season</span><span class="t2-v" style="font-size:1.3rem">${d.km.toFixed(0)}<small style="font-size:.6rem">${d.uKm?'km':'mi'}</small></span></div>
   </div>`;
@@ -7634,11 +7636,6 @@ function renderTodayV2(){
     </div>
   </div>` : '';
 
-  const meetTile = d.meet ? `<div class="t2-tile" style="border-color:var(--t-violet);border-style:dashed">
-    <span class="t2-lbl" style="color:var(--t-violet)">Coming up</span>
-    <p class="t2-nt"><b style="color:var(--t-ink)">${escHtml(d.meet.name)}</b> — ${d.meet.days} day${d.meet.days===1?'':'s'} away${d.meet.priority?` · ${escHtml(d.meet.priority)}-meet`:''}.</p>
-  </div>` : '';
-
   // ── RACE DAY TAKEOVER ──────────────────────────────────────────────────────
   // On a meet day, Today transforms: the load vessel steps aside for the race
   // hero, the swimmer's own race-history narrator, and the adaptive warm-up (open
@@ -7689,7 +7686,6 @@ function renderTodayV2(){
     ${sessionTile}
     ${chaseTile}
     ${fuelTile}
-    ${meetTile}
   </div>`;
 
   // Fill the vessel after paint (empty → today's level) for the settle animation.
@@ -7698,6 +7694,35 @@ function renderTodayV2(){
 }
 
 function cycleV2Theme(){ const keys=Object.keys(V2_THEMES); const cur=v2Theme(); const nx=keys[(keys.indexOf(cur)+1)%keys.length]; setV2Theme(nx); const el=document.getElementById('today-v2'); if(el&&el.style.display==='block')renderTodayV2(); }
+
+// ── Load balance (acute:chronic workload ratio) ─────────────────────────────
+// The sports-science under/over-training indicator: this week's training load vs
+// the swimmer's recent 4-week average. Ratio ~0.8–1.3 is the "sweet spot"; a spike
+// (>1.5) is the classic injury-risk / overreaching flag. Load is a consistent
+// per-day proxy (pool km + dryland RPE) — units cancel in the ratio, so the exact
+// weighting doesn't matter, only that it's applied consistently. Replaces the
+// daily "streak" (which could nudge training through needed rest days).
+function _v2LoadBalance(){
+  try{
+    const now=new Date(); now.setHours(0,0,0,0);
+    const LMAP={Maximum:9,Hard:8,Standard:6,Moderate:5,Light:4,Recover:2};
+    const dayLoad={};
+    const add=(dateStr,amt)=>{ if(!dateStr)return; const k=String(dateStr).slice(0,10);
+      let dd; try{ dd=(now-localDate(k))/86400000; }catch(e){ return; }
+      if(dd<0||dd>27)return; dayLoad[k]=(dayLoad[k]||0)+amt; };
+    (S.poolLog||[]).forEach(p=>{ if(p&&p.date) add(p.date,(p.distKm&&p.distKm>0)?p.distKm:3); });
+    (S.history||[]).forEach(h=>{ if(h&&h.date) add(h.date,((h.rpe||(h.load&&LMAP[h.load.label])||6)/2)); });
+    let acute=0,chronic=0; const activeDays=Object.keys(dayLoad);
+    activeDays.forEach(k=>{ const v=dayLoad[k]; chronic+=v; const dd=(now-localDate(k))/86400000; if(dd<=6)acute+=v; });
+    const oldest=activeDays.length?Math.max(...activeDays.map(k=>(now-localDate(k))/86400000)):0;
+    if(chronic<=0||oldest<20||activeDays.length<6) return {building:true,label:'Building',color:'var(--t-mute)',detail:'a few more weeks'};
+    const ratio=acute/((chronic/4)||1);
+    if(ratio<0.8)   return {building:false,label:'Fresh',   color:'var(--t-aqua)', detail:'well recovered',ratio};
+    if(ratio<=1.3)  return {building:false,label:'Balanced',color:'var(--t-aqua)', detail:'optimal load',  ratio};
+    if(ratio<=1.5)  return {building:false,label:'High',    color:'var(--t-gold)', detail:'ramping up',    ratio};
+    return                 {building:false,label:'Spiking', color:'var(--t-red)',  detail:'ease back',     ratio};
+  }catch(e){ return {building:true,label:'Building',color:'var(--t-mute)',detail:''}; }
+}
 
 // ── Planned week shape ──────────────────────────────────────────────────────
 // The Schedule tab is gone in v2; this compact Mon–Sun strip brings its most
