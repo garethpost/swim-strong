@@ -10852,7 +10852,7 @@ function renderHistory(){
         <div>
           <div style="font-size:11px;color:var(--muted);">${dateStr}</div>
           <div style="font-size:15px;font-weight:600;margin:2px 0;">${h.title}${rpeTag}</div>
-          <div style="font-size:12px;color:var(--muted);">${h.phase.name} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div>
+          <div style="font-size:12px;color:var(--muted);">${h.phase?.name||'—'} · ${h.load?.label||'—'} · Sleep ${h.sleep||'?'}h · R${h.readiness}/5</div>
         </div>
         <div class="history-chevron" style="font-size:16px;color:var(--muted);transition:transform 0.25s;flex-shrink:0;margin-left:8px;">›</div>
       </div>
@@ -12867,6 +12867,8 @@ function showSection(name){
   document.documentElement.classList.toggle('v2on', !!_v2); // dark page bg under v2
   document.querySelectorAll('.section').forEach(s=>s.classList.toggle('v2skin', !!_v2));
   syncV2Nav(name); // show the 5-tab v2 nav (or restore the legacy nav) + active state
+  // v2 nav labels this tab "Me"; keep the screen header consistent (legacy says "More").
+  const _moreTitle=document.querySelector('#section-more .section-title'); if(_moreTitle)_moreTitle.textContent=_v2?'Me':'More';
   if(name==='home')renderHomeDispatch();
   if(name==='times'){renderStrokeTabs();renderTimesContent();renderCustomTargetMeets();}
   if(name==='schedule'){
