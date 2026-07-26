@@ -6860,7 +6860,11 @@ function _pbCrowd(gold){
     const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
     const ctx=new AC(); if(ctx.state==='suspended'){try{ctx.resume();}catch(e){}}
     const now=ctx.currentTime, dur=gold?2.6:1.9;
-    const master=ctx.createGain(); master.gain.value=0.6; master.connect(ctx.destination);
+    const master=ctx.createGain(); master.gain.value=1.6;
+    // Compressor glues the noise bursts and lets us push loudness without harsh clipping.
+    const comp=ctx.createDynamicsCompressor();
+    comp.threshold.value=-22; comp.knee.value=28; comp.ratio.value=10; comp.attack.value=0.003; comp.release.value=0.25;
+    master.connect(comp); comp.connect(ctx.destination);
     // shared white-noise buffer
     const len=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0);
     for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
@@ -6870,8 +6874,8 @@ function _pbCrowd(gold){
     bp.frequency.setValueAtTime(650,now); bp.frequency.linearRampToValueAtTime(1300,now+dur*0.55);
     const rg=ctx.createGain();
     rg.gain.setValueAtTime(0,now);
-    rg.gain.linearRampToValueAtTime(0.30,now+0.45);
-    rg.gain.linearRampToValueAtTime(0.22,now+dur*0.7);
+    rg.gain.linearRampToValueAtTime(0.55,now+0.45);
+    rg.gain.linearRampToValueAtTime(0.42,now+dur*0.7);
     rg.gain.linearRampToValueAtTime(0,now+dur);
     roar.connect(bp); bp.connect(rg); rg.connect(master);
     roar.start(now); roar.stop(now+dur);
@@ -6883,7 +6887,7 @@ function _pbCrowd(gold){
       const cf=ctx.createBiquadFilter(); cf.type='bandpass'; cf.frequency.value=1400+Math.random()*1800; cf.Q.value=1.4;
       const g=ctx.createGain(); const cd=0.018+Math.random()*0.03;
       g.gain.setValueAtTime(0,t);
-      g.gain.linearRampToValueAtTime(0.10+Math.random()*0.15,t+0.002);
+      g.gain.linearRampToValueAtTime(0.18+Math.random()*0.22,t+0.002);
       g.gain.exponentialRampToValueAtTime(0.0004,t+cd);
       s.connect(cf); cf.connect(g); g.connect(master);
       s.start(t, Math.random()*(dur-0.1), cd+0.02);
