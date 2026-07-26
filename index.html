@@ -7281,6 +7281,18 @@ function ensureV2Styles(){
   /* Paint the whole page dark under v2 so a light legacy theme can't show white
      behind short screens. */
   body.v2on,html.v2on{background:#04141A;}
+  /* The check-in sheet is static HTML outside any .section, so the .v2skin remap
+     never reaches it — under a light legacy theme its var(--surface) is white.
+     Redefine the water tokens on the sheet so every child repaints. */
+  body.v2on #checkin-sheet-inner{
+    --surface:#0A2028;--bg:#04141A;--card:#123039;--border:#1C4550;
+    --accent:#3DE0C8;--accent2:#0A2028;--text:#EAF6F5;--muted:#6E8D95;
+    --green:#3DE0C8;--gold:#F5B544;--purple:#A98BFF;--red:#FF6B5B;
+    background:#0A2028;color:#EAF6F5;
+  }
+  /* wrapper divs inside the sheet set no color — pin them so they can't inherit
+     the legacy body's dark-on-light text color. */
+  body.v2on #checkin-sheet-inner div:not([style*="color"]){color:#EAF6F5;}
   `;
   const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
 }
