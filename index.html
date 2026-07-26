@@ -1867,8 +1867,58 @@ function launchApp(){
   if(_currentUser) syncToCloud();
 }
 
+// ── Demo mode ───────────────────────────────────────────────────────────────
+// Seeds a realistic demo swimmer into memory (never persisted) so ?demo=1 opens a
+// full-looking app with no account. Re-runs on every load, so it always looks
+// fresh and never writes over a real user's stored data.
+function seedDemoData(){
+  const D=(daysAgo)=>{const d=new Date();d.setDate(d.getDate()-daysAgo);d.setHours(0,0,0,0);return dKey(d);};
+  const Dfut=(n)=>{const d=new Date();d.setDate(d.getDate()+n);d.setHours(0,0,0,0);return dKey(d);};
+  const tk=dKey(new Date());
+  _currentUser={email:'demo@swimfitpro.app'};
+  S.profile={name:'Priya Raman',club:'Riptide Swim Club',gender:'female',birthdate:'2009-04-12',primaryStroke:'Freestyle',primaryEvents:['100 Free','50 Free','200 Free'],trainingLevel:'advanced'};
+  S.bodyStats={ht:172,age:16,sex:'female',wtKg:61.5,updated:new Date().toISOString()};
+  S.programmes=[{id:'programme_1',name:'2026–27 Long Course',color:'#3DE0C8'}];
+  S.currentProgrammeId='programme_1';
+  S.swimPhase='build'; S.activeStandard='canadatrials'; S.activeTStroke='100 Free'; S.useKm=true;
+  S.seasonTemplate={start:D(60),end:Dfut(120),days:{1:['swim_am','dry_lower'],2:['dry_upper'],3:['swim_am'],4:['dry_power'],5:['swim_am'],6:['swim_am'],0:[]}};
+  S.daySchedule={[tk]:{override:true,sessions:['swim_am','dry_power']}};
+  const pastMeets=[],races=[],logs=[];
+  const tags=[['turns'],['turns','back-half'],['back-half'],['turns'],['start'],['turns','back-half'],['turns'],['turns'],['back-half'],['turns'],['turns'],['turns']];
+  for(let i=0;i<12;i++){
+    const ev=i%3===1?'50 Free':i%3===2?'200 Free':'100 Free';
+    const base=ev==='50 Free'?28.6:ev==='200 Free'?141.3:63.4;
+    const t=(base-i*0.14).toFixed(2);const mins=Math.floor(t/60),secs=(t-mins*60).toFixed(2);
+    const timeStr=mins>0?mins+':'+(secs<10?'0':'')+secs:secs;const md=D(150-i*11);
+    pastMeets.push({id:8000+i,name:'Meet '+(i+1),date:md,endDate:md,priority:'B'});
+    races.push({id:1000+i,meetId:8000+i,event:ev,pool:'lcm',session:'prelims',seedTime:String(timeStr),day:1});
+    logs.push({raceId:1000+i,meetId:8000+i,event:ev,time:String(timeStr),seedTime:String(timeStr),date:md,coachTags:tags[i],programmeId:'programme_1',pool:'lcm',feel:i%2?'good':'flat'});
+  }
+  S.meets=[{id:9001,name:'Canadian Trials',date:Dfut(18),endDate:Dfut(21),priority:'A'},{id:9002,name:'Regional Cup',date:D(25),endDate:D(24),priority:'B'},...pastMeets];
+  S.meetRaces=races; S.meetRaceLog=logs;
+  const phaseCycle=['GPP','GPP','GPP','Strength','Strength','Power','Power'];S.history=[];
+  for(let i=0;i<40;i++){const ph=phaseCycle[i%phaseCycle.length];S.history.push({date:D(160-i*4),title:ph+' dryland',phase:{name:ph},load:{label:i%3===0?'Hard':'Standard'},rpe:6+(i%3),readiness:3+(i%2),sleep:7+(i%2?0.5:0),programmeId:'programme_1'});}
+  S.timeHistory={
+    '100 Free':[{date:D(200),meet:'Fall Invite',scm:'1:02.90',lcm:'1:05.10',entryType:'race',programmeId:'programme_1'},{date:D(120),meet:'Winter Champs',scm:'1:01.80',lcm:'1:04.20',entryType:'race',programmeId:'programme_1'},{date:D(45),meet:'Regional Cup',scm:'1:00.90',lcm:'1:03.40',entryType:'race',programmeId:'programme_1'}],
+    '50 Free':[{date:D(120),meet:'Winter Champs',scm:'28.40',lcm:'29.20',entryType:'race',programmeId:'programme_1'},{date:D(45),meet:'Regional Cup',scm:'27.80',lcm:'28.60',entryType:'race',programmeId:'programme_1'}],
+    '200 Free':[{date:D(120),meet:'Winter Champs',scm:'2:16.10',lcm:'2:21.30',entryType:'race',programmeId:'programme_1'}]
+  };
+  const ci=[];for(let i=0;i<10;i++)ci.push({date:D(i),sleep:7+(i%3?0.5:0),readiness:3+(i%2),sessions:i%2?['swim_am']:['dry_lower','swim_am']});
+  S.checkinHistory=ci;
+  const pl=[];for(let i=0;i<8;i++)pl.push({date:D(i*2),distKm:4.2+(i%3),feel:3+(i%2)});
+  S.poolLog=pl;
+  const ids=(typeof SWIMMER_FOODS!=='undefined'?SWIMMER_FOODS.slice(0,3).map(f=>f.id):[]);
+  S.mealLog={[tk]:ids.map((id,i)=>({foodId:id,qty:i===2?2:1,servingMult:1}))};
+  S.hydrationLog={[tk]:6};
+  S.sleep=7.5; S.readiness=4; S.todaySleep=7.5; S.todayReadiness=4;
+  try{ buildPerformanceProfile._force=true; buildPerformanceProfile(); }catch(e){}
+  try{ S.currentWorkout=generateWorkout(null); }catch(e){}
+}
+
 // ── Boot: check for existing session ──
 async function bootAuth(){
+  // Demo mode short-circuits auth + cloud entirely.
+  if(window.FLAGS&&FLAGS.demo){ try{ seedDemoData(); }catch(e){console.warn('demo seed failed',e);} launchApp(); return; }
   const{data:{session}}=await supa.auth.getSession();
   if(session&&session.user){
     _currentUser=session.user;
@@ -7312,6 +7362,17 @@ function v2Data(){
   // Today's load
   let mult=1.0,load={label:'Standard',msg:''};
   try{ mult=getLoadMult(); load=getLoadDesc(mult); }catch(e){}
+  // Rest-day cap: getLoadMult() reflects readiness + phase, NOT the day's plan, so
+  // on a scheduled rest day it can read "Hard" next to a "rest & refuel" directive.
+  // Cap the DISPLAY (label + vessel level) here — the underlying math is untouched.
+  // Readiness is still shown in the check-in row, so the "you're primed" signal isn't lost.
+  try{
+    const _restToday=(getSessionsForDate(now)||[]).length===0;
+    if(_restToday && !isMeetDay(now)){
+      load={label:'Recover',msg:'Rest day — recovery is training.'};
+      mult=0.35;                 // pull the vessel to near-empty so label and water agree
+    }
+  }catch(e){}
 
   // Check-in
   let checked=false; try{ checked=hasCheckedInToday(); }catch(e){}
@@ -13073,8 +13134,14 @@ window.FLAGS = window.FLAGS || {};
   try{
     const p=new URLSearchParams(location.search);
     if(p.has('v2'))localStorage.setItem('sfp_v2', p.get('v2')==='0'?'0':'1');
+    // Demo mode: ?demo=1 loads a seeded demo swimmer and skips auth/cloud sync so a
+    // reviewer (or you) can open a clean, full-looking app with no account. NOT
+    // persisted — it only lives while the param is in the URL, so it never sticks
+    // for a real user or writes demo data over their storage.
+    FLAGS.demo = p.get('demo')==='1';
+    if(FLAGS.demo)localStorage.setItem('sfp_v2','1'); // demo always shows v2
   }catch(e){}
-  FLAGS.v2 = localStorage.getItem('sfp_v2')==='1';
+  FLAGS.v2 = FLAGS.demo || localStorage.getItem('sfp_v2')==='1';
 })();
 document.getElementById('app').style.display='none';
 // Deduplicate any daySchedule entries that have repeated session types (stale off-season data)
