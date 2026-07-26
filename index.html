@@ -1631,6 +1631,7 @@ const LAST_SYNC_KEY='_lastSyncedAt';
 const LOGO_SIG_KEY='_clubLogoSig';
 function _logoSig(v){const s=String(v);return s.length+':'+s.slice(-24);}
 function markLocalDirty(){
+  if(window.FLAGS&&FLAGS.demo)return; // demo/test mode is fully sealed off from the cloud
   if(!_currentUser)return; // signed out: nothing to reconcile against
   try{localStorage.setItem(DIRTY_KEY,String(Date.now()));}catch(e){}
 }
@@ -1638,6 +1639,7 @@ function isLocalDirty(){return !!localStorage.getItem(DIRTY_KEY);}
 
 // ── Push all localStorage to Supabase (called after login/signup and on key saves) ──
 async function syncToCloud(){
+  if(window.FLAGS&&FLAGS.demo)return false; // never write demo/test data to the cloud
   if(!_currentUser){console.warn('syncToCloud: no user');return false;}
   const payload={};
   SYNC_KEYS.forEach(k=>{
@@ -1673,6 +1675,7 @@ async function syncToCloud(){
 // Never clobbers unsynced local work. If we are holding writes the cloud has not
 // confirmed, we push them up instead of pulling down over the top of them.
 async function syncFromCloud(){
+  if(window.FLAGS&&FLAGS.demo)return false; // demo/test mode never touches the cloud
   if(!_currentUser)return false;
   if(isLocalDirty()){
     console.warn('syncFromCloud: local has unsynced writes — pushing instead of pulling');
