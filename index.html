@@ -6208,19 +6208,22 @@ function buildChart(hist,field){
   if(vals.length<2)return'';
   const labels=hist.filter(e=>tSec(e[field])!==Infinity).map(e=>{const d=new Date(e.date);return d.toLocaleDateString('en',{month:'short'})+" '"+d.getFullYear().toString().slice(2);});
   const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||0.5;
-  const W=320,H=110,PX=32,PY=14,iW=W-PX*2,iH=H-PY*2;
-  const pts=vals.map((v,i)=>[PX+i*(iW/Math.max(1,vals.length-1)),PY+iH-((v-mn)/rng)*iH]);
-  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible;">`;
+  // PT (top) gives the time labels headroom so the fastest point's label can't clip
+  // off the top; max-width keeps the chart from stretching huge on wide screens.
+  const W=340,H=132,PX=34,PT=24,PB=22,iW=W-PX*2,iH=H-PT-PB;
+  const pts=vals.map((v,i)=>[PX+i*(iW/Math.max(1,vals.length-1)),PT+iH-((v-mn)/rng)*iH]);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:440px;display:block;margin:0 auto;overflow:visible;">`;
   svg+=`<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1ABCBF" stop-opacity="0.4"/><stop offset="100%" stop-color="#1ABCBF" stop-opacity="0"/></linearGradient></defs>`;
-  for(let i=0;i<=4;i++){const y=PY+i*(iH/4);svg+=`<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#1e3258" stroke-width="1"/>`;}
-  const aPath=`M ${pts[0][0]} ${pts[0][1]} ${pts.slice(1).map(p=>`L ${p[0]} ${p[1]}`).join(' ')} L ${pts[pts.length-1][0]} ${PY+iH} L ${pts[0][0]} ${PY+iH} Z`;
+  for(let i=0;i<=4;i++){const y=PT+i*(iH/4);svg+=`<line x1="${PX}" y1="${y}" x2="${W-PX}" y2="${y}" stroke="#1e3258" stroke-width="1"/>`;}
+  const aPath=`M ${pts[0][0]} ${pts[0][1]} ${pts.slice(1).map(p=>`L ${p[0]} ${p[1]}`).join(' ')} L ${pts[pts.length-1][0]} ${PT+iH} L ${pts[0][0]} ${PT+iH} Z`;
   svg+=`<path d="${aPath}" fill="url(#cg)"/>`;
   svg+=`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#1ABCBF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   pts.forEach(([x,y],i)=>{
     svg+=`<circle cx="${x}" cy="${y}" r="4" fill="#1ABCBF"/>`;
     const a=i===0?'start':i===vals.length-1?'end':'middle';
-    svg+=`<text x="${x}" y="${y-9}" fill="#e8f0fe" font-size="9" text-anchor="${a}">${secDisp(vals[i])}</text>`;
-    svg+=`<text x="${x}" y="${H-2}" fill="#7a8faa" font-size="8" text-anchor="${a}">${labels[i]}</text>`;
+    const ty=Math.max(9,y-9); // never let the time label clip above the top edge
+    svg+=`<text x="${x}" y="${ty}" fill="#e8f0fe" font-size="9" text-anchor="${a}">${secDisp(vals[i])}</text>`;
+    svg+=`<text x="${x}" y="${H-4}" fill="#7a8faa" font-size="8" text-anchor="${a}">${labels[i]}</text>`;
   });
   svg+=`</svg>`;
   return svg;
@@ -11216,7 +11219,7 @@ function renderPerformanceInsightsTimes(){
 
   // Block correlation rows
   const blockRows=Object.entries(pp.blockCorrelation).map(([phase,d])=>{
-    if(d.signal==='insufficient')return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);"><span style="font-size:12px;color:var(--muted);">${phase}</span><span style="font-size:11px;color:var(--muted);">—</span></div>`;
+    if(d.signal==='insufficient')return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);"><span style="font-size:12px;color:var(--muted);">${phase} Block</span><span style="font-size:10px;color:var(--muted);font-style:italic;">Building — more races needed</span></div>`;
     const rate=d.total>0?Math.round((d.imp/d.total)*100):0;
     const col=d.signal==='positive'?'var(--green)':d.signal==='negative'?'var(--red)':'var(--muted)';
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
@@ -11282,7 +11285,7 @@ function renderPerformanceInsightsTimes(){
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Pool Trends</div>
       ${poolRows}
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">Block Correlation</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">% of races where times improved after each training block</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.5;">For each dryland block you finish, this checks how often your races got faster afterward — so you learn which blocks actually move your times. "Building" means you haven't logged enough races following that block yet.</div>
       ${blockRows}
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 6px;">Recurring Race Issues</div>
       ${tagRows}
