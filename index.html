@@ -13186,19 +13186,9 @@ function renderMeetDayBanner(){
     <!-- Race cards for selected day -->
     ${_buildRaceCards(viewRaces,races,activeMeet,viewDay)}
 
-    <!-- Meet Day Nutrition -->
-    <div class="card" style="margin-top:4px;">
-      <details>
-        <summary style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:2px 0;">
-          <span>📋 Meet Day Nutrition</span><span style="font-size:11px;color:var(--muted);">▼</span>
-        </summary>
-        <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.8;">
-          <b style="color:var(--text);">Wake:</b> High-carb breakfast 2–3h before warm-up. Oats, banana, toast + honey. No heavy protein.<br>
-          <b style="color:var(--text);">Between races:</b> Fast carbs every 45–60 min. Sports drink, banana, energy gels, dates.<br>
-          <b style="color:var(--text);">Hydration:</b> 150–200ml every 20 min all day. Don't wait until thirsty.<br>
-          <b style="color:var(--text);">Avoid:</b> High fat, high fibre, anything unfamiliar. Not the day to experiment.
-        </div>
-      </details>
+    <!-- Meet-day fuel lives in the Fuel tab (single home) — link, don't duplicate -->
+    <div style="margin-top:6px;text-align:center;">
+      <button onclick="showSection('fuel')" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">🥤 Meet-day fuel &amp; timing plan → Fuel tab</button>
     </div>`;
 }
 
