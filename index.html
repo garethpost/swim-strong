@@ -1879,6 +1879,7 @@ function seedDemoData(){
   _currentUser={email:'demo@swimfitpro.app'};
   S.profile={name:'Priya Raman',club:'Riptide Swim Club',gender:'female',birthdate:'2009-04-12',primaryStroke:'Freestyle',primaryEvents:['100 Free','50 Free','200 Free'],trainingLevel:'advanced'};
   S.bodyStats={ht:172,age:16,sex:'female',wtKg:61.5,updated:new Date().toISOString()};
+  S.oneRM={squat:85,rdl:95,row:55,pull:5,ohpress:35}; S.oneRMDate=D(20); S.lastBaselineDate=D(20); // recent baselines → weights prescribed, no retest nag
   S.programmes=[{id:'programme_1',name:'2026–27 Long Course',color:'#3DE0C8'}];
   S.currentProgrammeId='programme_1';
   S.swimPhase='build'; S.activeStandard='canadatrials'; S.activeTStroke='100 Free'; S.useKm=true;
@@ -11683,8 +11684,8 @@ function renderBaseline(){
   }).join('');
 
   const firstTimeIntro=!hasAny?`<div style="background:rgba(0,198,255,0.06);border:1px solid rgba(0,198,255,0.2);border-left:3px solid var(--accent);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
-    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;">🎯 Week 1 — Set Your Strength Baselines</div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.6;">The weight loading system is locked until you set these. You don't need to max out — just enter a weight and reps you've done in training. The app calculates your estimated 1RM using the Epley formula and uses it to prescribe the right weight for every session.</div>
+    <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;">🎯 Set a strength baseline → unlock precise loads</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;">Optional, but worth it. You don't need to max out — just enter a weight and reps you've done in training, and the app estimates your 1RM (Epley formula) to prescribe the exact right weight every session. Until you do, workouts still run on bodyweight and effort (RPE), so you can start training right away.</div>
   </div>`:'';
 
   el.innerHTML=`<div class="card" style="margin-bottom:12px;">
