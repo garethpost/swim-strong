@@ -1600,6 +1600,10 @@ const SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 // use of `supa` is inside a function called after boot, so none of them race this.
 let supa=null;
 let _currentUser=null; // set after auth
+// Staged v2 rollout: the redesign auto-enables ONLY for these accounts (matched on
+// login email, lower-cased). Everyone else stays on the legacy app. Remove this list
+// (or the check in launchApp) to launch v2 to all users.
+const V2_ALLOWLIST=['garethpost81@gmail.com','renatapost@me.com'];
 
 // ── All localStorage keys we sync to Supabase ──
 const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','weightLog','weightTrendLog',
@@ -1862,6 +1866,8 @@ function reloadStateFromStorage(){
 
 // ── Launch app after auth ──
 function launchApp(){
+  // Staged v2 rollout — flip the redesign on for allowlisted accounts before the first render.
+  try{ if(_currentUser && V2_ALLOWLIST.includes(String(_currentUser.email||'').trim().toLowerCase())) FLAGS.v2=true; }catch(e){}
   applyTheme(DB.get('appTheme','original'));
   applyClubLogo();
   checkOnboarding();
@@ -7719,6 +7725,11 @@ function v2Data(){
 
 function renderTodayV2(){
   ensureV2Styles();
+  // Ensure the whole v2 environment is on even when Today renders straight from
+  // launchApp (allowlisted account) before any showSection — so the check-in sheet,
+  // modals and page background pick up the water theme immediately.
+  document.body.classList.add('v2on'); document.documentElement.classList.add('v2on');
+  try{ document.documentElement.setAttribute('data-v2theme', v2Theme()); }catch(e){}
   let el=document.getElementById('today-v2');
   if(!el){ el=document.createElement('div'); el.id='today-v2';
     const c=document.getElementById('content'); (c||document.body).appendChild(el); }
