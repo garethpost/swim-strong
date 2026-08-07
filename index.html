@@ -3194,6 +3194,7 @@ function renderProfileDisplay(){
     ${S.profile.primaryEvents&&S.profile.primaryEvents.length?`<div style="color:var(--muted);font-size:12px;">Events: ${S.profile.primaryEvents.join(', ')}</div>`:''}
     ${S.profile.primaryStroke?`<div style="color:var(--muted);font-size:12px;">Stroke: ${({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.primaryStroke]||S.profile.primaryStroke}${S.profile.secondaryStroke?' · '+({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.secondaryStroke]:''}</div>`:''}
     ${goals.length?`<div style="margin-top:4px;"><div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Long-term goals</div>${goals.map(g=>`<div style="font-size:12px;color:var(--muted);padding:2px 0;">→ ${g}</div>`).join('')}</div>`:''}
+    <button onclick="openSeasonWrapped()" style="margin-top:10px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--accent);background:linear-gradient(100deg, color-mix(in srgb,var(--accent) 20%,transparent), transparent);color:var(--accent);font-weight:750;font-size:13px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;">🌊 Season Wrapped — your season, in stories →</button>
   </div>`;
 }
 function openProfileModal(){
@@ -7914,6 +7915,221 @@ function closeWeekRecap(){
   const inn=document.getElementById('week-recap-inner'); if(inn) inn.style.transform='translateY(100%)';
   ov.style.opacity='0';
   setTimeout(()=>{ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },350);
+}
+
+// ── Season Wrapped — season-end story deck + shareable card ───────────────────
+// The season-scale sibling of Your Week: a tap-through story reel that reflects the
+// whole season back at the swimmer, ending in a 1080×1920 image they can post.
+// Same ethos — own season only, never peers; no body/weight; adult-mediated share.
+// Every figure pulls live from logged swims/times/check-ins + the correlation engine.
+function _seasonBounds(){
+  const tmpl=S.seasonTemplate||{};
+  let start=tmpl.start?localDate(tmpl.start):null;
+  let end=tmpl.end?localDate(tmpl.end):null;
+  if(!start){ // no season set → span all logged data
+    const dates=[];
+    (S.poolLog||[]).forEach(e=>{ if(e&&e.date)dates.push(e.date); });
+    (S.history||[]).forEach(h=>{ if(h&&h.date)dates.push(dKey(new Date(h.date))); });
+    Object.values(S.timeHistory||{}).forEach(arr=>(arr||[]).forEach(e=>{ if(e&&e.date)dates.push(e.date); }));
+    dates.sort();
+    start=dates.length?localDate(dates[0]):new Date(Date.now()-15552000000); // 180d fallback
+  }
+  const now=new Date(); now.setHours(23,59,59,999);
+  if(!end||end.getTime()>now.getTime()) end=now; // clip to today if the season isn't over
+  const sy=start.getFullYear(), ey=end.getFullYear();
+  const label=(sy===ey)?`${sy} season`:`${String(sy).slice(2)}–${String(ey).slice(2)} season`;
+  return {start, end, startMs:start.getTime(), endMs:end.getTime(), label};
+}
+function _seasonPBs(a,b){
+  const out=[], th=S.timeHistory||{};
+  Object.keys(th).forEach(ev=>{
+    const entries=(th[ev]||[]).filter(e=>e&&e.date).slice().sort((x,y)=>x.date.localeCompare(y.date));
+    ['lcm','scm'].forEach(course=>{
+      let best=Infinity;
+      entries.forEach(e=>{ const raw=e[course]; if(!raw||raw==='—')return; const s=tSec(raw); if(!isFinite(s)||s<=0)return;
+        if(s<best-1e-6){ const d=localDate(e.date); if(d&&d.getTime()>=a&&d.getTime()<=b) out.push({event:ev,course:course.toUpperCase(),time:raw,drop:isFinite(best)?best-s:0,first:!isFinite(best)}); best=s; } });
+    });
+  });
+  return out.sort((x,y)=>y.drop-x.drop);
+}
+function _seasonImprovements(a,b){
+  const th=S.timeHistory||{}, res=[];
+  Object.keys(th).forEach(ev=>['lcm','scm'].forEach(course=>{
+    const inWin=(th[ev]||[]).filter(e=>{ const raw=e&&e[course]; if(!raw||raw==='—')return false; const d=localDate(e.date); return !!d&&d.getTime()>=a&&d.getTime()<=b&&isFinite(tSec(raw)); }).sort((x,y)=>x.date.localeCompare(y.date));
+    if(inWin.length<2)return;
+    const first=tSec(inWin[0][course]); let best=Infinity; inWin.forEach(e=>{ const s=tSec(e[course]); if(s<best)best=s; });
+    const drop=first-best; if(drop>0.001) res.push({event:ev,course:course.toUpperCase(),drop,pct:drop/first*100});
+  }));
+  return res.sort((x,y)=>y.drop-x.drop);
+}
+function _seasonStandards(a,b){
+  const th=S.timeHistory||{}, hits=[];
+  Object.keys(th).forEach(ev=>['lcm','scm'].forEach(course=>{
+    let std; try{ std=getStandard(ev,course); }catch(e){ std=null; } if(!std)return;
+    const entries=(th[ev]||[]).filter(e=>{ const raw=e&&e[course]; return raw&&raw!=='—'&&isFinite(tSec(raw)); }).sort((x,y)=>x.date.localeCompare(y.date));
+    let metBefore=false;
+    for(const e of entries){ let g; try{ g=gapSec(e[course],std); }catch(_){ g=null; } const met=(g!=null&&g<=0);
+      if(met&&!metBefore){ const d=localDate(e.date); if(d&&d.getTime()>=a&&d.getTime()<=b) hits.push({event:ev,course:course.toUpperCase(),time:e[course]}); metBefore=true; break; }
+      if(met)metBefore=true;
+    }
+  }));
+  return hits;
+}
+function _seasonCheckins(a,b){
+  const cks=(S.checkinHistory||[]).filter(c=>{ const d=localDate(c.date); return !!d&&d.getTime()>=a&&d.getTime()<=b; }).sort((x,y)=>x.date.localeCompare(y.date));
+  let longest=0,cur=0,prev=null;
+  cks.forEach(c=>{ const d=localDate(c.date).getTime(); if(prev!=null&&Math.abs(d-prev-86400000)<3600000)cur++; else cur=1; if(cur>longest)longest=cur; prev=d; });
+  const days=cks.length, avgReadiness=days?cks.reduce((s,c)=>s+(+c.readiness||0),0)/days:0;
+  return {days, longest, avgReadiness};
+}
+function getSeasonWrapped(){
+  const b=_seasonBounds(), a=b.startMs, z=b.endMs, uk=S.useKm?'km':'mi';
+  const inMs=ms=>isFinite(ms)&&ms>=a&&ms<=z, inKey=k=>{ const d=localDate(k); return !!d&&inMs(d.getTime()); };
+  let km=0, swims=0; (S.poolLog||[]).forEach(e=>{ if(e&&e.date&&inKey(e.date)){ km+=(+e.distKm||0); swims++; } });
+  let dry=0; (S.history||[]).forEach(h=>{ const ms=h&&h.date?new Date(h.date).getTime():NaN; if(inMs(ms))dry++; });
+  const sessions=swims+dry;
+  const checkins=_seasonCheckins(a,z);
+  const pbs=_seasonPBs(a,z), imp=_seasonImprovements(a,z), stds=_seasonStandards(a,z);
+  const races=(S.meetRaceLog||[]).filter(l=>{ const ms=l&&l.ts?l.ts:(l&&l.date?new Date(l.date).getTime():NaN); return inMs(ms); }).length;
+  // engine insight (moat)
+  let insight=null;
+  try{ const p=(typeof buildPerformanceProfile==='function')?buildPerformanceProfile():null;
+    if(p){ if(p.prescription&&p.prescription.reasoning&&p.prescription.reasoning.length) insight=p.prescription.reasoning[0];
+      else if(p.bestBlock) insight=`Your fastest swims follow a ${p.bestBlock} block.`; }
+  }catch(e){}
+  // identity synth
+  let sprint=0,mid=0,dist=0; const th=S.timeHistory||{};
+  Object.keys(th).forEach(ev=>{ const d=parseInt(ev,10), n=(th[ev]||[]).length; if(!d)return; if(d<=50)sprint+=n; else if(d<=200)mid+=n; else dist+=n; });
+  const mx=Math.max(sprint,mid,dist);
+  let type = mx===0?'swimmer' : (mx===sprint?'sprinter' : (mx===dist?'distance swimmer':'racer'));
+  const consistent = sessions>=60 || checkins.days>=40;
+  const identity = mx===0?'Your season starts here.' : `A ${type} who ${consistent?'shows up':'is on the rise'}.`;
+  // headline stat for the share card
+  const bestDrop=pbs.find(p=>p.drop>0)||null;
+  const w={bounds:b, uk, km, swims, dry, sessions, races, checkins, pbs, imp, stds, insight, identity, type, bestDrop};
+  // ── assemble the card sequence — only cards that have real data ──
+  const cards=[{t:'cover'}];
+  if(km>0||swims>0) cards.push({t:'volume'});
+  if(sessions>0) cards.push({t:'consistency'});
+  if(bestDrop) cards.push({t:'drop'});
+  if(pbs.length) cards.push({t:'pbs'});
+  if(stds.length) cards.push({t:'standard'});
+  if(imp.length) cards.push({t:'improved'});
+  if(insight) cards.push({t:'engine'});
+  cards.push({t:'identity'});
+  cards.push({t:'share'});
+  w.cards=cards;
+  return w;
+}
+// ── Deck rendering ────────────────────────────────────────────────────────────
+function _swEye(txt){ return `<div style="font-family:var(--t-mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--t-ink2)">${txt}</div>`; }
+function _swCardBG(theme){
+  if(theme==='cover') return 'radial-gradient(120% 90% at 70% 0%, color-mix(in srgb,var(--t-aqua) 24%,transparent), transparent 60%), linear-gradient(180deg,#072028,var(--t-deep))';
+  if(theme==='gold') return 'radial-gradient(120% 80% at 30% 10%, color-mix(in srgb,var(--t-gold) 30%,transparent), transparent 62%), linear-gradient(180deg,#1c150a,var(--t-surface))';
+  if(theme==='violet') return 'radial-gradient(120% 80% at 70% 10%, color-mix(in srgb,var(--t-violet) 32%,transparent), transparent 62%), linear-gradient(180deg,#140f22,var(--t-surface))';
+  return 'linear-gradient(165deg, color-mix(in srgb,var(--t-aqua-d) 40%,transparent), transparent 72%), var(--t-surface)'; // aqua
+}
+function _swCardInner(card,w){
+  const uk=w.uk;
+  const bignum=(v,unit)=>`<div style="font-size:clamp(3.6rem,17vw,5.2rem);font-weight:850;letter-spacing:-.04em;line-height:.9;color:var(--t-ink)">${v}${unit?`<span style="font-size:1.4rem;color:var(--t-aqua)">${unit}</span>`:''}</div>`;
+  switch(card.t){
+    case 'cover': return `${_swEye(w.bounds.label)}<div style="margin:auto 0"><div style="font-size:clamp(2.2rem,10vw,3rem);font-weight:850;letter-spacing:-.035em;line-height:1.02;color:var(--t-ink)">Your Season,<br><span style="color:var(--t-aqua)">Wrapped.</span></div></div><div style="font-size:.8rem;color:var(--t-mute)">${escHtml((((S.profile&&S.profile.name)||'Your').split(' ')[0])||'Your')} · tap to begin →</div>`;
+    case 'volume': return `${_swEye('You lived in the water')}<div style="margin:auto 0">${bignum(w.km.toFixed(w.km>=100?0:1),uk)}<div style="font-size:.95rem;color:var(--t-ink2);margin-top:8px;font-weight:600">swum this season</div></div><div style="font-size:.78rem;color:var(--t-mute)">Across ${w.swims} pool session${w.swims===1?'':'s'}. Every length banked.</div>`;
+    case 'consistency': return `${_swEye('You showed up')}<div style="margin:auto 0">${bignum(w.sessions)}<div style="font-size:.95rem;color:var(--t-ink2);margin-top:8px;font-weight:600">sessions — pool + dryland</div></div><div style="font-size:.78rem;color:var(--t-mute)">${w.checkins.longest>1?`Longest check-in streak: <b style="color:var(--t-ink2)">${w.checkins.longest} days</b>. `:''}Showing up is the whole game.</div>`;
+    case 'drop': { const p=w.bestDrop; return `${_swEye('Your biggest drop')}<div style="margin:auto 0"><div style="font-size:1rem;font-weight:700;color:var(--t-ink2);margin-bottom:10px">${escHtml(p.event)} <span style="font-size:.72rem;color:var(--t-mute)">${p.course}</span></div><div style="font-size:clamp(3rem,14vw,4.2rem);font-weight:850;letter-spacing:-.04em;line-height:.9;color:var(--t-gold)">−${secDisp(p.drop)}</div><div style="font-family:var(--t-mono);font-size:.9rem;color:var(--t-ink);margin-top:12px">now <b style="color:var(--t-gold)">${p.time}</b></div></div><div style="font-size:.8rem;color:var(--t-mute)">The clock doesn't lie. 🏆</div>`; }
+    case 'pbs': return `${_swEye('Personal bests')}<div style="margin:auto 0">${bignum(w.pbs.length)}<div style="font-size:.95rem;color:var(--t-ink2);margin-top:8px;font-weight:600">new PB${w.pbs.length===1?'':'s'} this season</div></div><div style="font-size:.78rem;color:var(--t-mute)">This is the work, showing up on the board.</div>`;
+    case 'standard': { const s=w.stds[0]; return `${_swEye('A new tier')}<div style="margin:auto 0"><div style="font-size:.9rem;color:var(--t-ink2);font-weight:600">You hit a standard</div><div style="font-size:clamp(1.7rem,7vw,2.3rem);font-weight:850;letter-spacing:-.02em;line-height:1.05;color:var(--t-ink);margin-top:10px">${escHtml(s.event)}</div><div style="font-family:var(--t-mono);font-size:1rem;color:var(--t-gold);margin-top:10px">${s.time} · ${s.course}</div></div><div style="font-size:.8rem;color:var(--t-mute)">${w.stds.length>1?`+${w.stds.length-1} more cut${w.stds.length-1===1?'':'s'}. `:''}A new door just opened.</div>`; }
+    case 'improved': { const i=w.imp[0]; return `${_swEye('Most improved')}<div style="margin:auto 0"><div style="font-size:clamp(1.5rem,6vw,2rem);font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--t-ink)">${escHtml(i.event)}</div><div style="font-size:clamp(2.4rem,11vw,3.2rem);font-weight:850;letter-spacing:-.04em;color:var(--t-aqua);margin-top:12px">−${secDisp(i.drop)}</div></div><div style="font-size:.8rem;color:var(--t-mute)">That's ${i.pct.toFixed(1)}% faster across the season.</div>`; }
+    case 'engine': return `${_swEye('What the engine learned')}<div style="margin:auto 0"><div style="font-size:clamp(1.25rem,5.4vw,1.6rem);font-weight:750;letter-spacing:-.02em;line-height:1.2;color:var(--t-ink)">${escHtml(w.insight)}</div></div><div style="font-size:.78rem;color:var(--t-mute)">No other app knows this about <i>you</i>. Next season, we time it on purpose.</div>`;
+    case 'identity': return `${_swEye('This season, you became')}<div style="margin:auto 0"><div style="font-size:clamp(1.5rem,6.4vw,2rem);font-weight:800;letter-spacing:-.02em;line-height:1.16;color:var(--t-ink)">${escHtml(w.identity).replace(/(shows up|is on the rise|starts here)\./,'<span style="color:var(--t-aqua)">$1.</span>')}</div></div><div style="font-size:.8rem;color:var(--t-mute)">Tap → for your share card.</div>`;
+    case 'share': return `${_swEye('Your season card')}<div style="margin:auto 0;width:100%"><div style="font-size:clamp(1.15rem,5vw,1.5rem);font-weight:800;letter-spacing:-.02em;line-height:1.12;color:var(--t-ink);margin-bottom:16px">${w.km>0?`${w.km.toFixed(0)}${uk}. `:''}${w.pbs.length?`${w.pbs.length} PB${w.pbs.length===1?'':'s'}.`:'Your season.'}</div>
+      <button onclick="shareSeasonCard()" style="width:100%;padding:14px;border-radius:14px;border:none;background:var(--t-aqua);color:#042028;font-weight:800;font-size:.95rem;cursor:pointer;font-family:var(--t-mono);letter-spacing:.04em;text-transform:uppercase">↑ Share my season</button>
+      <div style="font-size:.66rem;color:var(--t-mute);text-align:center;margin-top:12px;line-height:1.5">Saves a picture to share. Only ever your own season — never another swimmer.</div>
+    </div><div></div>`;
+    default: return '';
+  }
+}
+const _SW_THEME={cover:'cover',volume:'aqua',consistency:'aqua',drop:'gold',pbs:'aqua',standard:'gold',improved:'aqua',engine:'violet',identity:'cover',share:'aqua'};
+function _swShow(i){
+  const ov=document.getElementById('season-wrapped'); if(!ov)return;
+  const cards=ov._cards||[], w=ov._w; i=Math.max(0,Math.min(cards.length-1,i)); ov._idx=i;
+  const stage=ov.querySelector('#sw-stage'); if(!stage)return;
+  const c=cards[i];
+  stage.style.opacity='0';
+  stage.style.background=_swCardBG(_SW_THEME[c.t]||'aqua');
+  stage.innerHTML=_swCardInner(c,w);
+  const reveal=()=>{ stage.style.opacity='1'; };   // rAF for a smooth fade, setTimeout so content shows even if rAF is throttled
+  requestAnimationFrame(reveal); setTimeout(reveal,60);
+  [...ov.querySelectorAll('.sw-pip i')].forEach((el,n)=>{ el.style.background=(n<=i)?'var(--t-ink)':'rgba(255,255,255,.22)'; });
+}
+function _swNav(dir){ const ov=document.getElementById('season-wrapped'); if(!ov)return; const ni=(ov._idx||0)+dir; if(ni<0)return; if(ni>=(ov._cards||[]).length){ closeSeasonWrapped(); return; } _swShow(ni); }
+function openSeasonWrapped(){
+  const w=getSeasonWrapped();
+  let ov=document.getElementById('season-wrapped');
+  if(!ov){ ov=document.createElement('div'); ov.id='season-wrapped'; document.body.appendChild(ov); }
+  ov._cards=w.cards; ov._idx=0; ov._w=w;
+  const tv=document.getElementById('today-v2'); let tok='';
+  ['--t-deep','--t-surface','--t-raised','--t-line','--t-aqua','--t-aqua-d','--t-gold','--t-violet','--t-red','--t-ink','--t-ink2','--t-mute','--t-mono'].forEach(k=>{ if(tv){ const v=getComputedStyle(tv).getPropertyValue(k); if(v&&v.trim()) tok+=`${k}:${v.trim()};`; } });
+  ov.setAttribute('style',`${tok}position:fixed;inset:0;z-index:6500;background:var(--t-deep);opacity:0;transition:opacity .28s;display:flex;justify-content:center`);
+  const pips=w.cards.map(()=>`<i style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.22);transition:background .3s"></i>`).join('');
+  ov.innerHTML=`<div style="position:relative;width:100%;max-width:440px;height:100%;overflow:hidden">
+    <div id="sw-stage" style="position:absolute;inset:0;display:flex;flex-direction:column;padding:64px 26px 30px;opacity:0;transition:opacity .3s"></div>
+    <div class="sw-pip" style="position:absolute;top:14px;left:16px;right:52px;display:flex;gap:4px;z-index:5">${pips}</div>
+    <button onclick="closeSeasonWrapped()" aria-label="Close" style="position:absolute;top:11px;right:14px;z-index:6;width:32px;height:32px;border-radius:50%;border:1px solid var(--t-line);background:rgba(4,20,26,.5);color:var(--t-ink2);font-size:1rem;cursor:pointer">✕</button>
+    <div onclick="_swNav(-1)" style="position:absolute;top:52px;left:0;width:32%;height:calc(100% - 52px);z-index:3;cursor:w-resize"></div>
+    <div onclick="_swNav(1)" style="position:absolute;top:52px;right:0;width:68%;height:calc(100% - 52px);z-index:3;cursor:e-resize"></div>
+  </div>`;
+  _swShow(0);                                       // render synchronously — never gate visible content on rAF
+  const fade=()=>{ ov.style.opacity='1'; };
+  requestAnimationFrame(fade); setTimeout(fade,60);
+}
+function closeSeasonWrapped(){ const ov=document.getElementById('season-wrapped'); if(!ov)return; ov.style.opacity='0'; setTimeout(()=>{ if(ov&&ov.parentNode)ov.parentNode.removeChild(ov); },300); }
+// ── Shareable 1080×1920 card → PNG via html2canvas (reuses the sharePBCard idiom) ──
+function _swShareCardHTML(w){
+  const uk=w.uk, name=(((S.profile&&S.profile.name)||'').split(' ')[0])||'';
+  const cell=(n,l,col)=>`<div style="background:rgba(4,20,26,.55);border:1px solid #1C4550;border-radius:22px;padding:26px 26px"><div style="font-size:66px;font-weight:850;letter-spacing:-.03em;line-height:1;color:${col}">${n}</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:20px;letter-spacing:.1em;text-transform:uppercase;color:#6E8D95;margin-top:14px">${l}</div></div>`;
+  const cells=[];
+  if(w.km>0) cells.push(cell(`${w.km.toFixed(0)}<span style="font-size:30px">${uk}</span>`,'In the water','#3DE0C8'));
+  if(w.pbs.length) cells.push(cell(w.pbs.length,'Personal bests','#F5B544'));
+  if(w.bestDrop) cells.push(cell(`−${secDisp(w.bestDrop.drop)}`,`Best drop · ${escHtml(w.bestDrop.event)}`,'#F5B544'));
+  if(w.stds.length) cells.push(cell(w.stds.length,`Cut${w.stds.length===1?'':'s'} hit`,'#A98BFF'));
+  else if(w.sessions) cells.push(cell(w.sessions,'Sessions','#A98BFF'));
+  const headline = `${w.km>0?`${w.km.toFixed(0)}${uk}. `:''}${w.pbs.length?`${w.pbs.length} PB${w.pbs.length===1?'':'s'}.`:'A season in.'}`;
+  return `<div style="width:1080px;height:1920px;box-sizing:border-box;padding:88px 80px;display:flex;flex-direction:column;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:radial-gradient(110% 55% at 50% -6%,rgba(61,224,200,.30),transparent 55%),radial-gradient(120% 60% at 50% 106%,rgba(245,181,68,.20),transparent 55%),linear-gradient(180deg,#06202a,#04141A 60%,#071a14);color:#EAF6F5">
+    <div style="display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;font-size:24px;letter-spacing:.14em;text-transform:uppercase;color:#A6C3C6"><span>Season Wrapped</span><span>${escHtml(w.bounds.label)}</span></div>
+    <div style="margin-top:auto">
+      <div style="font-size:96px;font-weight:850;letter-spacing:-.035em;line-height:1.0">${headline}</div>
+      ${name?`<div style="font-family:ui-monospace,Menlo,monospace;font-size:28px;letter-spacing:.08em;color:#A6C3C6;margin-top:20px;text-transform:uppercase">${escHtml(name)}</div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:56px">${cells.slice(0,4).join('')}</div>
+    ${w.insight?`<div style="margin-top:40px;padding:34px 38px;border-radius:22px;background:rgba(169,139,255,.14);border-left:8px solid #A98BFF">
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:20px;letter-spacing:.12em;text-transform:uppercase;color:#A98BFF;margin-bottom:16px">What the engine learned</div>
+      <div style="font-size:38px;font-weight:600;line-height:1.32">${escHtml(w.insight)}</div></div>`:''}
+    <div style="margin-top:56px;display:flex;justify-content:space-between;align-items:flex-end;padding-top:40px;border-top:1px solid #1C4550">
+      <div style="font-size:40px;font-weight:800;letter-spacing:-.02em">Swim<span style="color:#3DE0C8">FitPro</span></div>
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:#6E8D95;text-align:right;line-height:1.5">Your season,<br>your data.</div>
+    </div>
+  </div>`;
+}
+async function shareSeasonCard(){
+  const ov=document.getElementById('season-wrapped'); const w=ov?ov._w:getSeasonWrapped();
+  if(typeof html2canvas!=='function'){ alert('Share needs a moment to load — try again.'); return; }
+  const node=document.createElement('div');
+  node.style.cssText='position:fixed;left:-99999px;top:0;width:1080px;height:1920px;z-index:-1';
+  node.innerHTML=_swShareCardHTML(w);
+  document.body.appendChild(node);
+  try{
+    const canvas=await html2canvas(node.firstElementChild,{backgroundColor:'#04141A',scale:1,useCORS:true,allowTaint:false,logging:false,width:1080,height:1920});
+    canvas.toBlob(async blob=>{
+      try{
+        const file=new File([blob],'season-wrapped.png',{type:'image/png'});
+        if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'My Season, Wrapped'}); }
+        else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='season-wrapped.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500); }
+      }catch(e){}
+      if(node.parentNode)node.parentNode.removeChild(node);
+    },'image/png');
+  }catch(e){ if(node.parentNode)node.parentNode.removeChild(node); alert('Could not create the image right now.'); }
 }
 
 function renderTodayV2(){
