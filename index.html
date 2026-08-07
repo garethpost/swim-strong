@@ -1612,7 +1612,7 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
   'poolLog','checkinHistory','daySchedule','meets','offSeason','programmes','currentProgrammeId',
   'performanceProfile','sessionRPELog','oneRM','oneRMDate','bodyStats','lastStatsUpdate',
   'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
-  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','raceSplits','onboardSeen','workoutMode',
+  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','raceSplits','onboardSeen','customTheme','workoutMode',
   'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
   'lastBaselineDate','autoDeload','mobilityLog','clubLogo',
   // Added: these were persisted locally but never reached the cloud, so they were
@@ -1856,6 +1856,7 @@ function reloadStateFromStorage(){
   S.goalTimes=DB.get('goalTimes',{}); // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   S.raceSplits=DB.get('raceSplits',{}); // {event: {legs:[sec...], goal:'m:ss.xx', ts}} — logged actual race splits (pacing analysis)
   S.onboardSeen=DB.get('onboardSeen',{}); // {home:true,...} — first-run coach-marks shown per screen
+  S.customTheme=DB.get('customTheme',null); // {accent,highlight,bg} — user's custom palette (guardrailed)
   S.workoutMode=DB.get('workoutMode','standard');
   S.activeStandard=DB.get('activeStandard','provchamp');
   S.useKg=DB.get('useKg',true);
@@ -2418,6 +2419,7 @@ let S={
   goalTimes:DB.get('goalTimes',{}), // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   raceSplits:DB.get('raceSplits',{}), // {event: {legs:[sec...], goal, ts}} — logged actual race splits (pacing analysis)
   onboardSeen:DB.get('onboardSeen',{}), // {home:true,...} — first-run coach-marks shown per screen
+  customTheme:DB.get('customTheme',null), // {accent,highlight,bg} — user's custom palette (guardrailed)
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),   // weight: true=kg, false=lbs
@@ -2771,8 +2773,10 @@ function renderThemePicker(){
   // working v2 themes instead. Swaps instantly, never navigates.
   if(window.FLAGS&&FLAGS.v2){
     const cur=v2Theme();
-    el.innerHTML=Object.entries(V2_THEMES).map(([key,t])=>{
-      const active=key===cur; const [bg,accent,card]=t.sw;
+    const ct=Object.assign({},CT_DEFAULT,S.customTheme);
+    const tiles=Object.entries(V2_THEMES).map(([key,t])=>{
+      const active=key===cur;
+      const [bg,accent,card]= t.custom ? [ct.bg,ct.accent,ct.highlight] : t.sw;
       return`<div onclick="setV2ThemePick('${key}')" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(61,224,200,0.08)':'var(--surface)'};cursor:pointer;transition:all 0.15s;">
         <div style="display:flex;gap:3px;flex-shrink:0;">
           <div style="width:18px;height:32px;border-radius:5px 0 0 5px;background:${bg};border:1px solid rgba(255,255,255,0.12);"></div>
@@ -2786,6 +2790,22 @@ function renderThemePicker(){
         ${active?`<div style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#04141A;font-size:11px;font-weight:900;">✓</span></div>`:''}
       </div>`;
     }).join('');
+    // Custom colour controls — three pickers with built-in legibility guardrails.
+    const swatch=(which,label,val)=>`<label style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
+      <span style="position:relative;width:100%;height:40px;border-radius:10px;background:${val};border:1px solid var(--border);overflow:hidden;">
+        <input type="color" value="${val}" oninput="setCustomThemeColor('${which}',this.value)" style="position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);border:none;padding:0;background:none;cursor:pointer;opacity:0;">
+      </span>
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">${label}</span>
+    </label>`;
+    const controls=`<div style="margin-top:10px;padding:13px;border-radius:12px;border:1px dashed var(--border);background:var(--surface);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:9px;">🎨 Make it yours</div>
+      <div style="display:flex;gap:10px;">${swatch('accent','Accent',ct.accent)}${swatch('highlight','Highlight',ct.highlight)}${swatch('bg','Background',ct.bg)}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--muted);line-height:1.4;">
+        <span style="color:var(--green);font-weight:800;">✓ AA</span> Colours are auto‑tuned so text always stays readable.
+      </div>
+      ${cur==='custom'?'':`<button onclick="setV2ThemePick('custom')" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:none;background:var(--accent);color:#04141A;font-weight:750;font-size:13px;cursor:pointer;">Use my colours →</button>`}
+    </div>`;
+    el.innerHTML=tiles+controls;
     return;
   }
   const current=S.appTheme||'original';
@@ -7441,9 +7461,11 @@ function renderHomeWeekProgress(){
 const V2_THEMES={
   deep:  {name:'Deep Water',     desc:'Deep navy + aqua',   sw:['#04141A','#3DE0C8','#123039']},
   noir:  {name:'Bioluminescence',desc:'True black + neon',   sw:['#05060A','#2BF5D6','#12181C']},
+  custom:{name:'Custom',         desc:'Your three colours',  custom:true},
 };
 function v2Theme(){ const t=localStorage.getItem('sfp_v2theme')||'deep'; return V2_THEMES[t]?t:'deep'; }
 function setV2Theme(t){ if(V2_THEMES[t]){localStorage.setItem('sfp_v2theme',t);
+  if(t==='custom')try{applyCustomThemeCSS();}catch(e){}               // ensure the custom token block exists before we switch to it
   document.documentElement.setAttribute('data-v2theme',t);          // themes ALL v2 surfaces
   const el=document.getElementById('today-v2'); if(el)el.setAttribute('data-sfp-theme',t);
   const n2=document.getElementById('nav-v2'); if(n2)n2.setAttribute('data-sfp-theme',t);
@@ -7451,6 +7473,56 @@ function setV2Theme(t){ if(V2_THEMES[t]){localStorage.setItem('sfp_v2theme',t);
 // Picker handler — swaps the theme instantly (CSS-attribute driven, no re-render)
 // and refreshes the picker's active state. Never navigates.
 function setV2ThemePick(t){ setV2Theme(t); try{ renderThemePicker(); }catch(e){} }
+
+// ── Custom theme — three user-picked colours with legibility guardrails ───────
+// The swimmer picks an accent, a highlight and a base tint. We keep the base DARK
+// (the app's world) and raise the accent/highlight lightness until each clears WCAG
+// AA (≥4.5:1) on the surface, then derive readable text — so no combination the
+// swimmer picks can produce an unreadable screen. Uses the same token structure as
+// the built-in themes, remapping both the water (--t-*) and legacy (.v2skin/.modal)
+// palettes so every tab, sheet and modal changes together.
+const CT_DEFAULT={accent:'#3DE0C8',highlight:'#F5B544',bg:'#0A2233'};
+function _ctHexRgb(h){ h=String(h||'').replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); return [parseInt(h.slice(0,2),16)||0,parseInt(h.slice(2,4),16)||0,parseInt(h.slice(4,6),16)||0]; }
+function _ctByte(n){ n=Math.round(Math.max(0,Math.min(255,n))); return n.toString(16).padStart(2,'0'); }
+function _ctRgbHex(r,g,b){ return '#'+_ctByte(r)+_ctByte(g)+_ctByte(b); }
+function _ctRgbHsl(r,g,b){ r/=255;g/=255;b/=255; const mx=Math.max(r,g,b),mn=Math.min(r,g,b); let h=0,s=0,l=(mx+mn)/2; if(mx!==mn){ const d=mx-mn; s=l>.5?d/(2-mx-mn):d/(mx+mn); h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4; h/=6; } return [h*360,s*100,l*100]; }
+function _ctHslRgb(h,s,l){ h=(h%360)/360;s/=100;l/=100; if(s===0){const v=l*255;return[v,v,v];} const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q; const f=t=>{ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }; return [f(h+1/3)*255,f(h)*255,f(h-1/3)*255]; }
+function _ctHslHex(h,s,l){ return _ctRgbHex(..._ctHslRgb(h,s,l)); }
+function _ctLin(c){ c/=255; return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4); }
+function _ctLum(rgb){ return .2126*_ctLin(rgb[0])+.7152*_ctLin(rgb[1])+.0722*_ctLin(rgb[2]); }
+function _ctContrast(a,b){ const la=_ctLum(a),lb=_ctLum(b); return (Math.max(la,lb)+.05)/(Math.min(la,lb)+.05); }
+// Raise a colour's lightness until it clears `target` contrast on the (dark) surface.
+function _ctLegible(hex, bgRgb, target){ let [h,s,l]=_ctRgbHsl(..._ctHexRgb(hex)); let rgb=_ctHexRgb(hex),g=0; while(_ctContrast(rgb,bgRgb)<target && l<93 && g<80){ l+=1.5; rgb=_ctHslRgb(h,s,l); g++; } return _ctRgbHex(...rgb); }
+function buildCustomPalette(ct){
+  ct=Object.assign({},CT_DEFAULT,ct||{});
+  const [bh,bs]=_ctRgbHsl(..._ctHexRgb(ct.bg)); const sat=Math.min(bs,34);
+  const deep=_ctHslHex(bh,sat,6.5), surface=_ctHslHex(bh,Math.min(sat,26),11.5), raised=_ctHslHex(bh,Math.min(sat,24),17), line=_ctHslHex(bh,Math.min(sat,22),26);
+  const surfRgb=_ctHexRgb(surface);
+  const ink=_ctHslHex(bh,14,95), ink2=_ctLegible(_ctHslHex(bh,12,74),surfRgb,4.5), mute=_ctLegible(_ctHslHex(bh,10,56),surfRgb,4.5);
+  const accent=_ctLegible(ct.accent,surfRgb,4.5); const [ah,as,al]=_ctRgbHsl(..._ctHexRgb(accent));
+  const accentD=_ctHslHex(ah,as,Math.max(20,al-26));
+  const highlight=_ctLegible(ct.highlight,surfRgb,4.5); const [hh,hs,hl]=_ctRgbHsl(..._ctHexRgb(highlight));
+  const violet=_ctLegible(_ctHslHex((hh+45)%360,Math.max(42,hs),Math.max(hl,62)),surfRgb,4.5);
+  return {'--t-deep':deep,'--t-surface':surface,'--t-raised':raised,'--t-line':line,'--t-aqua':accent,'--t-aqua-d':accentD,'--t-gold':highlight,'--t-violet':violet,'--t-red':'#FF6B5B','--t-ink':ink,'--t-ink2':ink2,'--t-mute':mute};
+}
+function customThemeCSS(){
+  const p=buildCustomPalette(S.customTheme);
+  const tvars=Object.entries(p).map(([k,v])=>`${k}:${v}`).join(';');
+  const legacy=`--bg:${p['--t-deep']};--surface:${p['--t-surface']};--card:${p['--t-raised']};--border:${p['--t-line']};--accent:${p['--t-aqua']};--accent2:${p['--t-surface']};--text:${p['--t-ink']};--muted:${p['--t-mute']};--green:${p['--t-aqua']};--gold:${p['--t-gold']};--orange:${p['--t-gold']};--purple:${p['--t-violet']};--red:${p['--t-red']}`;
+  return `#today-v2[data-sfp-theme="custom"],#nav-v2[data-sfp-theme="custom"]{${tvars}}
+    html.v2on[data-v2theme="custom"],html[data-v2theme="custom"] body.v2on{background:${p['--t-deep']};}
+    html[data-v2theme="custom"] .section.v2skin{${legacy};background:${p['--t-deep']};}
+    html[data-v2theme="custom"] .section.v2skin .card-title,html[data-v2theme="custom"] .section.v2skin .section-title{color:${p['--t-ink']};}
+    html[data-v2theme="custom"] .modal,html[data-v2theme="custom"] #checkin-sheet-inner{${legacy};background:${p['--t-surface']};}
+    html[data-v2theme="custom"] .modal h1,html[data-v2theme="custom"] .modal h2,html[data-v2theme="custom"] .modal h3,html[data-v2theme="custom"] .modal div:not([style*="color"]),html[data-v2theme="custom"] .modal p:not([style*="color"]){color:${p['--t-ink']};}`;
+}
+function applyCustomThemeCSS(){ let st=document.getElementById('custom-theme-css'); if(!st){ st=document.createElement('style'); st.id='custom-theme-css'; document.head.appendChild(st); } st.textContent=customThemeCSS(); }
+function setCustomThemeColor(which,val){
+  S.customTheme=Object.assign({},CT_DEFAULT,S.customTheme); S.customTheme[which]=val; DB.set('customTheme',S.customTheme);
+  applyCustomThemeCSS();
+  if(v2Theme()==='custom'){ setV2Theme('custom'); const el=document.getElementById('today-v2'); if(el&&el.style.display==='block')try{renderTodayV2();}catch(e){} }
+  try{ renderThemePicker(); }catch(e){}
+}
 
 function ensureV2Styles(){
   if(document.getElementById('v2-css'))return;
@@ -7579,6 +7651,7 @@ function ensureV2Styles(){
   }
   `;
   const s=document.createElement('style');s.id='v2-css';s.textContent=css;document.head.appendChild(s);
+  if(S.customTheme)try{applyCustomThemeCSS();}catch(e){} // re-assert a saved custom palette whenever the v2 CSS (re)loads
 }
 
 // Gather everything the Today screen shows, defensively — any missing datum

@@ -11,7 +11,7 @@
 // worker, run activate (clearing stale caches from any older worker), and hand
 // control to it. A prior worker that cached index.html is how users got stuck on
 // old code; a clean version bump plus skipWaiting/claim evicts it.
-const CACHE_VERSION = 'v137';
+const CACHE_VERSION = 'v138';
 const CACHE_NAME = 'swimfitpro-' + CACHE_VERSION;
 const ASSET_URLS = [
   './icons/vessel-512.png',
