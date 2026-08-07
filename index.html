@@ -285,6 +285,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
         </div>
       </div>
       <div id="times-content"></div>
+      <!-- Goal + target splits (pacing) for the active event -->
+      <div id="goal-pacing" style="margin-top:4px;"></div>
       <!-- Performance Insights panel — built by Performance Correlation Engine -->
       <div id="perf-insights-times" style="margin-top:4px;"></div>
       <!-- Custom Target Meets — qualifying time standards -->
@@ -1610,7 +1612,7 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
   'poolLog','checkinHistory','daySchedule','meets','offSeason','programmes','currentProgrammeId',
   'performanceProfile','sessionRPELog','oneRM','oneRMDate','bodyStats','lastStatsUpdate',
   'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
-  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','workoutMode',
+  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','workoutMode',
   'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
   'lastBaselineDate','autoDeload','mobilityLog','clubLogo',
   // Added: these were persisted locally but never reached the cloud, so they were
@@ -1851,6 +1853,7 @@ function reloadStateFromStorage(){
   S.seasonTemplate=DB.get('seasonTemplate',{start:'',end:'',days:{}});
   S.shortTermGoals=DB.get('shortTermGoals',[]);
   S.goalProgram=DB.get('goalProgram',null);
+  S.goalTimes=DB.get('goalTimes',{}); // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   S.workoutMode=DB.get('workoutMode','standard');
   S.activeStandard=DB.get('activeStandard','provchamp');
   S.useKg=DB.get('useKg',true);
@@ -2410,6 +2413,7 @@ let S={
   workoutMode:DB.get('workoutMode','standard'), // 'standard' | 'goal'
   offSeason:DB.get('offSeason',{active:false,nextSeasonStart:'',phases:[]}), // out-of-season plan
   goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
+  goalTimes:DB.get('goalTimes',{}), // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),   // weight: true=kg, false=lbs
@@ -6682,6 +6686,7 @@ function renderTimesContent(){
   }
 
   document.getElementById('times-content').innerHTML=html;
+  renderGoalPacing(); // goal-time → target splits for the active event
   renderPerformanceInsightsTimes(); // performance correlation panel
 }
 
@@ -8106,12 +8111,23 @@ function _v2RaceDayHTML(d,rd,checkRow){
   const intelNote=(rd.warmup[0]&&rd.warmup[0].intelNote)||null;
   const raceChips=rd.racesToday.length?rd.racesToday.map(r=>{
     const logged=(S.meetRaceLog||[]).some(l=>String(l.raceId)===String(r.id));
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.82rem;font-weight:650;color:var(--t-ink)">${escHtml(r.event)}</div>
-        <div style="font-family:var(--t-mono);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-mute);margin-top:2px">${escHtml(r.session||'')}${r.seedTime?` · seed ${escHtml(r.seedTime)}`:''}</div>
+    // Pacing: if the swimmer has set a goal for this event, show the target splits
+    // right here — what to hit, right before they race.
+    const goal=(S.goalTimes||{})[r.event];
+    let gs=null; try{ gs=goal?getGoalSplits(r.event,goal):null; }catch(e){}
+    const splitStrip=gs?`<div style="margin-top:6px;padding:8px 10px;background:var(--t-deep);border:1px solid var(--t-line);border-radius:9px">
+        <div style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;color:var(--t-aqua);margin-bottom:5px">Goal ${escHtml(goal)} · target splits</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${gs.splits.map(s=>`<span style="font-family:var(--t-mono);font-size:.6rem;color:var(--t-ink2);background:var(--t-surface);border:1px solid var(--t-line);border-radius:6px;padding:2px 7px">${s.at}m ${secDisp(s.cum)}</span>`).join('')}</div>
+      </div>`:'';
+    return `<div>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:650;color:var(--t-ink)">${escHtml(r.event)}</div>
+          <div style="font-family:var(--t-mono);font-size:.55rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t-mute);margin-top:2px">${escHtml(r.session||'')}${r.seedTime?` · seed ${escHtml(r.seedTime)}`:''}</div>
+        </div>
+        <button onclick="openRaceLog(${r.id})" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid ${logged?'var(--t-aqua-d)':'var(--t-aqua)'};background:${logged?'transparent':'var(--t-aqua)'};color:${logged?'var(--t-aqua)':'#04141A'};font-size:.72rem;font-weight:800;cursor:pointer;font-family:var(--font)">${logged?'✓ Logged':'Log time →'}</button>
       </div>
-      <button onclick="openRaceLog(${r.id})" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid ${logged?'var(--t-aqua-d)':'var(--t-aqua)'};background:${logged?'transparent':'var(--t-aqua)'};color:${logged?'var(--t-aqua)':'#04141A'};font-size:.72rem;font-weight:800;cursor:pointer;font-family:var(--font)">${logged?'✓ Logged':'Log time →'}</button>
+      ${splitStrip}
     </div>`;
   }).join(''):`<div class="t2-nt" style="color:var(--t-mute)">No races entered yet — add them in Race Mode.</div>`;
   const narratorHTML=(rd.narrator&&rd.narrator.length)?`
@@ -11471,6 +11487,66 @@ function toggleHistoryDetail(el,idx){
 }
 
 // ── Performance Insights — Times Tab ──
+// ── Pacing: goal-time → target splits ────────────────────────────────────────
+// From a goal time, compute realistic per-50 (per-25 for a 50) target splits: a
+// small dive advantage on the first leg, then a gentle positive drift. IM uses
+// stroke-specific fractions (breaststroke is the slow leg). Pure pacing math.
+function getGoalSplits(event, goalStr){
+  const total=tSec(goalStr); if(!isFinite(total)||total<=0)return null;
+  const dist=parseInt(event,10); if(!dist)return null;
+  const isIM=/IM/i.test(event);
+  let legLen, n, frac;
+  if(dist===50){ legLen=25; n=2; frac=[0.47,0.53]; }
+  else {
+    legLen=50; n=Math.round(dist/50);
+    if(isIM&&n===4){ frac=[0.225,0.255,0.290,0.230]; }                 // fly, back, breast, free
+    else if(isIM&&n===8){ frac=[]; [0.225,0.255,0.290,0.230].forEach(f=>frac.push(f/2,f/2)); }
+    else {
+      const dive=dist<=100?0.05:0.035;                                 // fresh-dive advantage on leg 1
+      const first=(1/n)*(1-dive), restEach=(1-first)/(n-1||1);
+      frac=[first]; const drift=0.03;                                  // gentle positive split across the rest
+      for(let i=0;i<n-1;i++){ const t=(n-1===1)?0.5:i/(n-2||1); frac.push(restEach*(1-drift/2+drift*t)); }
+    }
+  }
+  const sum=frac.reduce((a,b)=>a+b,0); frac=frac.map(f=>f/sum);
+  let cum=0;
+  return {legLen,total,splits:frac.map((f,i)=>{const split=total*f;cum+=split;return{at:(i+1)*legLen,split,cum};})};
+}
+function setGoalTime(event, forceVal){
+  const inp=document.getElementById('goal-time-input');
+  const v=String(forceVal!==undefined?forceVal:(inp?inp.value:'')).trim();
+  S.goalTimes=S.goalTimes||{};
+  if(!v){ delete S.goalTimes[event]; }
+  else { if(!_validTime(v)){alert('Time format like 1:02.34 or 28.50');return;} S.goalTimes[event]=v; }
+  DB.set('goalTimes',S.goalTimes);
+  renderGoalPacing();
+  const t=document.getElementById('today-v2'); if(window.FLAGS&&FLAGS.v2&&t&&t.style.display==='block')try{renderTodayV2();}catch(e){}
+}
+function _goalSplitsHTML(gs){
+  const rows=gs.splits.map(s=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums">
+    <span style="font-size:12px;color:var(--muted)">${s.at}m</span>
+    <span style="font-size:12px;color:var(--text)">${secDisp(s.split)}</span>
+    <span style="font-size:12px;font-weight:700;color:var(--accent)">${secDisp(s.cum)}</span>
+  </div>`).join('');
+  return `<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-bottom:4px"><span>At</span><span>This ${gs.legLen}</span><span>Cumulative</span></div>${rows}`;
+}
+function renderGoalPacing(){
+  const el=document.getElementById('goal-pacing'); if(!el)return;
+  const ev=S.activeTStroke; if(!ev){el.innerHTML='';return;}
+  const goal=(S.goalTimes||{})[ev]||'';
+  const std=getStandard(ev,'lcm');
+  const gs=goal?getGoalSplits(ev,goal):null;
+  el.innerHTML=`<div class="card" style="margin-bottom:12px;">
+    <div class="card-title" style="margin-bottom:8px;">🎯 Goal &amp; pacing — ${escHtml(ev)}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:${(gs||(!goal&&std))?'12px':'0'};">
+      <input id="goal-time-input" type="text" inputmode="numeric" oninput="maskSwimTime(this)" value="${escHtml(goal)}" placeholder="goal time — type e.g. 10183"
+        style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-weight:700;text-align:center;padding:9px 12px;font-family:var(--font);">
+      <button class="btn btn-primary btn-sm" onclick="setGoalTime('${esc(ev)}')">${goal?'Update':'Set goal'}</button>
+    </div>
+    ${!goal&&std?`<button onclick="setGoalTime('${esc(ev)}','${std}')" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Use the ${escHtml(STD_LABELS[S.activeStandard]||'standard')} time (${std}) as my goal →</button>`:''}
+    ${gs?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">To swim <b style="color:var(--text)">${escHtml(goal)}</b> — quick off the ${gs.legLen}, then hold these. Rehearse them in race-pace sets.</div>${_goalSplitsHTML(gs)}`:''}
+  </div>`;
+}
 function renderPerformanceInsightsTimes(){
   const el=document.getElementById('perf-insights-times');
   if(!el)return;
