@@ -1612,7 +1612,7 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
   'poolLog','checkinHistory','daySchedule','meets','offSeason','programmes','currentProgrammeId',
   'performanceProfile','sessionRPELog','oneRM','oneRMDate','bodyStats','lastStatsUpdate',
   'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
-  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','workoutMode',
+  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','raceSplits','workoutMode',
   'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
   'lastBaselineDate','autoDeload','mobilityLog','clubLogo',
   // Added: these were persisted locally but never reached the cloud, so they were
@@ -1854,6 +1854,7 @@ function reloadStateFromStorage(){
   S.shortTermGoals=DB.get('shortTermGoals',[]);
   S.goalProgram=DB.get('goalProgram',null);
   S.goalTimes=DB.get('goalTimes',{}); // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
+  S.raceSplits=DB.get('raceSplits',{}); // {event: {legs:[sec...], goal:'m:ss.xx', ts}} — logged actual race splits (pacing analysis)
   S.workoutMode=DB.get('workoutMode','standard');
   S.activeStandard=DB.get('activeStandard','provchamp');
   S.useKg=DB.get('useKg',true);
@@ -2414,6 +2415,7 @@ let S={
   offSeason:DB.get('offSeason',{active:false,nextSeasonStart:'',phases:[]}), // out-of-season plan
   goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
   goalTimes:DB.get('goalTimes',{}), // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
+  raceSplits:DB.get('raceSplits',{}), // {event: {legs:[sec...], goal, ts}} — logged actual race splits (pacing analysis)
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),   // weight: true=kg, false=lbs
@@ -11530,12 +11532,105 @@ function _goalSplitsHTML(gs){
   </div>`).join('');
   return `<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-bottom:4px"><span>At</span><span>This ${gs.legLen}</span><span>Cumulative</span></div>${rows}`;
 }
+// ── Pacing: race split ANALYSIS ──────────────────────────────────────────────
+// Enter the actual per-50 (per-25 for a 50) splits you swam → front/back-half
+// breakdown, a per-leg comparison to target (goal splits if set, else the model's
+// ideal distribution for the time you swam), and a fade verdict with a coaching
+// cue that points at the dryland lever. Distribution quality is judged against the
+// dive-aware model, so short events aren't wrongly flagged for the normal dive fade.
+function eventLegStructure(event){
+  const dist=parseInt(event,10); if(!dist)return null;
+  if(dist===50)return {legLen:25,n:2};
+  return {legLen:50,n:Math.round(dist/50)};
+}
+function analyzeSplits(event, legs, goalStr){
+  const st=eventLegStructure(event); if(!st)return null;
+  if(!Array.isArray(legs)||legs.length!==st.n||legs.some(x=>!isFinite(x)||x<=0))return null;
+  const total=legs.reduce((a,b)=>a+b,0);
+  const goalSplits=goalStr?getGoalSplits(event,goalStr):null;   // target = your goal, if set
+  const ideal=getGoalSplits(event,secDisp(total));              // model's ideal distribution for the time you swam
+  const target=goalSplits||ideal;
+  const half=st.n/2;
+  const front=legs.slice(0,half).reduce((a,b)=>a+b,0);
+  const back=legs.slice(half).reduce((a,b)=>a+b,0);
+  const fade=back-front;                                        // + = slower back half
+  const idealFade=ideal?(ideal.splits.slice(half).reduce((a,s)=>a+s.split,0)-ideal.splits.slice(0,half).reduce((a,s)=>a+s.split,0)):0;
+  const excess=fade-idealFade;                                  // fade beyond the dive-aware model
+  let cum=0;
+  const rows=legs.map((sec,i)=>{ cum+=sec; const tgt=target?target.splits[i].split:null; return {at:(i+1)*st.legLen, split:sec, cum, target:tgt, delta:tgt!=null?sec-tgt:null}; });
+  // Verdict from distribution quality (excess fade vs the model), tone-scaled to the total.
+  let tone,title,cue;
+  if(excess<-0.004*total){ tone='var(--green)'; title='Negative split — you closed faster than ideal'; cue='Championship distribution. This is exactly how the fastest swims are built — hold this and chase a faster front half.'; }
+  else if(excess<=0.004*total){ tone='var(--green)'; title='Even, well-distributed — textbook pacing'; cue='You held your speed the whole way. Keep rehearsing this rhythm at race pace so it holds when you push the front end faster.'; }
+  else if(excess<=0.012*total){ tone='var(--gold)'; title='Slight back-half fade — normal, but there\'s time here'; cue='You gave a little back late. Holding form on the back half is a real, trainable second — aerobic base + late-race stroke tempo work.'; }
+  else { tone='var(--red)'; title=`Significant back-half fade — ${secDisp(fade)} slower coming home`; cue='This is your single biggest lever: back-half endurance. Race-pace-2 sets (hold goal pace when tired) + aerobic base build the engine that stops the fade.'; }
+  const vsGoal=goalSplits?(total-goalSplits.total):null;        // + = slower than goal
+  return {st,total,front,back,fade,excess,rows,tone,title,cue,haveGoal:!!goalSplits,vsGoal,targetIsGoal:!!goalSplits};
+}
+function saveRaceSplits(event){
+  const st=eventLegStructure(event); if(!st)return;
+  const legs=[];
+  for(let i=0;i<st.n;i++){ const inp=document.getElementById('split-leg-'+i); const s=inp?tSec(inp.value):NaN; if(!isFinite(s)||s<=0){ alert('Enter every '+st.legLen+' split — e.g. 31.50'); return; } legs.push(s); }
+  S.raceSplits=S.raceSplits||{};
+  S.raceSplits[event]={legs, goal:(S.goalTimes||{})[event]||'', ts:Date.now()};
+  DB.set('raceSplits',S.raceSplits);
+  renderGoalPacing();
+}
+function clearRaceSplits(event){ S.raceSplits=S.raceSplits||{}; delete S.raceSplits[event]; DB.set('raceSplits',S.raceSplits); renderGoalPacing(); }
+function _splitAnalysisHTML(an,event){
+  const rows=an.rows.map(r=>{
+    const dCol=r.delta==null?'var(--muted)':(r.delta<=0.001?'var(--green)':'var(--red)');
+    const dTxt=r.delta==null?'—':(r.delta<=0.001?'−':'+')+secDisp(Math.abs(r.delta));
+    return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:5px 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;font-size:12px;">
+      <span style="color:var(--muted)">${r.at}m</span>
+      <span style="color:var(--text);font-weight:700">${secDisp(r.split)}</span>
+      <span style="color:var(--muted)">${r.target!=null?secDisp(r.target):'—'}</span>
+      <span style="color:${dCol};font-weight:700">${dTxt}</span>
+    </div>`;
+  }).join('');
+  const fadeTxt=an.fade<=0.001?`${secDisp(Math.abs(an.fade))} faster back`:`${secDisp(an.fade)} slower back`;
+  return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-bottom:4px"><span>At</span><span>You</span><span>${an.targetIsGoal?'Goal':'Ideal'}</span><span>Δ</span></div>
+    ${rows}
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Front half</div><div style="font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">${secDisp(an.front)}</div></div>
+      <div style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Back half</div><div style="font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">${secDisp(an.back)}</div></div>
+      <div style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Split</div><div style="font-size:15px;font-weight:800;color:${an.tone};font-variant-numeric:tabular-nums">${fadeTxt}</div></div>
+    </div>
+    ${an.haveGoal&&an.vsGoal!=null?`<div style="margin-top:8px;font-size:12px;color:var(--muted);text-align:center;">Total <b style="color:var(--text)">${secDisp(an.total)}</b> — ${an.vsGoal<=0.001?`<b style="color:var(--green)">${secDisp(Math.abs(an.vsGoal))} under goal 🎯</b>`:`<b style="color:var(--gold)">${secDisp(an.vsGoal)} off goal</b>`}</div>`:`<div style="margin-top:8px;font-size:12px;color:var(--muted);text-align:center;">Total swum <b style="color:var(--text)">${secDisp(an.total)}</b></div>`}
+    <div style="margin-top:10px;padding:10px;border-radius:10px;background:color-mix(in srgb, ${an.tone} 12%, transparent);border-left:3px solid ${an.tone};">
+      <div style="font-size:12px;font-weight:800;color:${an.tone};margin-bottom:3px;">${an.title}</div>
+      <div style="font-size:11px;color:var(--text);line-height:1.5;">${an.cue}</div>
+    </div>
+    <button onclick="clearRaceSplits('${esc(event)}')" style="width:100%;margin-top:8px;padding:7px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);">Clear &amp; enter a new race</button>`;
+}
 function renderGoalPacing(){
   const el=document.getElementById('goal-pacing'); if(!el)return;
   const ev=S.activeTStroke; if(!ev){el.innerHTML='';return;}
   const goal=(S.goalTimes||{})[ev]||'';
   const std=getStandard(ev,'lcm');
   const gs=goal?getGoalSplits(ev,goal):null;
+  const st=eventLegStructure(ev);
+  const saved=(S.raceSplits||{})[ev];
+  const an=saved?analyzeSplits(ev,saved.legs,saved.goal||goal):null;
+  // Split-analysis section: show the analysis if saved, else an input grid to enter a race's splits.
+  let splitSection='';
+  if(st){
+    if(an){
+      splitSection=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">📊 How you actually split</div>
+        ${_splitAnalysisHTML(an,ev)}
+      </div>`;
+    } else {
+      const inputs=Array.from({length:st.n},(_,i)=>`<input id="split-leg-${i}" type="text" inputmode="numeric" oninput="maskSwimTime(this)" placeholder="${(i+1)*st.legLen}m" title="your ${(i+1)*st.legLen}m split"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px;font-weight:700;text-align:center;padding:8px 4px;font-family:var(--font);min-width:0;">`).join('');
+      splitSection=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">📊 Analyze a race</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Enter the <b style="color:var(--text)">${st.legLen}m splits</b> you actually swam — see your front/back-half breakdown${goal?' vs your goal':''} and where to find time.</div>
+        <div style="display:grid;grid-template-columns:repeat(${Math.min(st.n,4)},1fr);gap:6px;margin-bottom:8px;">${inputs}</div>
+        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="saveRaceSplits('${esc(ev)}')">Break it down →</button>
+      </div>`;
+    }
+  }
   el.innerHTML=`<div class="card" style="margin-bottom:12px;">
     <div class="card-title" style="margin-bottom:8px;">🎯 Goal &amp; pacing — ${escHtml(ev)}</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:${(gs||(!goal&&std))?'12px':'0'};">
@@ -11545,6 +11640,7 @@ function renderGoalPacing(){
     </div>
     ${!goal&&std?`<button onclick="setGoalTime('${esc(ev)}','${std}')" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Use the ${escHtml(STD_LABELS[S.activeStandard]||'standard')} time (${std}) as my goal →</button>`:''}
     ${gs?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">To swim <b style="color:var(--text)">${escHtml(goal)}</b> — quick off the ${gs.legLen}, then hold these. Rehearse them in race-pace sets.</div>${_goalSplitsHTML(gs)}`:''}
+    ${splitSection}
   </div>`;
 }
 function renderPerformanceInsightsTimes(){
