@@ -7730,6 +7730,192 @@ function v2Data(){
   return {greet,phase,mult,load,loadNote,checked,sleep,readiness,streak,meet,km,kmGoal,session,chase,fuel,uKm:S.useKm,rightNow,week,pool,restDay,doneToday};
 }
 
+// ── Your Week — weekly recap (Home) ──────────────────────────────────────────
+// A self-referential weekly ritual: what you did this week vs your OWN last week.
+// Pulls live from the same engines the Home tiles use — never invents data. Kid-safe
+// by construction: own past self only (never peers), no body/weight, and a light week
+// reads as recovery, never a scolding. It's the habit flywheel that later feeds
+// Season Wrapped. Monday-start weeks, matching the rest of v2.
+function _weekBounds(offset){ // offset 0 = this Mon-week, -1 = last week
+  const t=new Date(); t.setHours(0,0,0,0);
+  const dow=(t.getDay()+6)%7;                    // 0=Mon … 6=Sun
+  const mon=new Date(t); mon.setDate(t.getDate()-dow+(offset||0)*7);
+  const end=new Date(mon); end.setDate(mon.getDate()+7);   // exclusive upper bound
+  return {start:mon, end, startMs:mon.getTime(), endMs:end.getTime()};
+}
+function _weekStats(offset){
+  const b=_weekBounds(offset);
+  const inMs=(ms)=>isFinite(ms)&&ms>=b.startMs&&ms<b.endMs;
+  const inKey=(k)=>{ const d=localDate(k); return !!d&&inMs(d.getTime()); };
+  let km=0, swims=0;
+  (S.poolLog||[]).forEach(e=>{ if(e&&e.date&&inKey(e.date)){ km+=(+e.distKm||0); swims++; } });
+  let dry=0;
+  (S.history||[]).forEach(h=>{ const ms=h&&h.date?new Date(h.date).getTime():NaN; if(inMs(ms)) dry++; });
+  const cks=(S.checkinHistory||[]).filter(c=>c&&c.date&&inKey(c.date));
+  const ckDays=cks.length;
+  const avgReadiness=ckDays?cks.reduce((a,c)=>a+(+c.readiness||0),0)/ckDays:0;
+  const avgSleep=ckDays?cks.reduce((a,c)=>a+(+c.sleep||0),0)/ckDays:0;
+  let fuelDays=0, fuelLogged=0;                   // "fueled well" = logged AND ≥80% of target (under-fuelling is the risk)
+  for(let i=0;i<7;i++){
+    const day=new Date(b.startMs+i*86400000), key=dKey(day), log=(S.mealLog||{})[key];
+    if(log&&log.length){ fuelLogged++; let cal=0; log.forEach(m=>{ const mac=entryMacros(m,resolveFood(m.foodId)); cal+=(mac&&mac.cal)||0; });
+      let t=0; try{ const tgt=getDailyCalFromSchedule?getDailyCalFromSchedule(day):null; t=tgt&&tgt.cal?tgt.cal:0; }catch(e){}
+      if(t&&cal>=0.8*t) fuelDays++;
+    }
+  }
+  return {bounds:b, km, swims, dry, sessions:swims+dry, ckDays, avgReadiness, avgSleep, fuelDays, fuelLogged};
+}
+// PBs set THIS week: walk each event's time history chronologically, flag improvements
+// dated inside the week window. Uses timeHistory (the source of truth for times).
+function _weekPBs(offset){
+  const b=_weekBounds(offset), out=[], th=S.timeHistory||{};
+  Object.keys(th).forEach(ev=>{
+    const entries=(th[ev]||[]).filter(e=>e&&e.date).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    ['lcm','scm'].forEach(course=>{
+      let best=Infinity;
+      entries.forEach(e=>{
+        const raw=e[course]; if(!raw||raw==='—')return;
+        const s=tSec(raw); if(!isFinite(s)||s<=0)return;
+        if(s<best-1e-6){
+          const d=localDate(e.date);
+          if(d&&d.getTime()>=b.startMs&&d.getTime()<b.endMs) out.push({event:ev,course:course.toUpperCase(),time:raw,drop:isFinite(best)?best-s:0,first:!isFinite(best)});
+          best=s;
+        }
+      });
+    });
+  });
+  return out.sort((a,b)=>b.drop-a.drop);
+}
+function getWeekRecap(){
+  const cur=_weekStats(0), prev=_weekStats(-1), pbs=_weekPBs(0);
+  const lb=(typeof _v2LoadBalance==='function')?_v2LoadBalance():null;
+  const now=new Date(); const dow=(now.getDay()+6)%7; const midWeek=dow<5;   // Mon–Fri = "so far", weekend = "wrapped"
+  let headline, sub;
+  if(pbs.length){
+    const p=pbs[0];
+    headline=`A PB week. ${escHtml(p.event)} — ${p.time}${p.drop>0?` <span style="color:var(--t-aqua)">(${secDisp(p.drop)} faster)</span>`:''}.`;
+    sub='This is exactly how momentum is built. The work is showing up on the clock.';
+  } else if(cur.sessions>0 && cur.sessions>prev.sessions){
+    headline=`${cur.sessions} sessions — up from ${prev.sessions} last week.`;
+    sub='Consistency compounds. You showed up more than you did seven days ago.';
+  } else if(cur.sessions>0){
+    headline=`${cur.sessions} session${cur.sessions===1?'':'s'}${cur.km>0?`, ${cur.km.toFixed(1)}${S.useKm?'km':'mi'} in the water`:''}.`;
+    sub=midWeek?'Solid start — the week isn\'t done yet.':'Every session banks fitness for meet day.';
+  } else if(cur.ckDays>0){
+    headline='A lighter week — and that\'s okay.';
+    sub='Recovery is training too. Next week is yours to attack.';
+  } else {
+    headline='Your week starts now.';
+    sub='Log today\'s session or a check-in to kick it off.';
+  }
+  return {cur, prev, pbs, lb, headline, sub, midWeek};
+}
+function _wkRangeLabel(b){
+  const f=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `${f(b.start)} – ${f(new Date(b.endMs-86400000))}`;
+}
+function _wkDelta(cur,prev,digits){
+  const d=cur-prev, eps=digits?0.05:0.5;
+  if(Math.abs(d)<eps) return `<span style="color:var(--t-mute)">— vs last wk</span>`;
+  const up=d>0, val=digits?Math.abs(d).toFixed(1):Math.abs(d);
+  return `<span style="color:${up?'var(--t-aqua)':'var(--t-gold)'};font-weight:700">${up?'▲':'▼'}${val} <span style="color:var(--t-mute);font-weight:400">vs last wk</span></span>`;
+}
+function _weekRecapHTML(r){
+  const c=r.cur, uk=S.useKm?'km':'mi';
+  const stat=(lbl,val,delta)=>`<div style="flex:1;min-width:0;background:var(--t-surface);border:1px solid var(--t-line);border-radius:14px;padding:12px 10px;text-align:center">
+    <div style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:var(--t-mute);margin-bottom:5px">${lbl}</div>
+    <div style="font-size:1.5rem;font-weight:800;color:var(--t-ink);line-height:1;font-variant-numeric:tabular-nums">${val}</div>
+    <div style="font-size:.56rem;margin-top:6px">${delta}</div>
+  </div>`;
+  // PB moment
+  let pbBlock='';
+  if(r.pbs.length){
+    pbBlock=`<div style="margin-top:14px;padding:14px;border-radius:16px;background:color-mix(in srgb, var(--t-gold) 14%, transparent);border:1px solid color-mix(in srgb, var(--t-gold) 45%, transparent)">
+      <div style="font-family:var(--t-mono);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-gold);margin-bottom:8px">🏆 The moment</div>
+      ${r.pbs.slice(0,3).map(p=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-variant-numeric:tabular-nums">
+        <span style="font-size:.92rem;font-weight:700;color:var(--t-ink)">${escHtml(p.event)} <span style="color:var(--t-mute);font-size:.7rem;font-weight:500">${p.course}</span></span>
+        <span style="font-size:.95rem;font-weight:800;color:var(--t-gold)">${p.time}${p.drop>0?` <span style="font-size:.62rem;color:var(--t-aqua)">−${secDisp(p.drop)}</span>`:p.first?` <span style="font-size:.62rem;color:var(--t-aqua)">first time</span>`:''}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+  // Consistency
+  const readTxt=c.ckDays?`${c.avgReadiness.toFixed(1)}/5 readiness · ${c.avgSleep.toFixed(1)}h sleep`:'No check-ins logged';
+  const consistency=`<div style="margin-top:14px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:16px;padding:13px 14px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--t-mono);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-mute)">Consistency</span>
+      <span style="font-size:.82rem;font-weight:700;color:var(--t-ink)">${c.ckDays}/7 <span style="color:var(--t-mute);font-weight:500">days checked in</span></span>
+    </div>
+    <div style="font-size:.72rem;color:var(--t-ink2);margin-top:6px">${readTxt}</div>
+  </div>`;
+  // Fuel — positive framing only
+  let fuelTxt, fuelTone;
+  if(!c.fuelLogged){ fuelTxt='No fuel logged this week — fuel is recovery. Try logging one day.'; fuelTone='var(--t-mute)'; }
+  else { fuelTxt=`Fuelled well on <b style="color:var(--t-ink)">${c.fuelDays}</b> of ${c.fuelLogged} logged day${c.fuelLogged===1?'':'s'}.`; fuelTone='var(--t-ink2)'; }
+  const fuel=`<div style="margin-top:10px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:16px;padding:13px 14px">
+    <div style="font-family:var(--t-mono);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-mute);margin-bottom:6px">Fuel</div>
+    <div style="font-size:.75rem;color:${fuelTone};line-height:1.45">${fuelTxt}</div>
+  </div>`;
+  // Load
+  const load=r.lb?`<div style="margin-top:10px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:16px;padding:13px 14px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--t-mono);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-mute)">Where your week landed</span>
+      <span style="font-size:.82rem;font-weight:800;color:${r.lb.color||'var(--t-ink)'}">${escHtml(r.lb.label||'—')}</span>
+    </div>
+    ${r.lb.detail?`<div style="font-size:.72rem;color:var(--t-ink2);margin-top:5px">${escHtml(r.lb.detail)}</div>`:''}
+  </div>`:'';
+  // Forward nudge
+  let nudge;
+  if(!c.fuelLogged && c.sessions>0) nudge='Next week: log your fuel on a training day — it closes the recovery loop.';
+  else if(r.midWeek && c.sessions>0) nudge='Keep it rolling — one more session this week builds on this.';
+  else if(c.sessions===0) nudge='One session this week gets the flywheel turning again.';
+  else nudge='Same energy next week. This is how seasons are won.';
+  return `<div style="padding:18px 18px 26px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div style="font-family:var(--t-mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--t-aqua)">Your week${r.midWeek?' · so far':''}</div>
+        <div style="font-size:.66rem;color:var(--t-mute);margin-top:3px">${_wkRangeLabel(c.bounds)}</div>
+      </div>
+      <button onclick="closeWeekRecap()" aria-label="Close" style="width:34px;height:34px;border-radius:50%;border:1px solid var(--t-line);background:var(--t-surface);color:var(--t-ink2);font-size:1.1rem;line-height:1;cursor:pointer;flex-shrink:0">✕</button>
+    </div>
+    <div style="font-size:1.35rem;font-weight:800;color:var(--t-ink);line-height:1.22;text-wrap:balance;margin-bottom:6px">${r.headline}</div>
+    <div style="font-size:.8rem;color:var(--t-ink2);line-height:1.5;margin-bottom:16px">${r.sub}</div>
+    <div style="display:flex;gap:8px">
+      ${stat('Swims', c.swims, _wkDelta(c.swims,r.prev.swims))}
+      ${stat('Pool '+uk, c.km.toFixed(1), _wkDelta(c.km,r.prev.km,true))}
+      ${stat('Dryland', c.dry, _wkDelta(c.dry,r.prev.dry))}
+    </div>
+    ${pbBlock}
+    ${consistency}
+    ${fuel}
+    ${load}
+    <div style="margin-top:16px;padding:13px 15px;border-radius:16px;background:color-mix(in srgb, var(--t-aqua) 12%, transparent);border-left:3px solid var(--t-aqua)">
+      <div style="font-family:var(--t-mono);font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-aqua);margin-bottom:4px">Next</div>
+      <div style="font-size:.8rem;color:var(--t-ink);line-height:1.5">${nudge}</div>
+    </div>
+    <div style="text-align:center;font-size:.58rem;color:var(--t-mute);margin-top:16px;line-height:1.5">Only ever you vs your own last week — never anyone else.</div>
+  </div>`;
+}
+function openWeekRecap(){
+  const r=getWeekRecap();
+  let ov=document.getElementById('week-recap');
+  if(!ov){ ov=document.createElement('div'); ov.id='week-recap'; document.body.appendChild(ov); }
+  // Copy the active water-theme tokens off #today-v2 so the sheet matches the theme
+  // wherever it sits in the DOM.
+  const tv=document.getElementById('today-v2'); let tokCss='';
+  const toks=['--t-deep','--t-surface','--t-raised','--t-line','--t-aqua','--t-aqua-d','--t-gold','--t-violet','--t-red','--t-ink','--t-ink2','--t-mute','--t-mono'];
+  if(tv){ const cs=getComputedStyle(tv); toks.forEach(k=>{ const v=cs.getPropertyValue(k); if(v&&v.trim()) tokCss+=`${k}:${v.trim()};`; }); }
+  ov.setAttribute('style', `${tokCss}position:fixed;inset:0;z-index:6000;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(2,10,14,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;transition:opacity .25s`);
+  ov.onclick=(e)=>{ if(e.target===ov) closeWeekRecap(); };
+  ov.innerHTML=`<div id="week-recap-inner" style="background:var(--t-deep);border-top-left-radius:22px;border-top-right-radius:22px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .34s cubic-bezier(.22,1,.36,1);box-shadow:0 -14px 44px rgba(0,0,0,.55);border-top:1px solid var(--t-line)">${_weekRecapHTML(r)}</div>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ ov.style.opacity='1'; const inn=document.getElementById('week-recap-inner'); if(inn) inn.style.transform='translateY(0)'; }));
+}
+function closeWeekRecap(){
+  const ov=document.getElementById('week-recap'); if(!ov)return;
+  const inn=document.getElementById('week-recap-inner'); if(inn) inn.style.transform='translateY(100%)';
+  ov.style.opacity='0';
+  setTimeout(()=>{ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },350);
+}
+
 function renderTodayV2(){
   ensureV2Styles();
   // Ensure the whole v2 environment is on even when Today renders straight from
@@ -7809,6 +7995,7 @@ function renderTodayV2(){
     <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">This week</span><span class="t2-v" style="font-size:.82rem">${weekRight}</span></div>
     <div style="display:flex;gap:5px">${wkDots}</div>
     ${weekSwimBtn}${weekNudge}
+    <div class="t2-tap" onclick="openWeekRecap()" style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;padding-top:9px;border-top:1px solid var(--t-line);font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-aqua)"><span>📊 Your week — recap</span><span style="font-size:.9rem">→</span></div>
   </div>`;
 
   // Pool line — the coach's session, which the app supports. Tappable to open the
