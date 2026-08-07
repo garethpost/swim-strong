@@ -1612,7 +1612,7 @@ const SYNC_KEYS=['profile','timeHistory','history','meetRaceLog','meetRaces','we
   'poolLog','checkinHistory','daySchedule','meets','offSeason','programmes','currentProgrammeId',
   'performanceProfile','sessionRPELog','oneRM','oneRMDate','bodyStats','lastStatsUpdate',
   'mealCompliance','hydrationLog','swimKmTotal','swimKmLog','seasonKmTarget','programWeek',
-  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','raceSplits','workoutMode',
+  'programCycle','swimPhase','seasonTemplate','shortTermGoals','goalProgram','goalTimes','raceSplits','onboardSeen','workoutMode',
   'activeStandard','useKg','useKm','appTheme','equipmentMode','customTargetMeets',
   'lastBaselineDate','autoDeload','mobilityLog','clubLogo',
   // Added: these were persisted locally but never reached the cloud, so they were
@@ -1855,6 +1855,7 @@ function reloadStateFromStorage(){
   S.goalProgram=DB.get('goalProgram',null);
   S.goalTimes=DB.get('goalTimes',{}); // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   S.raceSplits=DB.get('raceSplits',{}); // {event: {legs:[sec...], goal:'m:ss.xx', ts}} — logged actual race splits (pacing analysis)
+  S.onboardSeen=DB.get('onboardSeen',{}); // {home:true,...} — first-run coach-marks shown per screen
   S.workoutMode=DB.get('workoutMode','standard');
   S.activeStandard=DB.get('activeStandard','provchamp');
   S.useKg=DB.get('useKg',true);
@@ -2416,6 +2417,7 @@ let S={
   goalProgram:DB.get('goalProgram',null), // {meetId, goals[], weeksToMeet, startDate, phase}
   goalTimes:DB.get('goalTimes',{}), // {event: 'm:ss.xx'} — swimmer-set goal per event (pacing)
   raceSplits:DB.get('raceSplits',{}), // {event: {legs:[sec...], goal, ts}} — logged actual race splits (pacing analysis)
+  onboardSeen:DB.get('onboardSeen',{}), // {home:true,...} — first-run coach-marks shown per screen
   shortTermGoals:DB.get('shortTermGoals',[]), // up to 3 in-app short-term goals
   activeStandard:DB.get('activeStandard','provchamp'),
   useKg:DB.get('useKg',true),   // weight: true=kg, false=lbs
@@ -3194,7 +3196,8 @@ function renderProfileDisplay(){
     ${S.profile.primaryEvents&&S.profile.primaryEvents.length?`<div style="color:var(--muted);font-size:12px;">Events: ${S.profile.primaryEvents.join(', ')}</div>`:''}
     ${S.profile.primaryStroke?`<div style="color:var(--muted);font-size:12px;">Stroke: ${({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.primaryStroke]||S.profile.primaryStroke}${S.profile.secondaryStroke?' · '+({'free':'Freestyle','back':'Backstroke','breast':'Breaststroke','fly':'Butterfly','im':'Individual Medley','distance':'Distance Freestyle'})[S.profile.secondaryStroke]:''}</div>`:''}
     ${goals.length?`<div style="margin-top:4px;"><div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Long-term goals</div>${goals.map(g=>`<div style="font-size:12px;color:var(--muted);padding:2px 0;">→ ${g}</div>`).join('')}</div>`:''}
-    <button onclick="openSeasonWrapped()" style="margin-top:10px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--accent);background:linear-gradient(100deg, color-mix(in srgb,var(--accent) 20%,transparent), transparent);color:var(--accent);font-weight:750;font-size:13px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;">🌊 Season Wrapped — your season, in stories →</button>
+    <button data-onboard="wrapped" onclick="openSeasonWrapped()" style="margin-top:10px;width:100%;padding:12px;border-radius:12px;border:1px solid var(--accent);background:linear-gradient(100deg, color-mix(in srgb,var(--accent) 20%,transparent), transparent);color:var(--accent);font-weight:750;font-size:13px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;">🌊 Season Wrapped — your season, in stories →</button>
+    <button onclick="resetOnboarding()" style="margin-top:6px;width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;font-family:var(--font);">↻ Replay the app tour</button>
   </div>`;
 }
 function openProfileModal(){
@@ -8132,6 +8135,69 @@ async function shareSeasonCard(){
   }catch(e){ if(node.parentNode)node.parentNode.removeChild(node); alert('Could not create the image right now.'); }
 }
 
+// ── First-run onboarding coach-marks ─────────────────────────────────────────
+// A short, skippable spotlight tour the first time a swimmer opens each screen —
+// points at the one or two things that matter, then never nags again (seen-state
+// per screen, synced). Kid-friendly copy. A missing target is skipped gracefully.
+const ONBOARD_STEPS={
+  home:[
+    {sel:'[data-onboard="load"]', title:"Today's load", body:"This vessel shows how hard to train today. Tap it any time to check in — your sleep &amp; readiness tune the plan."},
+    {sel:'[data-onboard="week"]', title:'Your week', body:'Your sessions at a glance. Tap the recap for your full week — streaks, PBs and a look back.'},
+    {sel:'[data-onboard="chase"]', title:"The time you're chasing", body:'Open this to set a goal time and get your target race splits, then see how you actually split.'},
+    {sel:'#nav-v2', title:'Five tabs', body:"Today, Train, Times, Fuel, Me. Have a look around — I'll pop a quick tip the first time you open each.", place:'top'}
+  ],
+  workout:[{sel:'#workout-content', title:'Your dryland', body:'One exercise at a time, big and clear. Start a session and follow the cues — form first, always.'}],
+  times:[{sel:'#goal-pacing', title:'Goals &amp; pacing', body:'Set a goal time for realistic target splits, then log the splits you actually swam to see your front/back-half breakdown.'}],
+  fuel:[{sel:'#food-search-input', title:'Fuel to grow', body:'Search any food to log it fast. This is about fuelling for training and growth — never dieting.'}],
+  more:[{sel:'[data-onboard="wrapped"]', title:'Your season, wrapped', body:'Your profile, themes and Season Wrapped live here — a shareable story of your whole season.'}]
+};
+let _obActive=false;
+function _obToken(){ const tv=document.getElementById('today-v2'); let tok=''; if(tv){ const cs=getComputedStyle(tv); ['--t-deep','--t-surface','--t-line','--t-aqua','--t-aqua-d','--t-gold','--t-ink','--t-ink2','--t-mute','--t-mono'].forEach(k=>{ const v=cs.getPropertyValue(k); if(v&&v.trim())tok+=`${k}:${v.trim()};`; }); } return tok; }
+function _obMarkSeen(name){ S.onboardSeen=S.onboardSeen||{}; if(!S.onboardSeen[name]){ S.onboardSeen[name]=true; DB.set('onboardSeen',S.onboardSeen); } }
+function obRender(){
+  const ov=document.getElementById('onboard-ov'); if(!ov)return;
+  const steps=ov._steps, idx=ov._idx, step=steps[idx];
+  const el=document.querySelector(step.sel);
+  if(!el){ obNext(); return; }
+  try{ el.scrollIntoView({block:'center'}); }catch(e){}
+  const r=el.getBoundingClientRect(), pad=8;
+  const spot=ov.querySelector('#ob-spot');
+  spot.style.cssText=`position:fixed;left:${Math.max(4,r.left-pad)}px;top:${Math.max(4,r.top-pad)}px;width:${r.width+pad*2}px;height:${r.height+pad*2}px;border-radius:16px;box-shadow:0 0 0 9999px rgba(2,9,12,.7), 0 0 22px 3px color-mix(in srgb, var(--t-aqua) 55%, transparent);border:2px solid var(--t-aqua);pointer-events:none;transition:all .28s ease`;
+  const card=ov.querySelector('#ob-card'), last=idx===steps.length-1;
+  const cw=Math.min(320, window.innerWidth-24);
+  card.style.cssText=`position:fixed;width:${cw}px;background:var(--t-surface);border:1px solid var(--t-line);border-radius:16px;padding:15px 16px;box-shadow:0 16px 44px rgba(0,0,0,.5);z-index:2;left:0;top:0;visibility:hidden`;
+  card.innerHTML=`<div style="font-family:var(--t-mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-aqua);margin-bottom:6px">${idx+1} of ${steps.length}</div>
+    <div style="font-size:1.02rem;font-weight:800;color:var(--t-ink);margin-bottom:6px;letter-spacing:-.01em">${step.title}</div>
+    <div style="font-size:.84rem;color:var(--t-ink2);line-height:1.5">${step.body}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+      <button onclick="event.stopPropagation();obSkip()" style="background:none;border:none;color:var(--t-mute);font-size:.78rem;cursor:pointer;padding:6px 2px">Skip tour</button>
+      <button onclick="event.stopPropagation();obNext()" style="background:var(--t-aqua);color:#042028;border:none;border-radius:999px;padding:9px 18px;font-weight:800;font-size:.84rem;cursor:pointer">${last?'Got it ✓':'Next →'}</button>
+    </div>`;
+  const ch=card.offsetHeight;
+  const cx=Math.min(Math.max(12, r.left+r.width/2-cw/2), window.innerWidth-cw-12);
+  const belowSpace=window.innerHeight-r.bottom;
+  const top=(step.place==='top'||belowSpace<ch+26)? Math.max(12, r.top-ch-14) : (r.bottom+14);
+  card.style.left=cx+'px'; card.style.top=top+'px'; card.style.visibility='visible';
+}
+function obNext(){ const ov=document.getElementById('onboard-ov'); if(!ov)return; ov._idx++; if(ov._idx>=ov._steps.length) obFinish(); else obRender(); }
+function obSkip(){ obFinish(); }
+function obFinish(){ const ov=document.getElementById('onboard-ov'); _obActive=false; if(!ov)return; _obMarkSeen(ov._name); ov.style.opacity='0'; setTimeout(()=>{ if(ov&&ov.parentNode)ov.parentNode.removeChild(ov); },220); }
+function startOnboarding(name){
+  if(_obActive)return;
+  const steps=(ONBOARD_STEPS[name]||[]).filter(s=>{ const e=document.querySelector(s.sel); return e&&e.getBoundingClientRect().width>0; });
+  if(!steps.length){ _obMarkSeen(name); return; }
+  _obActive=true;
+  let ov=document.getElementById('onboard-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='onboard-ov'; document.body.appendChild(ov); }
+  ov._steps=steps; ov._idx=0; ov._name=name;
+  ov.setAttribute('style',`${_obToken()}position:fixed;inset:0;z-index:7000;opacity:0;transition:opacity .2s`);
+  ov.innerHTML=`<div id="ob-adv" style="position:absolute;inset:0;z-index:1" onclick="obNext()"></div><div id="ob-spot"></div><div id="ob-card"></div>`;
+  obRender();
+  const fade=()=>{ if(ov)ov.style.opacity='1'; }; requestAnimationFrame(fade); setTimeout(fade,50);
+}
+function maybeOnboard(name){ try{ if(!(window.FLAGS&&FLAGS.v2))return; if(!S.profile)return; S.onboardSeen=S.onboardSeen||{}; if(S.onboardSeen[name]||_obActive)return; setTimeout(()=>{ if(!S.onboardSeen[name]) startOnboarding(name); },500); }catch(e){} }
+function resetOnboarding(){ S.onboardSeen={}; DB.set('onboardSeen',S.onboardSeen); startOnboarding('more'); }
+
 function renderTodayV2(){
   ensureV2Styles();
   // Ensure the whole v2 environment is on even when Today renders straight from
@@ -8211,7 +8277,7 @@ function renderTodayV2(){
     <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">This week</span><span class="t2-v" style="font-size:.82rem">${weekRight}</span></div>
     <div style="display:flex;gap:5px">${wkDots}</div>
     ${weekSwimBtn}${weekNudge}
-    <div class="t2-tap" onclick="openWeekRecap()" style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;padding-top:9px;border-top:1px solid var(--t-line);font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-aqua)"><span>📊 Your week — recap</span><span style="font-size:.9rem">→</span></div>
+    <div class="t2-tap" data-onboard="week" onclick="openWeekRecap()" style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;padding-top:9px;border-top:1px solid var(--t-line);font-family:var(--t-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--t-aqua)"><span>📊 Your week — recap</span><span style="font-size:.9rem">→</span></div>
   </div>`;
 
   // Pool line — the coach's session, which the app supports. Tappable to open the
@@ -8244,7 +8310,7 @@ function renderTodayV2(){
     ${weekShapeRow}
   </div>`;
 
-  const chaseTile = d.chase ? `<div class="t2-tile t2-tap" onclick="showSection('times')" style="border-color:var(--t-aqua-d)">
+  const chaseTile = d.chase ? `<div class="t2-tile t2-tap" data-onboard="chase" onclick="showSection('times')" style="border-color:var(--t-aqua-d)">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t2-lbl">Chasing · ${escHtml(d.chase.ev)}</span><span class="t2-v" style="font-size:.78rem;color:${d.chase.gap<=0?'var(--t-aqua)':'var(--t-gold)'}">${d.chase.gap<=0?'qualified ✓':(d.chase.gap>0?'−':'')+Math.abs(d.chase.gap).toFixed(2)+'s'}</span></div>
     <p class="t2-nt" style="font-size:.7rem">PB <span class="t2-v" style="font-size:.7rem">${escHtml(d.chase.pb)}</span> · standard <span class="t2-v" style="font-size:.7rem">${escHtml(d.chase.std)}</span></p>
   </div>` : '';
@@ -8288,7 +8354,7 @@ function renderTodayV2(){
 
     ${rightNowCard}
 
-    <div class="t2-tile t2-tap" onclick="showCheckinSheet()" style="align-items:center;padding:16px 12px;gap:8px;border-color:${hard?'var(--t-gold)':'var(--t-line)'}">
+    <div class="t2-tile t2-tap" data-onboard="load" onclick="showCheckinSheet()" style="align-items:center;padding:16px 12px;gap:8px;border-color:${hard?'var(--t-gold)':'var(--t-line)'}">
       <div class="t2-vessel">
         <svg viewBox="0 0 220 220" role="img" aria-label="Today's load: ${escHtml(d.load.label)}">
           <defs>
@@ -8673,7 +8739,7 @@ function updateV2Live(){
 }
 
 // Single dispatch: flag ON → v2, OFF → legacy. Every home re-render routes here.
-function renderHomeDispatch(){ if(window.FLAGS&&FLAGS.v2){try{renderTodayV2();return;}catch(e){console.error('v2 render failed, falling back',e);}} renderHome(); }
+function renderHomeDispatch(){ if(window.FLAGS&&FLAGS.v2){try{renderTodayV2();if(typeof maybeOnboard==='function')maybeOnboard('home');return;}catch(e){console.error('v2 render failed, falling back',e);}} renderHome(); }
 
 function renderHome(){
   const h=new Date().getHours();
@@ -14058,7 +14124,7 @@ function showSection(name){
   if(name==='workout'){renderWorkoutTab();}
   if(name==='fuel'){renderNutrition();renderMealTracker();}
   if(name==='more'){renderHistory();renderProgramTargets();renderCheckinChart();renderWeightTrendChart();renderPoolLog();renderProfileDisplay();updateUnitPickers();initKmTargetInput();renderThemePicker();renderEquipmentPicker();renderTemplateGrid();renderOffSeasonCard();renderCareerProgrammes();updateLegalContact();const _ae=document.getElementById('more-account-email');if(_ae&&_currentUser)_ae.textContent='Signed in as '+(_currentUser.email||'');const _aeb=document.getElementById('more-account-email-bar');if(_aeb&&_currentUser)_aeb.textContent=_currentUser.email||'';}
-
+  maybeOnboard(name); // first-run coach-marks for this screen (once per screen)
 }
 
 // ── Swim Log ──
